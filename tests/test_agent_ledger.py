@@ -24,7 +24,7 @@ def test_snapshot_and_outcome_backfill(tmp_path):
     assert row["feature_version"]=="f1"
     assert row["outcomes"]=={}
     assert ledger.backfill_returns("000001","2026-01-02",
-                                    {"decision":10,"1":10.2,"3":10.4})
+                                    {"decision":10,1:10.2,3:10.4})
     # JSON object keys may be strings; the public method also accepts integer keys.
     loaded=ledger.load()
     assert loaded[0]["outcomes"]["T+1"]==0.02
