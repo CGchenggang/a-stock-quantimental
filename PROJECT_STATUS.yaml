@@ -1,0 +1,26 @@
+project: A-Stock Quantimental 2.0
+purpose: Codex implementation package
+status: scaffold_for_incremental_implementation
+phase_order:
+  - P0
+  - P1
+  - P2
+  - P3
+  - P4
+  - P5
+  - P6
+  - P7
+  - P8
+rules:
+  preserve_v1: true
+  point_in_time_required: true
+  walk_forward_required: true
+  calibration_required: true
+  llm_may_modify_quant_output: false
+  auto_broker_order: false
+completion_labels:
+  - IMPLEMENTED
+  - PARTIAL
+  - SCAFFOLD_ONLY
+  - NOT_IMPLEMENTED
+  - BLOCKED_EXTERNAL_DEPENDENCY
