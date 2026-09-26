@@ -1,0 +1,18 @@
+market:
+  timezone: Asia/Shanghai
+  sessions:
+    - ["09:30","11:30"]
+    - ["13:00","15:00"]
+    - ["15:05","15:30"]
+data:
+  realtime_ttl_seconds: 30
+  intraday_ttl_seconds: 15
+  daily_ttl_seconds: 3600
+model:
+  horizons: [1,3,5,10]
+  min_train_samples: 500
+risk:
+  max_expected_drawdown: 0.12
+decision:
+  paper_test_probability: 0.60
+  min_data_quality: 0.90
