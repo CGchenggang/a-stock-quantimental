@@ -1,3 +1,5 @@
+import pytest
+
 from astock_v2.ledger import RecommendationLedger
 from astock_v2.types import DecisionPacket
 
@@ -27,5 +29,5 @@ def test_snapshot_and_outcome_backfill(tmp_path):
                                     {"decision":10,1:10.2,3:10.4})
     # JSON object keys may be strings; the public method also accepts integer keys.
     loaded=ledger.load()
-    assert loaded[0]["outcomes"]["T+1"]==0.02
-    assert loaded[0]["outcomes"]["T+3"]==0.04
+    assert loaded[0]["outcomes"]["T+1"] == pytest.approx(0.02)
+    assert loaded[0]["outcomes"]["T+3"] == pytest.approx(0.04)
