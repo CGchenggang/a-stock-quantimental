@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+
+import pytest
 from astock_v2.ledger import RecommendationLedger
 from astock_v2.types import DecisionPacket
 from astock_v2.review import due_horizons
@@ -16,4 +18,4 @@ def test_p7_due_review_and_backfill(tmp_path):
                                    {"decision":10,1:10.1,3:10.3,5:10.5,10:11})
     row=ledger.load()[0]
     assert row["p_up"]["5"]==.6
-    assert row["outcomes"]["T+5"]==.05
+    assert row["outcomes"]["T+5"] == pytest.approx(0.05)
