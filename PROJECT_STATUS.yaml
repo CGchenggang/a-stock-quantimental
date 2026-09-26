@@ -1,6 +1,6 @@
 project: A-Stock Quantimental 2.0
 purpose: incremental implementation
-status: P0_IN_PROGRESS
+status: P8_IN_PROGRESS
 phase_order: [P0, P1, P2, P3, P4, P5, P6, P7, P8]
 rules:
   preserve_v1: true
