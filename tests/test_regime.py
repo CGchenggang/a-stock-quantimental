@@ -56,4 +56,4 @@ def test_regime_confidence_reflects_missing_inputs():
     result = classify_regime(
         {"index_trend": 1.0, "breadth": 0.5, "volatility_z": 0.0}
     )
-    assert result["confidence"] == 3 / 7
+    assert result["confidence"] == pytest.approx(3 / 7)
