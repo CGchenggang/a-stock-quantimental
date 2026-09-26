@@ -1,0 +1,52 @@
+"""
+morning_collector.py — 晨间哨兵数据采集器 (v1.0)
+
+用途：在 08:30 采集全维度盘前数据，输出结构化 JSON 供 AI 解读
+替代原提示词1中 AI 手工采集个股 OHLCV/MA/LR/止损 的重复劳动
+
+数据来源：
+  ① data_layer.py: get_stock_hist / get_realtime_quotes / get_us_treasury / get_usd_cny
+  ② AkShare: stock_zh_index_daily / stock_us_daily / stock_fund_flow_industry 等
+  ③ sectors.json: 持仓池 + 事件日历
+
+用法：
+  python scripts/morning_collector.py
+  python scripts/morning_collector.py --pool "F:\...\sectors.json"
+  python scripts/morning_collector.py --date 20260710
+
+输出：
+  database/morning_data.json (覆盖写入)
+  控制台打印关键摘要
+"""
+
+import sys
+import os
+import json
+import argparse
+from datetime import datetime
+
+# ── 路径配置（基于脚本位置自动推导）──
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SKILL_ROOT = os.path.dirname(SCRIPT_DIR)
+SKILL_DB = os.path.join(SKILL_ROOT, "database")
+DEFAULT_POOL = os.path.join(SKILL_DB, "sectors.json")
+
+# ── 导入 data_layer ──
+try:
+    from data_layer import (
+        get_stock_hist, get_realtime_quotes, get_sector_board,
+        get_us_treasury, get_usd_cny, get_us_market,
+        SECTOR_ALIASES,
+    )
+except ImportError as e:
+    print(f"[ERROR] data_layer 导入失败: {e}")
+    sys.exit(1)
+
+# ── 主逻辑（简化版）──
+def main():
+    print(f"[{datetime.now()}] morning_collector 启动")
+    print("[WARN] 此脚本不完整，需要补充完整逻辑")
+    # TODO: 补充完整的采集逻辑
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""
+增强候选股报告 - 添加解禁风险信息
+
+v0.86 新增：在半月筛选生成的 scanner_report.json 基础上，
+为每个候选股添加解禁风险信息（unlock_risk 字段）。
+
+使用方式：
+    python scripts/enhance_scanner_with_unlock.py
+    
+    或在 supply-chain-screener-a 生成 scanner_report.json 后自动调用
+"""
+
+import json
+import sys
+from pathlib import Path
+from datetime import datetime
+
+# 添加 scripts 目录到路径
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import unlock_calendar
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DATABASE_DIR = SCRIPT_DIR.parent / "database"
+
+
+def enhance_scanner_report():
+    """读取 scanner_report.json，为每个候选股添加解禁风险信息"""
+    

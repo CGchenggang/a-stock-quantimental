@@ -1,0 +1,40 @@
+"""
+macro_event_monitor.py — 宏观事件监控模块 (v0.1)
+==================================================
+a-stock-quantimental v0.8 新增模块
+
+5层宏观事件采集与风险评级：
+  Layer 1: Fed 发言日历（硬编码 + 官网爬取）
+  Layer 2: 利率预期实时数据（美债收益率 / DXY / FedWatch 代理）
+  Layer 3: Fed 官员发言关键词捕捉（财联社 / 新浪 / Fed 官网）
+  Layer 4: 亚太联动监测（KOSPI / Nikkei / HSI 盘中异动）
+  Layer 5: 大行研报信号（半自动，每周）
+
+数据源优先级：
+  P0: Fed 官网、商务部
+  P1: 腾讯财经 API、新浪财经 API（结构化数据）
+  P2: 财联社、华尔街见闻（新闻关键词）
+  P3: Reuters、CNBC、FT（海外源，可选）
+  P4: 泛搜索（线索发现）
+
+输出：
+  macro_risk_report — 包含风险等级 (🟢🟡🟠🔴)、仓位修正建议、触发因子列表
+
+使用方式：
+  1. 每日 08:30 自动运行: python scripts/macro_event_monitor.py
+  2. 盘前预案 (Module 3) 中引用输出
+  3. 与 market_calendar_risk.py 协同
+
+依赖：无外部依赖（纯标准库 HTTP）；可选 akshare 增强
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import time
+import urllib.request
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
