@@ -10,6 +10,7 @@ research package does not require a network client.
 from __future__ import annotations
 
 import argparse
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,19 +25,40 @@ def _parse_date(value: str) -> str:
     return value
 
 
-def download_symbol(symbol: str, start: str, end: str, root: str, adjust: str = "") -> int:
+def _clear_proxy_env() -> dict[str, str | None]:
+    names = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy")
+    previous = {name: os.environ.get(name) for name in names}
+    for name in names:
+        os.environ.pop(name, None)
+    return previous
+
+
+def _restore_proxy_env(previous: dict[str, str | None]) -> None:
+    for name, value in previous.items():
+        if value is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = value
+
+
+def download_symbol(symbol: str, start: str, end: str, root: str, adjust: str = "", no_proxy: bool = False) -> int:
     try:
         import akshare as ak
     except ImportError as exc:
         raise SystemExit("AKShare is required only for the downloader; install it in the data-ingestion environment.") from exc
 
-    df = ak.stock_zh_a_hist(
-        symbol=symbol,
-        period="daily",
-        start_date=start,
-        end_date=end,
-        adjust=adjust,
-    )
+    previous_proxy = _clear_proxy_env() if no_proxy else None
+    try:
+        df = ak.stock_zh_a_hist(
+            symbol=symbol,
+            period="daily",
+            start_date=start,
+            end_date=end,
+            adjust=adjust,
+        )
+    finally:
+        if previous_proxy is not None:
+            _restore_proxy_env(previous_proxy)
     if df is None or df.empty:
         return 0
 
@@ -97,9 +119,14 @@ def main() -> None:
     parser.add_argument("--end", type=_parse_date, required=True)
     parser.add_argument("--root", default="data")
     parser.add_argument("--adjust", choices=["", "qfq", "hfq"], default="")
+    parser.add_argument(
+        "--no-proxy",
+        action="store_true",
+        help="Temporarily ignore HTTP(S)/ALL proxy environment variables for the AKShare request.",
+    )
     args = parser.parse_args()
     for symbol in args.symbol:
-        count = download_symbol(symbol, args.start, args.end, args.root, args.adjust)
+        count = download_symbol(symbol, args.start, args.end, args.root, args.adjust, args.no_proxy)
         print(f"{symbol}: stored {count} rows")
 
 
