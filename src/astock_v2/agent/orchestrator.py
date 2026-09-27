@@ -22,7 +22,11 @@ class ResearchOrchestrator:
     def build(self, **kwargs)->ResearchPacket:
         return ResearchPacket(**kwargs)
 
-    def build_from_provider(self, provider, **kwargs) -> ResearchPacket:\n        from ..provider_research import build_research_packet_from_provider\n        return build_research_packet_from_provider(provider, **kwargs)\n\n    def as_json(self, packet: ResearchPacket)->dict[str,Any]:
+    def build_from_provider(self, provider, **kwargs) -> ResearchPacket:
+        from ..provider_research import build_research_packet_from_provider
+        return build_research_packet_from_provider(provider, **kwargs)
+
+    def as_json(self, packet: ResearchPacket)->dict[str,Any]:
         return asdict(packet)
 
     def recommendation_record(self, packet: ResearchPacket, *, record_id: str, model_version: str):
