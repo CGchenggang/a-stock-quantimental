@@ -52,8 +52,10 @@ def test_regime_unknown_when_most_inputs_missing():
     assert classify_regime({"index_trend": 1.0})["regime"] == "UNKNOWN"
 
 
-def test_regime_confidence_reflects_missing_inputs():
+def test_regime_confidence_is_zero_when_regime_is_unknown():
     result = classify_regime(
         {"index_trend": 1.0, "breadth": 0.5, "volatility_z": 0.0}
     )
-    assert result["confidence"] == pytest.approx(3 / 7)
+    assert result["regime"] == "UNKNOWN"
+    assert result["confidence"] == 0.0
+    assert result["missing_inputs"] == 4
