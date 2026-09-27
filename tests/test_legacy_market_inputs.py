@@ -104,3 +104,21 @@ def test_regime_bridge_rejects_future_market_snapshot():
     assert result["inputs"]["breadth"] is None
     assert result["inputs"]["index_trend"] is None
     assert result["inputs"]["sector_dispersion"] is None
+
+def test_regime_inputs_expose_shared_pit_quality_summary():
+    result = LegacyMarketInputs(_provider()).regime_inputs(
+        decision_time="2026-09-27T08:00:00+00:00"
+    )
+    quality = result["data_quality"]
+    assert quality["provider_results"] == 4
+    assert quality["pit_status_counts"]["ADMISSIBLE"] == 4
+    assert quality["pit_admissible_ratio"] == 1.0
+    assert quality["pit_admissible"] is True
+
+def test_regime_inputs_records_future_provider_statuses():
+    result = LegacyMarketInputs(_provider()).regime_inputs(
+        decision_time="2026-09-27T03:00:00+00:00"
+    )
+    quality = result["data_quality"]
+    assert quality["pit_status_counts"]["FUTURE"] == 4
+    assert quality["pit_admissible"] is False
