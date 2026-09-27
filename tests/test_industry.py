@@ -36,6 +36,21 @@ def test_current_interval_is_selected():
     assert got.industry_code == "B"
 
 
+def test_unavailable_new_membership_keeps_last_known_assignment():
+    memberships = [
+        row("A", "2020-01-01T00:00:00", "2020-01-22T00:00:00", "2020-01-02T16:00:00"),
+        row("B", "2020-01-22T00:00:00", None, "2020-01-23T16:00:00"),
+    ]
+    got = admissible_industry(
+        memberships,
+        "000001",
+        datetime(2020, 1, 22, 15, tzinfo=TZ),
+        datetime(2020, 1, 22, 16, tzinfo=TZ),
+    )
+    assert got is not None
+    assert got.industry_code == "A"
+
+
 def test_future_membership_is_not_admissible():
     memberships = [row("B", "2021-01-01T00:00:00", None, "2021-01-01T16:00:00")]
     got = admissible_industry(memberships, "000001", datetime(2020, 12, 31, 15, tzinfo=TZ), datetime(2020, 12, 31, 16, tzinfo=TZ))
