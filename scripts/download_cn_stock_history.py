@@ -1,0 +1,107 @@
+"""Download A-share daily history into the local PIT-safe store.
+
+Example:
+    python scripts/download_cn_stock_history.py --symbol 000001 \
+        --start 20200101 --end 20260927 --root data
+
+AKShare is an optional runtime dependency for this downloader.  The core
+research package does not require a network client.
+"""
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, timezone
+from pathlib import Path
+
+import pandas as pd
+
+from astock_v2.data.catalog import AssetScope, DataLayer, HistoricalRecord
+from astock_v2.data.local_store import LocalHistoricalStore
+
+
+def _parse_date(value: str) -> str:
+    datetime.strptime(value, "%Y%m%d")
+    return value
+
+
+def download_symbol(symbol: str, start: str, end: str, root: str, adjust: str = "") -> int:
+    try:
+        import akshare as ak
+    except ImportError as exc:
+        raise SystemExit("AKShare is required only for the downloader; install it in the data-ingestion environment.") from exc
+
+    df = ak.stock_zh_a_hist(
+        symbol=symbol,
+        period="daily",
+        start_date=start,
+        end_date=end,
+        adjust=adjust,
+    )
+    if df is None or df.empty:
+        return 0
+
+    required = {"日期", "股票代码", "开盘", "收盘", "最高", "最低", "成交量", "成交额"}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(f"AKShare response missing columns: {sorted(missing)}")
+
+    # The source documents that same-day daily data should be fetched after close.
+    # We model a conservative, explicit availability assumption of 16:00 Asia/Shanghai.
+    availability = "16:00:00+08:00"
+    records = []
+    for row in df.to_dict("records"):
+        date = pd.Timestamp(row["日期"]).strftime("%Y-%m-%d")
+        event_time = f"{date}T15:00:00+08:00"
+        available_time = f"{date}T{availability}"
+        records.append(HistoricalRecord(
+            symbol=str(row["股票代码"]).zfill(6),
+            event_time=event_time,
+            available_time=available_time,
+            source="akshare:stock_zh_a_hist",
+            source_type="historical_vendor",
+            value={
+                "date": date,
+                "open": float(row["开盘"]),
+                "close": float(row["收盘"]),
+                "high": float(row["最高"]),
+                "low": float(row["最低"]),
+                "volume": float(row["成交量"]),
+                "amount": float(row["成交额"]),
+                "adjust": adjust,
+            },
+            layer=DataLayer.CLEAN,
+            asset_scope=AssetScope.CN_STOCK,
+            quality="SOURCE_RETURNED",
+        ))
+
+    store = LocalHistoricalStore(root)
+    snapshot_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    raw_payload = df.astype(object).where(pd.notna(df), None).to_dict("records")
+    _, digest = store.write_raw_snapshot("cn_stock_daily", f"{symbol}-{snapshot_id}", raw_payload)
+    records = [
+        HistoricalRecord(
+            symbol=r.symbol, event_time=r.event_time, available_time=r.available_time,
+            source=r.source, source_type=r.source_type, value=r.value,
+            layer=r.layer, asset_scope=r.asset_scope, revision=r.revision,
+            raw_ref=digest, quality=r.quality,
+        )
+        for r in records
+    ]
+    return store.append_records("cn_stock_daily", records)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--symbol", action="append", required=True)
+    parser.add_argument("--start", type=_parse_date, required=True)
+    parser.add_argument("--end", type=_parse_date, required=True)
+    parser.add_argument("--root", default="data")
+    parser.add_argument("--adjust", choices=["", "qfq", "hfq"], default="")
+    args = parser.parse_args()
+    for symbol in args.symbol:
+        count = download_symbol(symbol, args.start, args.end, args.root, args.adjust)
+        print(f"{symbol}: stored {count} rows")
+
+
+if __name__ == "__main__":
+    main()
