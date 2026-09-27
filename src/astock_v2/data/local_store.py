@@ -11,7 +11,7 @@ import json
 import os
 import tempfile
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -28,6 +28,8 @@ def _parse_aware(value: str) -> datetime:
 
 
 def _json_default(value):
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
     if hasattr(value, "value"):
         return value.value
     raise TypeError(f"not JSON serializable: {type(value)!r}")
