@@ -29,7 +29,7 @@ SW_STANDARD_CODE = "008003"
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--symbol", action="append", required=True)
-    p.add_argument("--start", default="20200101")
+    p.add_argument("--start", default="19900101")
     p.add_argument("--end", default="20260927")
     p.add_argument("--output", default="data/industry/cninfo_sw1_membership.csv")
     p.add_argument("--raw-output", default="data/industry/cninfo_industry_change_raw.csv")
