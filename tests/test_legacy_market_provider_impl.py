@@ -132,3 +132,12 @@ def test_intraday_provider_rejects_invalid_scale_and_datalen():
         pass
     else:
         raise AssertionError("non-positive datalen must be rejected")
+
+
+def test_daily_provider_does_not_fabricate_availability_from_fetch_time():
+    provider=LegacyMarketProvider(
+        realtime_fetcher=lambda: {},
+        daily_fetcher=lambda symbol, days: {"latest_date":"2026-09-26","fetched_at":"2026-09-27T04:00:00+00:00"},
+    )
+    result=provider.daily("000001","2026-09-20","2026-09-26")
+    assert result.available_time == ""
