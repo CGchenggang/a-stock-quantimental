@@ -112,3 +112,28 @@ def minute_klines_to_datapoints(
             )
         )
     return points
+
+
+
+def daily_latest_cached_to_datapoint(
+    cache_record: dict[str, Any],
+    *,
+    quality: str = "B",
+    raw_ref: str | None = None,
+    revision: int = 0,
+) -> DataPoint:
+    """Convert a legacy cache record using its persisted save time as availability."""
+    saved_at = cache_record.get("saved_at_unix")
+    payload = cache_record.get("data")
+    if saved_at is None:
+        raise ValueError("legacy cache record requires saved_at_unix")
+    available = datetime.fromtimestamp(float(saved_at), tz=timezone.utc).isoformat()
+    if not isinstance(payload, dict):
+        raise ValueError("legacy cache record requires dict data")
+    return daily_latest_to_datapoint(
+        payload,
+        available_time=available,
+        quality=quality,
+        raw_ref=raw_ref,
+        revision=revision,
+    )
