@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import log
+from math import log
 from typing import Sequence
 
 
