@@ -85,3 +85,49 @@ class LegacyMarketInputs:
             source_type="legacy_sector_provider",
             available_time=payload.get("ts"),
         )
+
+
+    def regime_inputs(self, index_symbol: str = "sh000300") -> dict[str, Any]:
+        """Return P3-compatible inputs plus provenance and explicit missing fields."""
+        market = self.snapshot()
+        index = self.provider.index_daily(index_symbol)
+        sector = self.provider.sector_board()
+
+        index_data = index.data if isinstance(index.data, dict) else {}
+        pct = float(index_data.get("pct") or 0.0)
+        above_ma20 = index_data.get("above_ma20")
+        index_trend = (1.0 if above_ma20 else -1.0) + max(-1.0, min(1.0, pct / 3.0))
+
+        sector_data = sector.data if isinstance(sector.data, dict) else {}
+        values = [
+            float(row["pct"])
+            for row in sector_data.get("sectors", [])
+            if isinstance(row, dict) and row.get("pct") is not None
+        ]
+        dispersion = _std(values)
+
+        breadth = market["breadth"]
+        inputs = {
+            "index_trend": index_trend,
+            "breadth": breadth["breadth"],
+            "turnover_z": None,
+            "volatility_z": None,
+            "sector_dispersion": dispersion,
+            "limit_pressure": breadth["limit_pressure"],
+            "liquidity": None,
+        }
+        return {
+            "inputs": inputs,
+            "provenance": {
+                "index": index,
+                "quote": market["quote"],
+                "sector": sector,
+            },
+            "proxy_fields": [
+                "breadth",
+                "limit_pressure",
+                "index_trend",
+                "sector_dispersion",
+            ],
+            "missing_fields": [key for key, value in inputs.items() if value is None],
+        }
