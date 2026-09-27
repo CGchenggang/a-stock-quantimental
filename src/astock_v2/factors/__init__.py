@@ -58,11 +58,68 @@ def volume_ratio_factor(result: ProviderResult, *, symbol: str, decision_time: s
         value = volumes[-1] / baseline - 1.0 if baseline > 0 else None
     return _output("volume_ratio", symbol, decision_time, result, value, lookback, len(volumes), "volume_vs_prior_sma")
 
+
+def close_to_high_factor(result: ProviderResult, *, symbol: str, decision_time: str, lookback: int = 20) -> FactorOutput:
+    """Distance of the latest close from the rolling close high: close / max(close window) - 1."""
+    rows = _rows(result)
+    closes = [x for x in (_number(r, "close", "Close") for r in rows) if x is not None and x > 0]
+    value = None
+    if len(closes) >= lookback:
+        high = max(closes[-lookback:])
+        value = closes[-1] / high - 1.0 if high > 0 else None
+    return _output("close_to_high", symbol, decision_time, result, value, lookback, len(closes), "close_vs_rolling_close_high")
+
+
+def close_to_low_factor(result: ProviderResult, *, symbol: str, decision_time: str, lookback: int = 20) -> FactorOutput:
+    """Distance of the latest close from the rolling close low: close / min(close window) - 1."""
+    rows = _rows(result)
+    closes = [x for x in (_number(r, "close", "Close") for r in rows) if x is not None and x > 0]
+    value = None
+    if len(closes) >= lookback:
+        low = min(closes[-lookback:])
+        value = closes[-1] / low - 1.0 if low > 0 else None
+    return _output("close_to_low", symbol, decision_time, result, value, lookback, len(closes), "close_vs_rolling_close_low")
+
+
+def range_ratio_factor(result: ProviderResult, *, symbol: str, decision_time: str, lookback: int = 20) -> FactorOutput:
+    """Current normalized high-low range relative to the prior rolling mean."""
+    rows = _rows(result)
+    ranges = []
+    for row in rows:
+        high = _number(row, "high", "High")
+        low = _number(row, "low", "Low")
+        close = _number(row, "close", "Close")
+        if high is not None and low is not None and close is not None and close > 0 and high >= low:
+            ranges.append((high - low) / close)
+    value = None
+    if len(ranges) >= lookback + 1:
+        baseline = mean(ranges[-lookback-1:-1])
+        value = ranges[-1] / baseline - 1.0 if baseline > 0 else None
+    return _output("range_ratio", symbol, decision_time, result, value, lookback, len(ranges), "current_range_vs_prior_mean")
+
+
+def close_location_factor(result: ProviderResult, *, symbol: str, decision_time: str, lookback: int = 20) -> FactorOutput:
+    """Latest close location inside its daily high-low range, scaled to [-1, 1]."""
+    rows = _rows(result)
+    value = None
+    if rows:
+        row = rows[-1]
+        high = _number(row, "high", "High")
+        low = _number(row, "low", "Low")
+        close = _number(row, "close", "Close")
+        if high is not None and low is not None and close is not None and high > low:
+            value = 2.0 * (close - low) / (high - low) - 1.0
+    return _output("close_location", symbol, decision_time, result, value, lookback, len(rows), "close_position_in_daily_range")
+
 FACTOR_REGISTRY: dict[str, Callable[..., FactorOutput]] = {
     "momentum": momentum_factor,
     "volatility": volatility_factor,
     "trend": trend_factor,
     "volume_ratio": volume_ratio_factor,
+    "close_to_high": close_to_high_factor,
+    "close_to_low": close_to_low_factor,
+    "range_ratio": range_ratio_factor,
+    "close_location": close_location_factor,
 }
 
 def compute_factor(name: str, result: ProviderResult, *, symbol: str, decision_time: str, lookback: int = 20) -> FactorOutput:
