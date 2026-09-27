@@ -44,7 +44,7 @@ def test_later_revision_does_not_hide_original_at_1600(tmp_path):
     result = build_local_factor_rows(store, "300308", lookback=20)
 
     assert result
-    assert result[0].source_event_time == "2026-01-21T15:00:00+08:00"
+    assert result[0].source_event_time == "2026-02-02T15:00:00+08:00"
     assert result[0].label == 1
 
 
