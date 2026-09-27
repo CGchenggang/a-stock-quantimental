@@ -4,6 +4,7 @@ from math import sqrt
 from typing import Any
 from .legacy_provider import provider_result_from_legacy_payload
 from .providers import MarketProvider, ProviderResult, pit_admissible
+from ..data_quality import summarize_pit
 
 def _std(values: list[float]) -> float | None:
     if len(values) < 2: return None
@@ -74,12 +75,15 @@ class LegacyMarketInputs:
             "sector_dispersion": dispersion, "limit_pressure": breadth["limit_pressure"],
             "liquidity": None,
         }
+        provenance = {"index": index, "quote": market["quote"], "sector": sector, "turnover": turnover}
+        data_quality = summarize_pit(provenance.values(), decision_time) if decision_time is not None else None
         return {
             "inputs": inputs,
-            "provenance": {"index": index, "quote": market["quote"], "sector": sector, "turnover": turnover},
+            "provenance": provenance,
             "proxy_fields": ["breadth", "limit_pressure", "index_trend", "sector_dispersion"],
             "missing_fields": [k for k, v in inputs.items() if v is None],
             "missing_reasons": {
                 "liquidity": "no PIT-complete dedicated liquidity history is currently migrated"
             } if inputs["liquidity"] is None else {},
+            "data_quality": data_quality.as_dict() if data_quality is not None else None,
         }
