@@ -93,7 +93,9 @@ def _load_history(input_path: Path | None) -> tuple[pd.DataFrame, str, str]:
 
 
 def _build_intervals(
-    df: pd.DataFrame, source: str, source_type: str
+    df: pd.DataFrame,
+    source: str = "test",
+    source_type: str = "test",
 ) -> pd.DataFrame:
     columns = [
         "symbol",
