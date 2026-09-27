@@ -24,6 +24,9 @@ class MarketProvider(ABC):
     @abstractmethod
     def daily(self, symbol: str, start: str, end: str) -> ProviderResult: ...
 
+    def intraday(self, symbol: str, scale: int = 5, datalen: int = 20) -> ProviderResult:
+        raise NotImplementedError("intraday provider is not configured")
+
     def health(self) -> dict[str, Any]:
         return {"provider": self.name, "status": "UNKNOWN"}
 
