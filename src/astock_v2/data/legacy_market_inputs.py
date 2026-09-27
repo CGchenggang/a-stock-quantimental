@@ -140,7 +140,6 @@ class LegacyMarketInputs:
                 "limit_pressure",
                 "index_trend",
                 "sector_dispersion",
-                "volatility_z",
             ],
             "missing_fields": [key for key, value in inputs.items() if value is None],
         }
