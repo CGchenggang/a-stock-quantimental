@@ -37,12 +37,14 @@ def legacy_intraday_result(
     payload: dict[str, Any],
     *,
     available_time: str,
+    fetched_at: str | None = None,
 ) -> ProviderResult:
-    """Adapt V1 intraday output; granularity remains an explicit caller contract."""
+    """Adapt V1 intraday output; fetch time may come from the adapter boundary."""
     result = provider_result_from_legacy_payload(
         payload,
         source_type="legacy_intraday_provider",
         available_time=available_time,
+        fetched_at=fetched_at,
     )
     if not isinstance(result.data.get("klines"), list):
         raise ValueError("legacy intraday payload requires klines list")
