@@ -95,7 +95,7 @@ class LegacyMarketProvider(MarketProvider):
         return legacy_daily_result(payload, available_time=_now_iso())
 
 
-    def intraday(self, symbol: str, scale: int = 5, datalen: int = 20) -> ProviderResult:
+    def sector_board(self) -> ProviderResult:\n        if self._sector_fetcher is None:\n            raise NotImplementedError("legacy sector fetcher is not configured")\n        payload = self._sector_fetcher()\n        if not isinstance(payload, dict):\n            raise TypeError("legacy sector fetcher must return dict")\n        available = payload.get("ts") or _now_iso()\n        return legacy_daily_result(payload, available_time=available)\n\n    def intraday(self, symbol: str, scale: int = 5, datalen: int = 20) -> ProviderResult:
         if self._intraday_fetcher is None:
             raise NotImplementedError("legacy intraday fetcher is not configured")
         if scale not in {1, 5, 15, 30, 60}:
