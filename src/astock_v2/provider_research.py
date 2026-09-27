@@ -33,7 +33,7 @@ def _health(results: list[ProviderResult]) -> dict[str, Any]:
         "fallback_ratio": fallback / total if total else 1.0,
         "warning_count": warning_count,
         "available_times": available,
-        "realtime_admissible": all(
+        "availability_complete": all(
             result.available_time is not None and not result.fallback
             for result in results
         ) if results else False,
