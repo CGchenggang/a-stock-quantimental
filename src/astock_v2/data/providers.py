@@ -27,7 +27,16 @@ class MarketProvider(ABC):
     def intraday(self, symbol: str, scale: int = 5, datalen: int = 20) -> ProviderResult:
         raise NotImplementedError("intraday provider is not configured")
 
-    def index_daily(self, symbol: str) -> ProviderResult:\n        raise NotImplementedError("index provider is not configured")\n\n    def sector_board(self) -> ProviderResult:\n        raise NotImplementedError("sector board provider is not configured")\n\n    def health(self) -> dict[str, Any]:
+    def index_daily(self, symbol: str) -> ProviderResult:
+        raise NotImplementedError("index provider is not configured")
+
+    def sector_board(self) -> ProviderResult:
+        raise NotImplementedError("sector board provider is not configured")
+
+    def market_turnover(self) -> ProviderResult:
+        raise NotImplementedError("market turnover provider is not configured")
+
+    def health(self) -> dict[str, Any]:
         return {"provider": self.name, "status": "UNKNOWN"}
 
 class NullProvider(MarketProvider):
