@@ -58,14 +58,14 @@ class LegacyMarketProvider(MarketProvider):
         requested = {_clean_symbol(s) for s in symbols}
         selected: dict[str, Any] = {}
         for key, value in quotes.items():
-            if _clean_symbol(str(key)) in requested:
+            if select_all or _clean_symbol(str(key)) in requested:
                 selected[_clean_symbol(str(key))] = value
 
         return ProviderResult(
             data={
                 "ok": bool(payload.get("ok", False)),
                 "quotes": selected,
-                "requested_symbols": sorted(requested),
+                "requested_symbols": sorted(requested) if requested else ["__ALL__"],
                 "legacy_payload": payload,
             },
             source=result.source,
