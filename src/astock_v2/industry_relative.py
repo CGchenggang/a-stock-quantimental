@@ -1,23 +1,13 @@
-"""PIT-safe stock-relative-to-industry return features for local research.
+"""PIT-safe stock-relative-to-SW1-industry return features for local research.
 
 The industry benchmark is an equal-weight portfolio of locally available stock
 daily returns whose SW level-1 membership is admissible at the decision time.
-The target stock is excluded from its own benchmark to avoid mechanical
-self-inclusion. A missing or singleton industry therefore produces no factor
-rather than a fabricated value.
+The target stock is excluded from its own benchmark. A missing or singleton
+industry therefore produces no factor rather than a fabricated value.
 
-For every decision date t:
-- the target's current SW1 membership must cover t and be available by t;
-- each historical member assignment used in the lookback must have been
-  available by t;
-- only stock daily records admissible by t are used;
-- 5/20-day industry returns are computed from the benchmark's compounded close
-  returns over common dates;
-- the factor is stock return minus industry return.
-
-This is deliberately a local-research primitive. The quality of the resulting
-industry benchmark depends on the supplied stock universe being sufficiently
-broad.
+At decision time t, historical membership assignments are evaluated using only
+information available by t. Daily member returns are then averaged cross-
+sectionally and compounded over the requested lookback horizon.
 """
 from __future__ import annotations
 
@@ -62,17 +52,30 @@ def _admissible_daily(
     return selected
 
 
-def _industry_for_day(
-    memberships,
-    symbol: str,
-    day: str,
-    decision_time: str,
-):
-    event_time = datetime.fromisoformat(
-        f"{day}T00:00:00+00:00"
+def _industry_for_day(memberships, symbol: str, day: str, decision_time: str):
+    event_time = datetime.fromisoformat(f"{day}T00:00:00+00:00")
+    return admissible_industry(
+        memberships,
+        symbol,
+        event_time,
+        _parse_aware(decision_time),
     )
-    decision = _parse_aware(decision_time)
-    return admissible_industry(memberships, symbol, event_time, decision)
+
+
+def _daily_returns(
+    records: tuple[HistoricalRecord, ...],
+    decision_time: str,
+) -> dict[str, float]:
+    """Return close-to-close returns for records admissible at one decision time."""
+    selected = _admissible_daily(records, decision_time)
+    days = sorted(selected)
+    result: dict[str, float] = {}
+    for previous_day, day in zip(days, days[1:]):
+        previous_close = float(selected[previous_day].value["close"])
+        close = float(selected[day].value["close"])
+        if previous_close > 0 and close > 0:
+            result[day] = close / previous_close - 1.0
+    return result
 
 
 def build_stock_industry_relative_context(
@@ -92,18 +95,10 @@ def build_stock_industry_relative_context(
         symbols = (stock_symbol, *symbols)
 
     memberships = load_industry_memberships(membership_path)
-
     all_records = {
         symbol: store.read_records("cn_stock_daily", symbol)
         for symbol in symbols
     }
-    daily = {
-        symbol: _admissible_daily(records, "")
-        for symbol, records in all_records.items()
-    }
-
-    # Build raw day -> records once. Admissibility depends on the decision date,
-    # so the final selection is recomputed for each decision boundary.
     event_days = sorted(
         {
             record.event_time[:10]
@@ -118,11 +113,8 @@ def build_stock_industry_relative_context(
         decision_time = f"{day}T16:00:00+08:00"
         _parse_aware(decision_time)
 
-        current_records = {
-            symbol: _admissible_daily(records, decision_time).get(day)
-            for symbol, records in all_records.items()
-        }
-        target_current = current_records.get(stock_symbol)
+        target_daily = _admissible_daily(all_records[stock_symbol], decision_time)
+        target_current = target_daily.get(day)
         if target_current is None:
             continue
 
@@ -132,68 +124,54 @@ def build_stock_industry_relative_context(
         if target_membership is None:
             continue
 
-        # For each historical day, use the industry membership information
-        # available by today's decision boundary. This prevents future
-        # revisions from entering the current factor while allowing known
-        # historical classification changes to be used.
-        benchmark_closes: list[float] = []
-        target_closes: list[float] = []
-        benchmark_days: list[str] = []
-        for prior_day in event_days[: pos + 1]:
-            target_record = _admissible_daily(
-                all_records[stock_symbol], decision_time
-            ).get(prior_day)
-            if target_record is None:
-                continue
+        target_returns = _daily_returns(
+            all_records[stock_symbol], decision_time
+        )
 
-            members: list[tuple[float, float]] = []
-            for symbol in symbols:
-                if symbol == stock_symbol:
-                    continue
-                record = _admissible_daily(
-                    all_records[symbol], decision_time
-                ).get(prior_day)
-                if record is None:
-                    continue
+        # The industry benchmark is reconstructed from member-level daily
+        # returns. Membership is evaluated at today's decision boundary, so no
+        # classification information unavailable at t can enter the factor.
+        industry_returns_by_day: dict[str, list[float]] = {}
+        for symbol in symbols:
+            if symbol == stock_symbol:
+                continue
+            symbol_records = all_records[symbol]
+            symbol_returns = _daily_returns(symbol_records, decision_time)
+            symbol_daily = _admissible_daily(symbol_records, decision_time)
+            for return_day, stock_return in symbol_returns.items():
                 membership = _industry_for_day(
-                    memberships, symbol, prior_day, decision_time
+                    memberships, symbol, return_day, decision_time
                 )
-                if membership is None or membership.industry_code != target_membership.industry_code:
+                if membership is None:
                     continue
-                close = float(record.value["close"])
-                if close <= 0:
+                if membership.industry_code != target_membership.industry_code:
                     continue
-                members.append((close, 1.0))
+                industry_returns_by_day.setdefault(return_day, []).append(stock_return)
 
-            if not members:
-                continue
-
-            target_close = float(target_record.value["close"])
-            if target_close <= 0:
-                continue
-
-            # Store the target close and the equal-weight benchmark close proxy.
-            # For return calculations we instead use member-level daily returns
-            # below; this block only records dates with a valid benchmark.
-            target_closes.append(target_close)
-            benchmark_closes.append(sum(v for v, _ in members) / len(members))
-            benchmark_days.append(prior_day)
-
-        if len(benchmark_days) < lookback + 1:
+        common_days = [
+            d for d in sorted(target_returns)
+            if d in industry_returns_by_day and industry_returns_by_day[d]
+        ]
+        if len(common_days) < lookback:
             continue
 
-        # Reconstruct daily returns from the benchmark proxy over the common
-        # dates. Only consecutive observations in the common benchmark sample
-        # are used, so missing members never become zero-return placeholders.
-        target_window = target_closes[-(lookback + 1):]
-        benchmark_window = benchmark_closes[-(lookback + 1):]
-        if any(v <= 0 for v in target_window + benchmark_window):
-            continue
+        recent_days = common_days[-lookback:]
+        target_recent = [target_returns[d] for d in recent_days]
+        industry_recent = [
+            sum(industry_returns_by_day[d]) / len(industry_returns_by_day[d])
+            for d in recent_days
+        ]
 
-        target_return_5 = target_window[-1] / target_window[-6] - 1.0
-        industry_return_5 = benchmark_window[-1] / benchmark_window[-6] - 1.0
-        target_return_20 = target_window[-1] / target_window[-21] - 1.0
-        industry_return_20 = benchmark_window[-1] / benchmark_window[-21] - 1.0
+        def compounded(values: list[float]) -> float:
+            result = 1.0
+            for value in values:
+                result *= 1.0 + value
+            return result - 1.0
+
+        target_return_20 = compounded(target_recent)
+        industry_return_20 = compounded(industry_recent)
+        target_return_5 = compounded(target_recent[-5:])
+        industry_return_5 = compounded(industry_recent[-5:])
 
         rows.append(
             IndustryRelativeContextRow(
