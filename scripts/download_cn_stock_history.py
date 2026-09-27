@@ -49,23 +49,59 @@ def download_symbol(symbol: str, start: str, end: str, root: str, adjust: str = 
 
     previous_proxy = _clear_proxy_env() if no_proxy else None
     try:
-        df = ak.stock_zh_a_hist(
-            symbol=symbol,
-            period="daily",
-            start_date=start,
-            end_date=end,
-            adjust=adjust,
-        )
+        try:
+            df = ak.stock_zh_a_hist(
+                symbol=symbol,
+                period="daily",
+                start_date=start,
+                end_date=end,
+                adjust=adjust,
+            )
+            source_name = "akshare:stock_zh_a_hist"
+        except Exception as em_error:
+            # Tencent is an independent A-share daily source in AKShare.
+            # Use the exchange-qualified symbol expected by the Tencent endpoint.
+            tx_symbol = ("sh" if symbol.startswith(("6", "68")) else "sz") + symbol
+            try:
+                df = ak.stock_zh_a_hist_tx(
+                    symbol=tx_symbol,
+                    start_date=start,
+                    end_date=end,
+                    adjust=adjust,
+                )
+                source_name = "akshare:stock_zh_a_hist_tx"
+            except Exception as tx_error:
+                raise RuntimeError(
+                    "Both Eastmoney and Tencent historical sources failed. "
+                    f"Eastmoney={type(em_error).__name__}: {em_error}; "
+                    f"Tencent={type(tx_error).__name__}: {tx_error}"
+                ) from tx_error
     finally:
         if previous_proxy is not None:
             _restore_proxy_env(previous_proxy)
     if df is None or df.empty:
         return 0
 
-    required = {"日期", "股票代码", "开盘", "收盘", "最高", "最低", "成交量", "成交额"}
+    required = {"日期", "开盘", "收盘", "最高", "最低"}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"AKShare response missing columns: {sorted(missing)}")
+    if "股票代码" not in df.columns:
+        df["股票代码"] = symbol
+    if "成交量" not in df.columns:
+        if "成交量" in df.columns:
+            df["成交量"] = df["成交量"]
+        elif "volume" in df.columns:
+            df["成交量"] = df["volume"]
+        else:
+            df["成交量"] = 0.0
+    if "成交额" not in df.columns:
+        if "成交额" in df.columns:
+            df["成交额"] = df["成交额"]
+        elif "amount" in df.columns:
+            df["成交额"] = df["amount"]
+        else:
+            df["成交额"] = 0.0
 
     # The source documents that same-day daily data should be fetched after close.
     # We model a conservative, explicit availability assumption of 16:00 Asia/Shanghai.
@@ -79,7 +115,7 @@ def download_symbol(symbol: str, start: str, end: str, root: str, adjust: str = 
             symbol=str(row["股票代码"]).zfill(6),
             event_time=event_time,
             available_time=available_time,
-            source="akshare:stock_zh_a_hist",
+            source=source_name,
             source_type="historical_vendor",
             value={
                 "date": date,
