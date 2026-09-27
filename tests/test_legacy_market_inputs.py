@@ -24,6 +24,7 @@ def _provider():
             "source": "legacy_sector",
             "ts": "2026-09-27T04:00:00+00:00",
         },
+        turnover_fetcher=lambda: {"turnover_z": None, "pit_ready": False, "amount": 100.0},
         index_fetcher=lambda symbol: {
             "ok": True,
             "symbol": symbol,
@@ -80,3 +81,10 @@ def test_regime_bridge_does_not_fabricate_missing_inputs():
     regime = classify_regime(result["inputs"])
     assert regime["regime"] == "UNKNOWN"
     assert regime["confidence"] == 0.0
+
+
+def test_regime_inputs_use_index_volatility_but_not_non_pit_turnover():
+    provider = _provider()
+    result = LegacyMarketInputs(provider).regime_inputs()
+    assert result["inputs"]["volatility_z"] is None
+    assert result["inputs"]["turnover_z"] is None
