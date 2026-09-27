@@ -57,18 +57,20 @@ def build_local_factor_rows(
     rows: list[LocalFactorRow] = []
     for index in range(lookback, len(event_times) - 1):
         event_time = event_times[index]
-        decision_candidates = [r for r in by_event[event_time] if r.available_time]
-        if not decision_candidates:
-            continue
-
-        # The decision boundary is the latest available revision for the
-        # current event. A future revision cannot replace an earlier one in
-        # the factor input.
-        current = max(decision_candidates, key=lambda r: r.revision)
-        decision_time = current.available_time
-        if not decision_time:
-            continue
+        # Daily A-share research uses a fixed post-close decision boundary.
+        # This is the same explicit 16:00 Asia/Shanghai availability
+        # convention used by the downloader, not a fetch-time assumption.
+        decision_time = f"{event_time[:10]}T16:00:00+08:00"
         _parse_aware(decision_time)
+
+        current_candidates = [
+            record
+            for record in by_event[event_time]
+            if record.admissible_at(decision_time)
+        ]
+        if not current_candidates:
+            continue
+        current = max(current_candidates, key=lambda record: record.revision)
 
         admitted: list[HistoricalRecord] = []
         for prior_event in event_times[: index + 1]:
