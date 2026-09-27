@@ -39,7 +39,7 @@ def test_local_factor_rows_use_only_pit_admissible_revision(tmp_path):
         records.append(rec(day, close))
     # A later revision for 2026-01-20 is unavailable at that day's 16:00
     # decision, so the original revision must remain visible to the factor.
-    records.append(rec("2026-01-20", 99, revision=1, available_hour="18:00:00"))
+    records.append(HistoricalRecord(\n        symbol="300308", event_time="2026-01-20T15:00:00+08:00",\n        available_time="2026-01-22T18:00:00+08:00", source="test",\n        source_type="historical", value={"date": "2026-01-20", "open": 99, "close": 99,\n        "high": 99, "low": 99, "volume": 1000, "amount": 100000}, revision=1))
     store.append_records("cn_stock_daily", records)
 
     rows = build_local_factor_rows(store, "300308", lookback=20)
