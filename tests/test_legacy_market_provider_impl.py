@@ -84,3 +84,51 @@ def test_daily_provider_rejects_v1_payload_beyond_requested_end_date():
         assert "beyond requested end date" in str(exc)
     else:
         raise AssertionError("future data must not cross the requested historical boundary")
+
+
+def test_intraday_provider_preserves_scale_and_datalen():
+    payload = {
+        "ok": True,
+        "code": "000001",
+        "scale": 5,
+        "klines": [
+            {"time": "2026-09-27T09:35:00+08:00", "open": 10.0, "high": 10.1, "low": 9.9, "close": 10.05, "volume": 1000}
+        ],
+        "count": 1,
+        "source": "legacy_sina_minute",
+        "fetched_at": "2026-09-27T01:36:00+00:00",
+    }
+    calls = []
+    provider = LegacyMarketProvider(
+        realtime_fetcher=lambda: {},
+        daily_fetcher=lambda symbol, days: {},
+        intraday_fetcher=lambda symbol, scale, datalen: (
+            calls.append((symbol, scale, datalen)) or payload
+        ),
+    )
+    result = provider.intraday("000001", scale=5, datalen=20)
+    assert calls == [("000001", 5, 20)]
+    assert result.data is payload
+    assert result.source_type == "legacy_intraday_provider"
+    assert result.data["scale"] == 5
+
+
+def test_intraday_provider_rejects_invalid_scale_and_datalen():
+    provider = LegacyMarketProvider(
+        realtime_fetcher=lambda: {},
+        daily_fetcher=lambda symbol, days: {},
+        intraday_fetcher=lambda symbol, scale, datalen: {},
+    )
+    for scale in [0, 2, 10, 120]:
+        try:
+            provider.intraday("000001", scale=scale)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid scale must be rejected")
+    try:
+        provider.intraday("000001", datalen=0)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("non-positive datalen must be rejected")
