@@ -108,7 +108,7 @@ class LegacyMarketProvider(MarketProvider):
         if not isinstance(payload, dict):
             raise TypeError("legacy index fetcher must return dict")
         available = payload.get("fetched_at") or payload.get("ts") or _now_iso()
-        return legacy_provider_result(payload, source_type="legacy_index_provider", available_time=available)
+        return provider_result_from_legacy_payload(payload, source_type="legacy_index_provider", available_time=available, fetched_at=available)
 
     def sector_board(self) -> ProviderResult:
         if self._sector_fetcher is None:
