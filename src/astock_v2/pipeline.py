@@ -46,7 +46,7 @@ def run_walk_forward_probability(
         )
         models.append(model)
         for offset, row in enumerate(window.test):
-            p=model.predict(tuple(row.values()))
+            p=model.predict(tuple(row[name] for name in factor_names))
             predictions.append(OOSPrediction(window.test_start+offset,p,int(labels[window.test_start+offset])))
     report = calibration_report(
         [item.probability for item in predictions],
