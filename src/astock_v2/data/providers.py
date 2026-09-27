@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 @dataclass(frozen=True)
@@ -13,6 +14,21 @@ class ProviderResult:
     latency_ms: float | None = None
     fallback: bool = False
     warnings: list[str] = field(default_factory=list)
+
+def normalize_time(value: str) -> str:
+    dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
+
+def pit_admissible(result: ProviderResult, decision_time: str) -> bool:
+    """Return True only when the provider result is usable at decision_time."""
+    if not result.available_time or result.fallback:
+        return False
+    try:
+        return normalize_time(result.available_time) <= normalize_time(decision_time)
+    except (TypeError, ValueError):
+        return False
 
 class MarketProvider(ABC):
     name: str
