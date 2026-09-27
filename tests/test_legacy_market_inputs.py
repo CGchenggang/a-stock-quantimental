@@ -61,3 +61,14 @@ def test_provider_bridges_index_and_sector():
     assert index.data["above_ma20"] is True
     assert sector.source_type == "legacy_sector_provider"
     assert len(sector.data["sectors"]) == 2
+
+
+def test_regime_inputs_keep_missing_p3_fields_explicit():
+    result = LegacyMarketInputs(_provider()).regime_inputs()
+    assert result["inputs"]["breadth"] == (2 - 1) / 3
+    assert result["inputs"]["turnover_z"] is None
+    assert result["inputs"]["volatility_z"] is None
+    assert result["inputs"]["liquidity"] is None
+    assert set(result["missing_fields"]) == {"turnover_z", "volatility_z", "liquidity"}
+    assert "index" in result["provenance"]
+    assert "sector" in result["provenance"]
