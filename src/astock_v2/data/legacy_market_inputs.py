@@ -1,10 +1,9 @@
 """Adapters for V1 market-wide inputs consumed by the V2 regime layer."""
 from __future__ import annotations
-from datetime import datetime, timezone
 from math import sqrt
 from typing import Any
 from .legacy_provider import provider_result_from_legacy_payload
-from .providers import MarketProvider, ProviderResult
+from .providers import MarketProvider, ProviderResult, pit_admissible
 
 def _std(values: list[float]) -> float | None:
     if len(values) < 2: return None
@@ -16,35 +15,23 @@ def _breadth_from_quotes(quotes: dict[str, Any]) -> dict[str, float | int | None
     up = sum(float(r.get("pct") or 0) > 0 for r in rows)
     down = sum(float(r.get("pct") or 0) < 0 for r in rows)
     total = len(rows)
+    limit_up = sum(float(r.get("pct") or 0) >= 9.8 for r in rows)
+    limit_down = sum(float(r.get("pct") or 0) <= -9.8 for r in rows)
     return {
         "sample_size": total, "advancers": up, "decliners": down,
-        "unchanged": total - up - down,
-        "breadth": (up - down) / total if total else None,
-        "limit_up": sum(float(r.get("pct") or 0) >= 9.8 for r in rows),
-        "limit_down": sum(float(r.get("pct") or 0) <= -9.8 for r in rows),
-        "limit_pressure": (sum(float(r.get("pct") or 0) >= 9.8 for r in rows) - sum(float(r.get("pct") or 0) <= -9.8 for r in rows)) / total if total else None,
+        "unchanged": total - up - down, "breadth": (up - down) / total if total else None,
+        "limit_up": limit_up, "limit_down": limit_down,
+        "limit_pressure": (limit_up - limit_down) / total if total else None,
     }
 
 class LegacyMarketInputs:
-    """Build explicit, labeled V2 market-regime inputs from legacy payloads."""
+    """Build explicit, labeled V2 market-regime inputs from legacy market payloads."""
     def __init__(self, provider: MarketProvider): self.provider = provider
-
-    @staticmethod
-    def _pit_admissible(result: ProviderResult, decision_time: str) -> bool:
-        if not result.available_time or result.fallback: return False
-        try:
-            left = datetime.fromisoformat(str(result.available_time).replace("Z", "+00:00"))
-            right = datetime.fromisoformat(str(decision_time).replace("Z", "+00:00"))
-            if left.tzinfo is None: left = left.replace(tzinfo=timezone.utc)
-            if right.tzinfo is None: right = right.replace(tzinfo=timezone.utc)
-            return left <= right
-        except (TypeError, ValueError):
-            return False
 
     def snapshot(self, decision_time: str | None = None) -> dict[str, Any]:
         quote = self.provider.quote([])
         data = quote.data if isinstance(quote.data, dict) else {}
-        admissible = decision_time is None or self._pit_admissible(quote, decision_time)
+        admissible = decision_time is None or pit_admissible(quote, decision_time)
         breadth = _breadth_from_quotes(data.get("quotes") or {}) if admissible else _breadth_from_quotes({})
         return {"quote": quote, "breadth": {
             **breadth, "source": quote.source, "proxy": True,
@@ -53,7 +40,8 @@ class LegacyMarketInputs:
 
     def sector_dispersion(self, payload: dict[str, Any]) -> ProviderResult:
         values = [float(r["pct"]) for r in payload.get("sectors", []) if isinstance(r, dict) and r.get("pct") is not None]
-        normalized = {"sector_count": len(values), "pct_std": _std(values), "sector_dispersion": _std(values), "proxy": True}
+        dispersion = _std(values)
+        normalized = {"sector_count": len(values), "pct_std": dispersion, "sector_dispersion": dispersion, "proxy": True}
         return provider_result_from_legacy_payload(
             {"source": payload.get("source", "legacy_sector_board"), "fetched_at": payload.get("ts"), "data": normalized},
             source_type="legacy_sector_provider", available_time=payload.get("ts"))
@@ -62,14 +50,15 @@ class LegacyMarketInputs:
         market = self.snapshot(decision_time=decision_time)
         index = self.provider.index_daily(index_symbol)
         sector = self.provider.sector_board()
-        try: turnover = self.provider.market_turnover()
+        try:
+            turnover = self.provider.market_turnover()
         except NotImplementedError:
             turnover = ProviderResult(data={"turnover_z": None, "pit_ready": False}, source="unavailable",
                 source_type="missing", fetched_at="", available_time=None,
                 warnings=["market turnover provider is not configured"])
-        ia = decision_time is None or self._pit_admissible(index, decision_time)
-        sa = decision_time is None or self._pit_admissible(sector, decision_time)
-        ta = decision_time is None or self._pit_admissible(turnover, decision_time)
+        ia = decision_time is None or pit_admissible(index, decision_time)
+        sa = decision_time is None or pit_admissible(sector, decision_time)
+        ta = decision_time is None or pit_admissible(turnover, decision_time)
         index_data = index.data if ia and isinstance(index.data, dict) else {}
         pct = float(index_data.get("pct") or 0.0)
         above = index_data.get("above_ma20")
@@ -90,4 +79,7 @@ class LegacyMarketInputs:
             "provenance": {"index": index, "quote": market["quote"], "sector": sector, "turnover": turnover},
             "proxy_fields": ["breadth", "limit_pressure", "index_trend", "sector_dispersion"],
             "missing_fields": [k for k, v in inputs.items() if v is None],
+            "missing_reasons": {
+                "liquidity": "no PIT-complete dedicated liquidity history is currently migrated"
+            } if inputs["liquidity"] is None else {},
         }
