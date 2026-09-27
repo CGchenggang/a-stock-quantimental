@@ -72,6 +72,12 @@ def build_index_market_context(
         event_time = event_times[index]
         decision_time = f"{event_time[:10]}T16:00:00+08:00"
         _parse_aware(decision_time)
+        current_candidates = [
+            record for record in by_event[event_time]
+            if record.admissible_at(decision_time)
+        ]
+        if not current_candidates:
+            continue
         admitted = []
         for prior_event in event_times[: index + 1]:
             candidates = [
