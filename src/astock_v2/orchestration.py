@@ -9,6 +9,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from .agent.orchestrator import ResearchPacket
+
 
 def _iso(value: str) -> str:
     dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
@@ -23,12 +25,7 @@ def legacy_snapshot_to_v2(
     source: str,
     available_time: str | None = None,
 ) -> dict[str, Any]:
-    """Normalize a legacy collector result without upgrading its freshness claim.
-
-    available_time must be supplied by the V2 orchestration layer when the
-    snapshot becomes available. A legacy generated_at value is metadata only
-    and is never silently treated as a decision-time observation.
-    """
+    """Normalize a legacy collector result without upgrading its freshness claim."""
     if not isinstance(snapshot, dict):
         raise TypeError("legacy snapshot must be a dict")
     if not source:
@@ -81,3 +78,47 @@ def collect_legacy_outputs(
         "outputs": outputs,
         "legacy_fallback": bool(outputs),
     }
+
+
+def legacy_snapshot_to_research_packet(
+    snapshot: dict[str, Any],
+    *,
+    symbol: str | None = None,
+    decision_time: str | None = None,
+    source: str = "legacy_snapshot",
+) -> ResearchPacket:
+    """Wrap a legacy snapshot as research context without inventing model outputs.
+
+    The resulting packet intentionally leaves factors/model/risk empty. Legacy
+    observations are evidence context only until their field-level PIT contracts
+    are migrated.
+    """
+    wrapped = legacy_snapshot_to_v2(snapshot, source=source)
+    stocks = snapshot.get("stocks") or snapshot.get("portfolio_checkup") or []
+    first = stocks[0] if isinstance(stocks, list) and stocks else {}
+    inferred_symbol = symbol or first.get("ticker") or first.get("symbol") or "UNKNOWN"
+    decision = decision_time or wrapped.get("available_time") or wrapped.get("generated_at") or "UNKNOWN"
+    quality = snapshot.get("data_quality") or {}
+    completeness = quality.get("completeness")
+    score = float(completeness) if isinstance(completeness, (int, float)) else 0.0
+
+    return ResearchPacket(
+        symbol=str(inferred_symbol),
+        decision_time=str(decision),
+        market={
+            "legacy_snapshot": snapshot.get("market_env"),
+            "source": source,
+            "realtime_admissible": False,
+        },
+        stock={"legacy_context": first, "legacy_snapshot_source": source},
+        factors={},
+        events=snapshot.get("events", []) if isinstance(snapshot.get("events"), list) else [],
+        model={},
+        risk={"flags": ["LEGACY_COMPATIBILITY_INPUT"]},
+        data_quality={
+            "score": score,
+            "source": source,
+            "freshness_status": wrapped["freshness_status"],
+            "realtime_admissible": False,
+        },
+    )
