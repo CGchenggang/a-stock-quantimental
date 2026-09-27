@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from .legacy_market_provider import legacy_daily_result, legacy_quote_result, legacy_intraday_result, legacy_sector_result
+from .legacy_provider import provider_result_from_legacy_payload
 from .providers import MarketProvider, ProviderResult
 
 
@@ -33,10 +34,14 @@ class LegacyMarketProvider(MarketProvider):
         realtime_fetcher: Callable[[], dict[str, Any]],
         daily_fetcher: Callable[[str, int], dict[str, Any]],
         intraday_fetcher: Callable[[str, int, int], dict[str, Any]] | None = None,
+        sector_fetcher: Callable[[], dict[str, Any]] | None = None,
+        index_fetcher: Callable[[str], dict[str, Any]] | None = None,
     ) -> None:
         self._realtime_fetcher = realtime_fetcher
         self._daily_fetcher = daily_fetcher
         self._intraday_fetcher = intraday_fetcher
+        self._sector_fetcher = sector_fetcher
+        self._index_fetcher = index_fetcher
 
     def quote(self, symbols: list[str]) -> ProviderResult:
         payload = self._realtime_fetcher()
