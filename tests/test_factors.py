@@ -51,3 +51,16 @@ def test_decorrelation_retains_only_one_highly_correlated_series():
     from astock_v2.factors import decorrelate_factor_histories
     selected=decorrelate_factor_histories({"a":[1,2,3,4],"b":[2,4,6,8],"c":[4,1,3,2]},threshold=0.9)
     assert selected==("a","c")
+
+
+def test_ohlcv_candidate_factors_are_deterministic():
+    data = []
+    for i in range(21):
+        data.append({"close": 100 + i, "high": 102 + i, "low": 98 + i, "volume": 1000 + i * 10})
+    high = compute_factor("close_to_high", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
+    low = compute_factor("close_to_low", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
+    rr = compute_factor("range_ratio", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
+    loc = compute_factor("close_location", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
+    assert high.value is not None and low.value is not None
+    assert rr.value == 0.0
+    assert loc.value == 0.0
