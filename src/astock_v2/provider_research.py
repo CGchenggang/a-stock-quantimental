@@ -6,6 +6,8 @@ from typing import Any
 
 from .agent.orchestrator import ResearchPacket
 from .data.providers import MarketProvider, ProviderResult
+from .data.legacy_market_inputs import LegacyMarketInputs
+from .regime import classify_regime
 
 
 def _iso(value: str) -> str:
@@ -56,7 +58,9 @@ def build_research_packet_from_provider(
     decision = _iso(decision_time)
     quote = provider.quote([symbol])
     daily = provider.daily(symbol, daily_start, daily_end)
-    health = _health([quote, daily])
+    market_inputs = LegacyMarketInputs(provider).regime_inputs()
+    regime_result = classify_regime(market_inputs["inputs"])
+    health = _health([quote, daily, market_inputs["provenance"]["index"], market_inputs["provenance"]["sector"]])
 
     return ResearchPacket(
         symbol=symbol,
@@ -65,6 +69,11 @@ def build_research_packet_from_provider(
             "quotes": quote.data.get("quotes", {}) if isinstance(quote.data, dict) else {},
             "source": quote.source,
             "available_time": quote.available_time,
+            "regime_inputs": market_inputs["inputs"],
+            "regime": regime_result,
+            "regime_provenance": market_inputs["provenance"],
+            "regime_proxy_fields": market_inputs["proxy_fields"],
+            "regime_missing_fields": market_inputs["missing_fields"],
         },
         stock={
             "daily": daily.data,
