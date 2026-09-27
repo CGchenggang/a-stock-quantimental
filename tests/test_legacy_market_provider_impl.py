@@ -41,3 +41,25 @@ def test_legacy_market_provider_wraps_v1_daily_and_uses_requested_window():
     assert calls == [("000001", 7)]
     assert result.data["latest"]["close"] == 10.0
     assert result.source_type == "legacy_daily_provider"
+
+
+def test_quote_provider_scopes_full_market_snapshot_to_requested_symbols():
+    payload = {
+        "ok": True,
+        "quotes": {
+            "000001": {"code": "000001", "price": 10.2},
+            "600000": {"code": "600000", "price": 8.1},
+            "sz000001": {"code": "000001", "price": 10.2},
+        },
+        "source": "sina_spot",
+        "fetched_at": "2026-09-27T04:00:00+00:00",
+    }
+    provider = LegacyMarketProvider(
+        realtime_fetcher=lambda: payload,
+        daily_fetcher=lambda symbol, days: {},
+    )
+    result = provider.quote(["sh600000"])
+    assert result.data["requested_symbols"] == ["600000"]
+    assert set(result.data["quotes"]) == {"600000"}
+    assert result.data["quotes"]["600000"]["price"] == 8.1
+    assert result.data["legacy_payload"] is payload
