@@ -72,3 +72,11 @@ def test_regime_inputs_keep_missing_p3_fields_explicit():
     assert set(result["missing_fields"]) == {"turnover_z", "volatility_z", "liquidity"}
     assert "index" in result["provenance"]
     assert "sector" in result["provenance"]
+
+
+def test_regime_bridge_does_not_fabricate_missing_inputs():
+    from astock_v2.regime import classify_regime
+    result = LegacyMarketInputs(_provider()).regime_inputs()
+    regime = classify_regime(result["inputs"])
+    assert regime["regime"] == "UNKNOWN"
+    assert regime["confidence"] == 0.0
