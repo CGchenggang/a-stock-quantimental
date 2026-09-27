@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from .legacy_market_provider import legacy_daily_result, legacy_quote_result, legacy_intraday_result
+from .legacy_market_provider import legacy_daily_result, legacy_quote_result, legacy_intraday_result, legacy_sector_result
 from .providers import MarketProvider, ProviderResult
 
 
@@ -95,7 +95,7 @@ class LegacyMarketProvider(MarketProvider):
         return legacy_daily_result(payload, available_time=_now_iso())
 
 
-    def sector_board(self) -> ProviderResult:\n        if self._sector_fetcher is None:\n            raise NotImplementedError("legacy sector fetcher is not configured")\n        payload = self._sector_fetcher()\n        if not isinstance(payload, dict):\n            raise TypeError("legacy sector fetcher must return dict")\n        available = payload.get("ts") or _now_iso()\n        return legacy_daily_result(payload, available_time=available)\n\n    def intraday(self, symbol: str, scale: int = 5, datalen: int = 20) -> ProviderResult:
+    def sector_board(self) -> ProviderResult:\n        if self._sector_fetcher is None:\n            raise NotImplementedError("legacy sector fetcher is not configured")\n        payload = self._sector_fetcher()\n        if not isinstance(payload, dict):\n            raise TypeError("legacy sector fetcher must return dict")\n        available = payload.get("ts") or _now_iso()\n        return legacy_sector_result(payload, available_time=available)\n\n    def intraday(self, symbol: str, scale: int = 5, datalen: int = 20) -> ProviderResult:
         if self._intraday_fetcher is None:
             raise NotImplementedError("legacy intraday fetcher is not configured")
         if scale not in {1, 5, 15, 30, 60}:
