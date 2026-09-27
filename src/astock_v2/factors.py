@@ -55,3 +55,51 @@ def compute_factor(name: str,result: ProviderResult,*,symbol: str,decision_time:
     if name not in FACTOR_REGISTRY: raise ValueError(f"unknown factor: {name}")
     if lookback<=0: raise ValueError("lookback must be positive")
     return FACTOR_REGISTRY[name](result,symbol=symbol,decision_time=decision_time,lookback=lookback)
+
+
+def winsorize(values: Sequence[float], lower: float = 0.05, upper: float = 0.95) -> list[float]:
+    if not values: return []
+    if not 0 <= lower <= upper <= 1: raise ValueError("invalid winsorization bounds")
+    ordered=sorted(float(x) for x in values)
+    def quantile(q: float) -> float:
+        pos=(len(ordered)-1)*q; lo=int(pos); hi=min(lo+1,len(ordered)-1); weight=pos-lo
+        return ordered[lo]*(1-weight)+ordered[hi]*weight
+    lo,hi=quantile(lower),quantile(upper)
+    return [min(max(float(x),lo),hi) for x in values]
+
+
+def zscore(values: Sequence[float]) -> list[float]:
+    if not values: return []
+    avg=mean(values); sd=pstdev(values)
+    return [0.0 for _ in values] if sd == 0 else [(float(x)-avg)/sd for x in values]
+
+
+def pearson_correlation(left: Sequence[float], right: Sequence[float]) -> float:
+    if len(left) != len(right) or not left: raise ValueError("correlation requires equal non-empty series")
+    lx=zscore(left); rx=zscore(right)
+    if all(x == 0 for x in lx) or all(x == 0 for x in rx): return 0.0
+    return sum(a*b for a,b in zip(lx,rx))/len(lx)
+
+
+def normalize_factor_history(values: Sequence[float], *, lower: float = 0.05, upper: float = 0.95) -> list[float]:
+    """Winsorize then z-score a training-scope factor history.
+
+    The caller must provide observations from the intended fitting window only;
+    no future observations are pulled in by this helper.
+    """
+    return zscore(winsorize(values, lower=lower, upper=upper))
+
+
+def decorrelate_factor_histories(histories: Mapping[str, Sequence[float]], *, threshold: float = 0.90) -> tuple[str, ...]:
+    """Greedily retain factors whose training-scope correlation stays below threshold.
+
+    Ordering is explicit and therefore reproducible. This function selects a
+    representation; it does not alter factor values or infer economic meaning.
+    """
+    if not 0 <= threshold <= 1: raise ValueError("threshold must be between 0 and 1")
+    selected: list[str] = []
+    for name, values in histories.items():
+        if not values: continue
+        if all(abs(pearson_correlation(values, histories[other])) < threshold for other in selected):
+            selected.append(name)
+    return tuple(selected)
