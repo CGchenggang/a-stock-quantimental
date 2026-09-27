@@ -1,9 +1,8 @@
 """Multi-stock strict OOS replication for the local A-share factor baseline.
 
-This experiment keeps the existing four factors and 1-trading-day label.
-Each symbol is evaluated independently with the same walk-forward protocol,
-then OOS predictions are aggregated only for descriptive replication
-statistics. It does not create a pooled production model.
+Each symbol is evaluated independently with the same walk-forward protocol.
+For every test window, the factor model is compared with a train-rate
+probability baseline fitted only on that window's training labels.
 """
 from __future__ import annotations
 
@@ -67,7 +66,10 @@ def evaluate_symbol(store, symbol):
         step=STEP,
         gap=GAP,
     )
-    predictions = []
+
+    model_predictions = []
+    baseline_predictions = []
+
     for window in windows:
         train_rows = rows[window.train_start:window.train_end]
         test_rows = rows[window.test_start:window.test_end]
@@ -75,17 +77,22 @@ def evaluate_symbol(store, symbol):
         test_y = [r.label for r in test_rows]
         train_x = [[float(r.factors[name]) for name in FACTORS] for r in train_rows]
         test_x = [[float(r.factors[name]) for name in FACTORS] for r in test_rows]
-        predictions.extend(zip(fit_predict(train_x, train_y, test_x), test_y))
 
-    ps = [p for p, _ in predictions]
-    ys = [y for _, y in predictions]
-    a, b, ll = metrics(ps, ys)
+        model_ps = fit_predict(train_x, train_y, test_x)
+        train_rate = sum(train_y) / len(train_y)
+        baseline_ps = [train_rate] * len(test_y)
+
+        model_predictions.extend(zip(model_ps, test_y))
+        baseline_predictions.extend(zip(baseline_ps, test_y))
+
+    model_ps = [p for p, _ in model_predictions]
+    ys = [y for _, y in model_predictions]
+    base_ps = [p for p, _ in baseline_predictions]
+
+    a, b, ll = metrics(model_ps, ys)
+    ba, bb, bll = metrics(base_ps, ys)
     rate = sum(ys) / len(ys) if ys else float("nan")
-    baseline_a = sum((0.5 >= 0.5) == bool(y) for y in ys) / len(ys) if ys else float("nan")
-    baseline_b = sum((0.5 - y) ** 2 for y in ys) / len(ys) if ys else float("nan")
-    baseline_ll = -sum(
-        y * log(0.5) + (1 - y) * log(0.5) for y in ys
-    ) / len(ys) if ys else float("nan")
+
     return {
         "symbol": symbol,
         "factor_rows": len(rows),
@@ -95,10 +102,14 @@ def evaluate_symbol(store, symbol):
         "accuracy": a,
         "brier": b,
         "log_loss": ll,
-        "accuracy_delta_vs_50": a - baseline_a if ys else float("nan"),
-        "brier_delta_vs_50": b - baseline_b if ys else float("nan"),
-        "log_loss_delta_vs_50": ll - baseline_ll if ys else float("nan"),
-        "predictions": predictions,
+        "baseline_accuracy": ba,
+        "baseline_brier": bb,
+        "baseline_log_loss": bll,
+        "accuracy_delta_vs_train_rate": a - ba if ys else float("nan"),
+        "brier_delta_vs_train_rate": b - bb if ys else float("nan"),
+        "log_loss_delta_vs_train_rate": ll - bll if ys else float("nan"),
+        "predictions": model_predictions,
+        "baseline_predictions": baseline_predictions,
     }
 
 
@@ -111,24 +122,40 @@ def main():
     store = LocalHistoricalStore(args.root)
     results = [evaluate_symbol(store, symbol) for symbol in args.symbol]
 
-    print("symbol,factor_rows,windows,oos_predictions,positive_rate,accuracy,brier,log_loss,accuracy_delta_vs_50,brier_delta_vs_50,log_loss_delta_vs_50")
+    print(
+        "symbol,factor_rows,windows,oos_predictions,positive_rate,"
+        "accuracy,brier,log_loss,baseline_accuracy,baseline_brier,baseline_log_loss,"
+        "accuracy_delta_vs_train_rate,brier_delta_vs_train_rate,log_loss_delta_vs_train_rate"
+    )
     for r in results:
         print(
             f"{r['symbol']},{r['factor_rows']},{r['windows']},{r['oos_predictions']},"
             f"{r['positive_rate']:.6f},{r['accuracy']:.6f},{r['brier']:.6f},{r['log_loss']:.6f},"
-            f"{r['accuracy_delta_vs_50']:.6f},{r['brier_delta_vs_50']:.6f},{r['log_loss_delta_vs_50']:.6f}"
+            f"{r['baseline_accuracy']:.6f},{r['baseline_brier']:.6f},{r['baseline_log_loss']:.6f},"
+            f"{r['accuracy_delta_vs_train_rate']:.6f},{r['brier_delta_vs_train_rate']:.6f},"
+            f"{r['log_loss_delta_vs_train_rate']:.6f}"
         )
 
     pooled = [pair for r in results for pair in r["predictions"]]
+    pooled_base = [pair for r in results for pair in r["baseline_predictions"]]
     ps = [p for p, _ in pooled]
     ys = [y for _, y in pooled]
+    base_ps = [p for p, _ in pooled_base]
     a, b, ll = metrics(ps, ys)
+    ba, bb, bll = metrics(base_ps, ys)
+
     print()
     print(f"pooled_oos_predictions: {len(ys)}")
     print(f"pooled_positive_rate: {sum(ys) / len(ys):.6f}" if ys else "pooled_positive_rate: nan")
     print(f"pooled_accuracy: {a:.6f}")
     print(f"pooled_brier: {b:.6f}")
     print(f"pooled_log_loss: {ll:.6f}")
+    print(f"pooled_train_rate_baseline_accuracy: {ba:.6f}")
+    print(f"pooled_train_rate_baseline_brier: {bb:.6f}")
+    print(f"pooled_train_rate_baseline_log_loss: {bll:.6f}")
+    print(f"pooled_accuracy_delta_vs_train_rate: {a - ba:.6f}")
+    print(f"pooled_brier_delta_vs_train_rate: {b - bb:.6f}")
+    print(f"pooled_log_loss_delta_vs_train_rate: {ll - bll:.6f}")
     print("Note: pooled metrics aggregate independent per-symbol OOS predictions; they are not a pooled-trained model.")
 
 
