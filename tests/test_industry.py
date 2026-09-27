@@ -69,6 +69,20 @@ def test_csv_loader_parses_open_interval_and_coverage(tmp_path):
     assert starts["300308"] == datetime(2021, 7, 29, 16, tzinfo=TZ)
 
 
+def test_csv_loader_preserves_symbol_leading_zeros(tmp_path):
+    csv_path = tmp_path / "membership.csv"
+    csv_path.write_text(
+        "symbol,industry_code,industry_name,level,effective_from,effective_to,available_time,source,source_type,raw_ref\n"
+        "000001,SW1:银行,银行,l1,2021-07-30T00:00:00+08:00,,2021-07-31T16:00:00+08:00,cninfo,cninfo_effective_date_conservative_availability,ref\n"
+        "002594,SW1:汽车,汽车,l1,2021-07-30T00:00:00+08:00,,2021-07-31T16:00:00+08:00,cninfo,cninfo_effective_date_conservative_availability,ref\n",
+        encoding="utf-8",
+    )
+    memberships = load_industry_membership_csv(csv_path)
+    assert [m.symbol for m in memberships] == ["000001", "002594"]
+    starts = coverage_start(memberships)
+    assert set(starts) == {"000001", "002594"}
+
+
 def test_csv_loader_rejects_missing_columns(tmp_path):
     csv_path = tmp_path / "bad.csv"
     csv_path.write_text("symbol,industry_code\n300308,SW1:通信\n", encoding="utf-8")
