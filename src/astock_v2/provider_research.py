@@ -3,23 +3,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 from .agent.orchestrator import ResearchPacket
-from .data.providers import MarketProvider, ProviderResult
+from .data.providers import MarketProvider, ProviderResult, pit_admissible, normalize_time
 from .data.legacy_market_inputs import LegacyMarketInputs
 from .regime import classify_regime
 
 def _iso(value: str) -> str:
-    dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.isoformat()
+    return normalize_time(value)
 
 def _pit_admissible(result: ProviderResult, decision_time: str) -> bool:
-    if not result.available_time:
-        return False
-    try:
-        return _iso(result.available_time) <= _iso(decision_time)
-    except (TypeError, ValueError):
-        return False
+    return pit_admissible(result, decision_time)
 
 def _health(results: list[ProviderResult], decision_time: str) -> dict[str, Any]:
     total = len(results)
