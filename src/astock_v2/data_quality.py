@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from .providers import PitStatus, ProviderResult, pit_status
+from .data.providers import PitStatus, ProviderResult, pit_status
 
 
 @dataclass(frozen=True)
