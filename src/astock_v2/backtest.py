@@ -45,6 +45,7 @@ def run_signal_backtest(bars: Sequence[BacktestBar], *, initial_cash: float = 1_
     trades: list[BacktestTrade] = []
     equity: list[float] = []
     last_execution_time = None
+    acquired_dates: dict[str, str] = {}
     for bar in bars:
         if last_execution_time is not None and bar.execution_time < last_execution_time:
             raise ValueError("bars must be ordered by execution_time")
@@ -52,20 +53,28 @@ def run_signal_backtest(bars: Sequence[BacktestBar], *, initial_cash: float = 1_
             raise ValueError("execution_time cannot precede decision_time")
         last_execution_time = bar.execution_time
         current = positions.get(bar.symbol,0)
+        execution_date = bar.execution_time[:10]
         desired = target_shares if bar.signal > 0 else 0
         delta = desired-current
         if delta:
             side = "buy" if delta > 0 else "sell"
             requested = abs(delta)
-            result = execute_order(side=side,shares=requested,price=bar.close,constraints=constraints,
-                                   limit_up=bar.limit_up,limit_down=bar.limit_down,suspended=bar.suspended,
-                                   available_shares=current if side=="sell" else None)
+            if not bar.tradable:
+                result = execute_order(side=side,shares=requested,price=bar.close,constraints=constraints,suspended=True)
+                result = type(result)(result.requested_shares,result.executed_shares,result.execution_price,result.commission,result.stamp_duty,result.transfer_fee,result.slippage_cost,result.total_cost,"NOT_TRADABLE")
+            elif side == "sell" and constraints.t_plus_one and acquired_dates.get(bar.symbol) == execution_date:
+                result = execute_order(side=side,shares=requested,price=bar.close,constraints=constraints,available_shares=0)
+                result = type(result)(result.requested_shares,result.executed_shares,result.execution_price,result.commission,result.stamp_duty,result.transfer_fee,result.slippage_cost,result.total_cost,"T_PLUS_ONE")
+            else:
+                result = execute_order(side=side,shares=requested,price=bar.close,constraints=constraints,limit_up=bar.limit_up,limit_down=bar.limit_down,suspended=bar.suspended,available_shares=current if side=="sell" else None)
             if side=="buy" and result.executed_shares and cash + net_cash_delta(side=side,execution=result) < 0:
                 affordable = int(cash / (result.execution_price * (1+constraints.commission_rate+constraints.transfer_fee_rate)))
                 result = execute_order(side=side,shares=affordable,price=bar.close,constraints=constraints,
                                        limit_up=bar.limit_up,limit_down=bar.limit_down,suspended=bar.suspended)
             cash += net_cash_delta(side=side, execution=result)
             positions[bar.symbol] = current + result.executed_shares * (1 if side=="buy" else -1)
+            if side == "buy" and result.executed_shares:
+                acquired_dates[bar.symbol] = execution_date
             trades.append(BacktestTrade(bar.execution_time,bar.symbol,side,result.requested_shares,
                                         result.executed_shares,result.execution_price,result.total_cost,result.blocked_reason))
         equity.append(cash + sum(shares*bar.close for sym,shares in positions.items() if sym==bar.symbol))
