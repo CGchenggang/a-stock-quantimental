@@ -46,12 +46,10 @@ def build_local_factor_rows(
         return ()
 
     ordered = sorted(records, key=lambda r: (r.event_time, r.revision))
-    latest: dict[str, HistoricalRecord] = {}
+    event_times = sorted({record.event_time for record in ordered})
+    by_event: dict[str, list[HistoricalRecord]] = {}
     for record in ordered:
-        current = latest.get(record.event_time)
-        if current is None or record.revision > current.revision:
-            latest[record.event_time] = record
-    days = sorted(latest.values(), key=lambda r: r.event_time)
+        by_event.setdefault(record.event_time, []).append(record)
 
     rows: list[LocalFactorRow] = []
     for index in range(lookback, len(days) - 1):
@@ -67,6 +65,72 @@ def build_local_factor_rows(
             record for record in days[: index + 1]
             if record.admissible_at(decision_time)
         ]
+        if len(admitted) < lookback + 1:
+            continue
+
+        provider_rows = [dict(record.value) for record in admitted]
+        provider = ProviderResult(
+            data=provider_rows,
+            source="local:cn_stock_daily",
+            source_type="local_historical",
+            fetched_at="",
+            available_time=decision_time,
+        )
+
+        factors = {}
+        outputs = []
+        for name in factor_names:
+            output = compute_factor(
+                name,
+                provider,
+                symbol=symbol,
+                decision_time=decision_time,
+                lookback=lookback,
+            )
+            if not output.admissible or output.value is None:
+                break
+            factors[name] = float(output.value)
+            outputs.append(output)
+        if len(outputs) != len(factor_names):
+            continue
+
+        today_close = float(current.value["close"])
+        next_close = float(max(by_event[event_times[index + 1]], key=lambda record: record.revision).value["close"])
+        if today_close <= 0:
+            continue
+        next_return = next_close / today_close - 1.0
+        rows.append(
+            LocalFactorRow(
+                symbol=symbol,
+                decision_time=decision_time,
+                factors=factors,
+                label=int(next_return > 0),
+                next_return=next_return,
+                source_event_time=current.event_time,
+            )
+        )
+    return tuple(rows)    for index in range(lookback, len(event_times) - 1):
+        event_time = event_times[index]
+        decision_candidates = [
+            record for record in by_event[event_time]
+            if record.available_time
+        ]
+        if not decision_candidates:
+            continue
+        current = max(decision_candidates, key=lambda record: record.revision)
+        decision_time = current.available_time
+        if not decision_time:
+            continue
+        _parse_aware(decision_time)
+
+        admitted = []
+        for prior_event in event_times[: index + 1]:
+            candidates = [
+                record for record in by_event[prior_event]
+                if record.admissible_at(decision_time)
+            ]
+            if candidates:
+                admitted.append(max(candidates, key=lambda record: record.revision))
         if len(admitted) < lookback + 1:
             continue
 
