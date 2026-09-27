@@ -1,5 +1,5 @@
 from astock_v2.factor_inputs import gate_factor_inputs
-from astock_v2.data.providers import ProviderResult
+from astock_v2.data.providers import PitStatus, ProviderResult
 
 
 def _result(available_time=None, fallback=False):
@@ -49,6 +49,6 @@ def test_factor_gate_keeps_rejected_reason_without_fabricating_value():
     future = _result("2026-09-27T08:01:00+00:00")
     result = gate_factor_inputs([future], decision)
     assert result.rejected == (future,)
-    assert result.rejection_statuses == ("FUTURE",) if False else result.rejection_statuses
+    assert result.rejection_statuses == (PitStatus.FUTURE,)
     assert result.rejection_statuses[0].value == "FUTURE"
     assert result.as_dict()["ready"] is False
