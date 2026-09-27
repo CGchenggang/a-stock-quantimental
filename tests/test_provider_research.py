@@ -1,6 +1,7 @@
 from astock_v2.provider_research import build_research_packet_from_provider
 from astock_v2.data.legacy_market_provider_impl import LegacyMarketProvider
 from astock_v2.data.providers import PitStatus, ProviderResult, pit_status
+from astock_v2.data_quality import summarize_pit
 
 
 def test_provider_research_builds_evidence_packet_and_health():
@@ -188,3 +189,26 @@ def test_provider_research_health_reports_structured_pit_status_counts():
     assert counts["MISSING_TIME"] == 0
     assert counts["FALLBACK"] == 0
     assert counts["INVALID_TIME"] == 0
+
+
+def test_shared_pit_data_quality_summary_is_reason_specific():
+    decision = "2026-09-27T08:00:00+00:00"
+    base = dict(data={}, source="test", source_type="test", fetched_at=decision)
+    summary = summarize_pit([
+        ProviderResult(**base, available_time=decision),
+        ProviderResult(**base, available_time="2026-09-27T09:00:00+00:00"),
+        ProviderResult(**base),
+        ProviderResult(**base, fallback=True),
+        ProviderResult(**base, available_time="bad-time"),
+    ], decision)
+    assert summary.total == 5
+    assert summary.admissible == 1
+    assert summary.admissible_ratio == 0.2
+    assert summary.pit_admissible is False
+    assert summary.status_counts == {
+        "ADMISSIBLE": 1,
+        "FUTURE": 1,
+        "MISSING_TIME": 1,
+        "FALLBACK": 1,
+        "INVALID_TIME": 1,
+    }
