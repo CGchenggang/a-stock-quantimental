@@ -45,7 +45,7 @@ def run_signal_backtest(bars: Sequence[BacktestBar], *, initial_cash: float = 1_
     trades: list[BacktestTrade] = []
     equity: list[float] = []
     last_execution_time = None
-    acquired_dates: dict[str, str] = {}
+    acquired_today: dict[str, int] = {}\n    latest_prices: dict[str, float] = {}
     for bar in bars:
         if last_execution_time is not None and bar.execution_time < last_execution_time:
             raise ValueError("bars must be ordered by execution_time")
@@ -77,5 +77,5 @@ def run_signal_backtest(bars: Sequence[BacktestBar], *, initial_cash: float = 1_
                 acquired_dates[bar.symbol] = execution_date
             trades.append(BacktestTrade(bar.execution_time,bar.symbol,side,result.requested_shares,
                                         result.executed_shares,result.execution_price,result.total_cost,result.blocked_reason))
-        equity.append(cash + sum(shares*bar.close for sym,shares in positions.items() if sym==bar.symbol))
+        equity.append(cash + sum(shares*latest_prices.get(sym, 0.0) for sym,shares in positions.items()))
     return BacktestResult(initial_cash,cash,dict(positions),tuple(equity),tuple(trades))
