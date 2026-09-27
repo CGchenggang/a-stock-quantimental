@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pandas as pd
 
-SW_STANDARD_CODE = "008003"
+SW_STANDARD_NAME = "申银万国行业分类标准"
 
 
 def parse_args():
@@ -61,7 +61,12 @@ def _load_symbol(symbol: str, start: str, end: str) -> pd.DataFrame:
         raise RuntimeError(f"{symbol}: missing CNINFO columns {missing}")
 
     df = df.copy()
-    df = df[df["分类标准编码"].astype(str) == SW_STANDARD_CODE].copy()
+    # Do not filter by a hard-coded classification code: CNINFO uses codes
+    # across multiple classification systems. Match the human-readable
+    # classification standard instead.
+    standard_name = df["分类标准"].astype(str).str.strip()
+    print(f"{symbol}: classification standards: {sorted(standard_name.unique().tolist())}")
+    df = df[standard_name == SW_STANDARD_NAME].copy()
     if df.empty:
         return df
 
@@ -134,7 +139,7 @@ def main():
     for symbol in args.symbol:
         raw = _load_symbol(symbol, args.start, args.end)
         if raw.empty:
-            print(f"{symbol}: no SW industry-change rows")
+            print(f"{symbol}: no rows for classification standard {SW_STANDARD_NAME}")
             continue
         raw_frames.append(
             raw[
@@ -153,7 +158,7 @@ def main():
             ]
         )
         membership_frames.append(_build_intervals(raw))
-        print(f"{symbol}: {len(raw)} SW industry-change rows")
+        print(f"{symbol}: {len(raw)} {SW_STANDARD_NAME} industry-change rows")
 
     if not membership_frames:
         raise SystemExit("No SW industry membership data returned.")
