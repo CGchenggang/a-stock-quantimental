@@ -67,17 +67,23 @@ def run_simple_baselines(rows, labels):
     windows = walk_forward_windows(
         rows, train_size=TRAIN_SIZE, test_size=TEST_SIZE, step=STEP, gap=GAP
     )
-    majority, constant, oos_labels = [], [], []
+    majority, train_rate, constant, oos_labels = [], [], [], []
     for window in windows:
         train = labels[window.train_start:window.train_end]
-        majority_p = 1.0 if sum(train) / len(train) >= 0.5 else 0.0
+        rate = sum(train) / len(train)
+        majority_p = 1.0 if rate >= 0.5 else 0.0
         for index in range(window.test_start, window.test_end):
             majority.append(majority_p)
+            train_rate.append(rate)
             constant.append(0.5)
             oos_labels.append(labels[index])
 
     results = []
-    for name, probabilities in (("train_majority", majority), ("constant_0.50", constant)):
+    for name, probabilities in (
+        ("train_majority", majority),
+        ("train_rate", train_rate),
+        ("constant_0.50", constant),
+    ):
         accuracy, calibration = evaluate(probabilities, oos_labels)
         results.append({
             "name": name, "accuracy": accuracy, "brier": calibration.brier_score,
