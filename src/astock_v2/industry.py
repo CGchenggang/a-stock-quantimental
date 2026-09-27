@@ -51,15 +51,19 @@ def admissible_industry(
 ) -> Optional[IndustryMembership]:
     """Return the unique PIT-admissible industry at a decision boundary.
 
-    Effective interval is [effective_from, effective_to). A record must both
-    cover event_time and have been available by decision_time.
+    PIT classification is the latest effective assignment that was already
+    available by decision_time. If a newer effective assignment is not yet
+    available, the prior assignment remains the last known classification.
+
+    effective_to is retained for source-history validation and interval
+    reconstruction, but it is not used as a hard cutoff for PIT admissibility;
+    otherwise a disclosure lag would create an artificial no-industry gap.
     """
     candidates = [
         m
         for m in memberships
         if m.symbol == symbol
         and m.effective_from <= event_time
-        and (m.effective_to is None or event_time < m.effective_to)
         and m.available_time <= decision_time
     ]
     if not candidates:
