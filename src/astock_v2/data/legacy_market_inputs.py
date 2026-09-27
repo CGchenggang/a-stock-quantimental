@@ -92,7 +92,17 @@ class LegacyMarketInputs:
         market = self.snapshot()
         index = self.provider.index_daily(index_symbol)
         sector = self.provider.sector_board()
-        turnover = self.provider.market_turnover()
+        try:
+            turnover = self.provider.market_turnover()
+        except NotImplementedError:
+            turnover = ProviderResult(
+                data={"turnover_z": None, "pit_ready": False},
+                source="unavailable",
+                source_type="missing",
+                fetched_at="",
+                available_time=None,
+                warnings=["market turnover provider is not configured"],
+            )
 
         index_data = index.data if isinstance(index.data, dict) else {}
         pct = float(index_data.get("pct") or 0.0)
