@@ -92,6 +92,7 @@ class LegacyMarketInputs:
         market = self.snapshot()
         index = self.provider.index_daily(index_symbol)
         sector = self.provider.sector_board()
+        turnover = self.provider.market_turnover()
 
         index_data = index.data if isinstance(index.data, dict) else {}
         pct = float(index_data.get("pct") or 0.0)
@@ -110,8 +111,8 @@ class LegacyMarketInputs:
         inputs = {
             "index_trend": index_trend,
             "breadth": breadth["breadth"],
-            "turnover_z": None,
-            "volatility_z": None,
+            "turnover_z": (turnover.data.get("turnover_z") if isinstance(turnover.data, dict) and turnover.data.get("pit_ready") else None),
+            "volatility_z": index_data.get("volatility_z"),
             "sector_dispersion": dispersion,
             "limit_pressure": breadth["limit_pressure"],
             "liquidity": None,
@@ -122,12 +123,14 @@ class LegacyMarketInputs:
                 "index": index,
                 "quote": market["quote"],
                 "sector": sector,
+                "turnover": turnover,
             },
             "proxy_fields": [
                 "breadth",
                 "limit_pressure",
                 "index_trend",
                 "sector_dispersion",
+                "volatility_z",
             ],
             "missing_fields": [key for key, value in inputs.items() if value is None],
         }
