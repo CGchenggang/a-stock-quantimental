@@ -67,6 +67,7 @@ def main() -> None:
         train_size=252,
         test_size=20,
         step=20,
+        gap=1,
         learning_rate=0.05,
         epochs=500,
     )
@@ -74,6 +75,7 @@ def main() -> None:
 
     print(f"factor rows: {len(local_rows)}")
     print(f"walk-forward windows: {len(report.windows)}")
+    print("walk-forward gap: 1 trading day (label embargo)")
     print(f"OOS predictions: {len(report.predictions)}")
     print(f"classification accuracy: {oos.classification_accuracy}")
     print(f"Brier score: {oos.brier_score}")
