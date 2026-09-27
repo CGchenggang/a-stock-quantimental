@@ -63,3 +63,24 @@ def test_quote_provider_scopes_full_market_snapshot_to_requested_symbols():
     assert set(result.data["quotes"]) == {"600000"}
     assert result.data["quotes"]["600000"]["price"] == 8.1
     assert result.data["legacy_payload"] is payload
+
+
+def test_daily_provider_rejects_v1_payload_beyond_requested_end_date():
+    payload = {
+        "ok": True,
+        "code": "000001",
+        "latest_date": "2026-09-27",
+        "latest": {"close": 10.2},
+        "source": "legacy_daily",
+        "fetched_at": "2026-09-27T04:00:00+00:00",
+    }
+    provider = LegacyMarketProvider(
+        realtime_fetcher=lambda: {},
+        daily_fetcher=lambda symbol, days: payload,
+    )
+    try:
+        provider.daily("000001", "2026-09-20", "2026-09-26")
+    except ValueError as exc:
+        assert "beyond requested end date" in str(exc)
+    else:
+        raise AssertionError("future data must not cross the requested historical boundary")
