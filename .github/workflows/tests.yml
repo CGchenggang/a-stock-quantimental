@@ -24,14 +24,31 @@ jobs:
           python -m pip --version
           python -m pytest --version
           python -m pytest --collect-only -q -ra
-      - name: Run tests with captured log
+      - name: Core data and model tests
         run: |
-          set -o pipefail
-          python -m pytest -q -ra 2>&1 | tee pytest.log
-      - name: Upload pytest diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-diagnostics
-          path: pytest.log
-          if-no-files-found: warn
+          python -m pytest -q -ra \
+            tests/test_pit.py \
+            tests/test_pit_adapter.py \
+            tests/test_pit_adapter_daily.py \
+            tests/test_legacy_cache.py \
+            tests/test_legacy_cache_pit.py \
+            tests/test_legacy_provider.py \
+            tests/test_legacy_adapter.py \
+            tests/test_freshness.py \
+            tests/test_model_evaluation.py \
+            tests/test_ledger_metrics.py
+      - name: Agent, backtest and ledger tests
+        run: |
+          python -m pytest -q -ra \
+            tests/test_agent_ledger.py \
+            tests/test_backtest.py \
+            tests/test_compat.py \
+            tests/test_p7_integration.py \
+            tests/test_postmortem.py
+      - name: P8 regression tests
+        run: |
+          python -m pytest -q -ra \
+            tests/test_p8c_regression.py \
+            tests/test_p8c_legacy_intraday_semantics.py \
+            tests/test_p8d_orchestration.py \
+            tests/test_regime.py
