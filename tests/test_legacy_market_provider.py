@@ -59,3 +59,24 @@ def test_legacy_intraday_rejects_unknown_granularity():
             },
             available_time="2026-09-27T06:01:00+00:00",
         )
+
+
+def test_legacy_market_turnover_result_preserves_pit_gate():
+    from astock_v2.data.legacy_market_provider_impl import LegacyMarketProvider
+
+    provider = LegacyMarketProvider(
+        realtime_fetcher=lambda: {"quotes": {}, "source": "sina_spot", "fetched_at": "2026-09-27T04:00:00+00:00"},
+        daily_fetcher=lambda symbol, days: {"latest_date": "2026-09-26", "fetched_at": "2026-09-27T04:00:00+00:00"},
+        turnover_fetcher=lambda: {
+            "amount": 123.0,
+            "turnover_z": 1.2,
+            "pit_ready": False,
+            "warning": "local observation history",
+            "source": "legacy_market_turnover",
+            "fetched_at": "2026-09-27T04:00:00+00:00",
+        },
+    )
+    result = provider.market_turnover()
+    assert result.data["turnover_z"] == 1.2
+    assert result.data["pit_ready"] is False
+    assert result.warnings == ["local observation history"]
