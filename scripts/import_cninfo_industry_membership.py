@@ -1,9 +1,8 @@
 """Import historical industry membership from CNINFO via AKShare.
 
 This route does not require a Tushare token. AKShare exposes CNINFO's
-p_stock2110 industry-change endpoint. We first filter to the SW industry
-classification (008003), then construct effective intervals from successive
-change dates.
+p_stock2110 industry-change endpoint. We first filter to the SW industry classification by its human-readable standard name, then construct
+effective intervals from successive change dates.
 
 PIT convention:
 - effective_from: change date at 00:00 +08:00
