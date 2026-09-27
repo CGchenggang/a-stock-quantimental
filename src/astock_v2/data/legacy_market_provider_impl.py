@@ -105,4 +105,4 @@ class LegacyMarketProvider(MarketProvider):
         payload = self._intraday_fetcher(symbol, scale, datalen)
         if not isinstance(payload, dict):
             raise TypeError("legacy intraday fetcher must return dict")
-        return legacy_intraday_result(payload, available_time=_now_iso())
+        fetch_completed = _now_iso()\n        return legacy_intraday_result(payload, available_time=fetch_completed, fetched_at=fetch_completed)
