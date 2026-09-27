@@ -12,13 +12,19 @@ def provider_result_from_legacy_payload(
     *,
     source_type: str = "legacy_adapter",
     available_time: str | None = None,
+    fetched_at: str | None = None,
 ) -> ProviderResult:
-    """Normalize a legacy response while preserving provenance and fallback state."""
-    fetched_at = payload.get("fetched_at") or payload.get("ts")
-    if not fetched_at:
+    """Normalize a legacy response while preserving provenance and fallback state.
+
+    fetched_at may be supplied by an adapter when the legacy payload itself
+    has no fetch timestamp. This records adapter fetch completion, not the
+    market event time.
+    """
+    fetched_value = fetched_at or payload.get("fetched_at") or payload.get("ts")
+    if not fetched_value:
         raise ValueError("legacy payload requires fetched_at or ts")
 
-    fetched = datetime.fromisoformat(str(fetched_at).replace("Z", "+00:00"))
+    fetched = datetime.fromisoformat(str(fetched_value).replace("Z", "+00:00"))
     if fetched.tzinfo is None:
         fetched = fetched.replace(tzinfo=timezone.utc)
 
