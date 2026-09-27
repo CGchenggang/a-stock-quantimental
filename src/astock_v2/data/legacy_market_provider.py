@@ -51,3 +51,16 @@ def legacy_intraday_result(
     if not result.data.get("scale"):
         raise ValueError("legacy intraday payload requires explicit scale")
     return result
+
+
+def legacy_sector_result(
+    payload: dict[str, Any],
+    *,
+    available_time: str,
+) -> ProviderResult:
+    """Adapt the legacy sector-board snapshot."""
+    return provider_result_from_legacy_payload(
+        payload,
+        source_type="legacy_sector_provider",
+        available_time=available_time,
+    )
