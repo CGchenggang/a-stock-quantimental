@@ -37,3 +37,17 @@ def test_fallback_input_cannot_produce_factor_value():
 def test_insufficient_history_is_not_fabricated():
     out=compute_factor("momentum",provider(rows(5)),symbol="000001",decision_time=DECISION,lookback=20)
     assert out.value is None and not out.admissible
+
+
+def test_normalization_is_deterministic_and_clips_extremes():
+    from astock_v2.factors import normalize_factor_history
+    normalized=normalize_factor_history([1,2,3,4,100])
+    assert len(normalized)==5
+    assert max(normalized)<10
+    assert round(sum(normalized),10)==0
+
+
+def test_decorrelation_retains_only_one_highly_correlated_series():
+    from astock_v2.factors import decorrelate_factor_histories
+    selected=decorrelate_factor_histories({"a":[1,2,3,4],"b":[2,4,6,8],"c":[4,1,3,2]},threshold=0.9)
+    assert selected==("a","c")
