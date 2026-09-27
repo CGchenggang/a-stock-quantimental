@@ -28,7 +28,8 @@ def _membership_csv(tmp_path):
         "000001,SW1:A,A,l1,2020-01-23T00:00:00+08:00,,2020-01-24T16:00:00+08:00,test,test,r2\n"
         "000333,SW1:A,A,l1,2020-01-01T00:00:00+08:00,2020-01-22T00:00:00+08:00,2020-01-02T16:00:00+08:00,test,test,r3\n"
         "000333,SW1:B,B,l1,2020-01-22T00:00:00+08:00,,2020-01-23T16:00:00+08:00,test,test,r4\n"
-        "000651,SW1:B,B,l1,2020-01-01T00:00:00+08:00,,2020-01-02T16:00:00+08:00,test,test,r5\n",
+        "000651,SW1:B,B,l1,2020-01-01T00:00:00+08:00,,2020-01-02T16:00:00+08:00,test,test,r5\n"
+        "000652,SW1:A,A,l1,2020-01-01T00:00:00+08:00,,2020-01-02T16:00:00+08:00,test,test,r6\n",
         encoding="utf-8",
     )
     return path
@@ -39,13 +40,14 @@ def test_industry_relative_context_uses_pit_membership(tmp_path):
     target = [_record("000001", day, 100.0 + day) for day in range(1, 25)]
     peer = [_record("000333", day, 100.0 + 2.0 * day) for day in range(1, 25)]
     outsider = [_record("000651", day, 100.0 + 10.0 * day) for day in range(1, 25)]
-    store.append_records("cn_stock_daily", target + peer + outsider)
+    peer2 = [_record("000652", day, 100.0 + 3.0 * day) for day in range(1, 25)]
+    store.append_records("cn_stock_daily", target + peer + outsider + peer2)
 
     rows = build_stock_industry_relative_context(
         store,
         _membership_csv(tmp_path),
         "000001",
-        ("000001", "000333", "000651"),
+        ("000001", "000333", "000651", "000652"),
     )
 
     assert rows
