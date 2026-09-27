@@ -97,7 +97,7 @@ def legacy_snapshot_to_research_packet(
     stocks = snapshot.get("stocks") or snapshot.get("portfolio_checkup") or []
     first = stocks[0] if isinstance(stocks, list) and stocks else {}
     inferred_symbol = symbol or first.get("ticker") or first.get("symbol") or "UNKNOWN"
-    decision = decision_time or wrapped.get("available_time") or wrapped.get("generated_at") or "UNKNOWN"
+    if decision_time is None:\n        raise ValueError("decision_time is required for PIT-safe research packets")\n    decision = _iso(str(decision_time))
     quality = snapshot.get("data_quality") or {}
     completeness = quality.get("completeness")
     score = float(completeness) if isinstance(completeness, (int, float)) else 0.0
