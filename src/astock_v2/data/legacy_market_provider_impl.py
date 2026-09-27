@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from .legacy_market_provider import legacy_daily_result, legacy_quote_result
+from .legacy_market_provider import legacy_daily_result, legacy_quote_result, legacy_intraday_result
 from .providers import MarketProvider, ProviderResult
 
 
@@ -32,9 +32,11 @@ class LegacyMarketProvider(MarketProvider):
         *,
         realtime_fetcher: Callable[[], dict[str, Any]],
         daily_fetcher: Callable[[str, int], dict[str, Any]],
+        intraday_fetcher: Callable[[str, int, int], dict[str, Any]] | None = None,
     ) -> None:
         self._realtime_fetcher = realtime_fetcher
         self._daily_fetcher = daily_fetcher
+        self._intraday_fetcher = intraday_fetcher
 
     def quote(self, symbols: list[str]) -> ProviderResult:
         payload = self._realtime_fetcher()
@@ -91,3 +93,16 @@ class LegacyMarketProvider(MarketProvider):
                 )
 
         return legacy_daily_result(payload, available_time=_now_iso())
+
+
+    def intraday(self, symbol: str, scale: int = 5, datalen: int = 20) -> ProviderResult:
+        if self._intraday_fetcher is None:
+            raise NotImplementedError("legacy intraday fetcher is not configured")
+        if scale not in {1, 5, 15, 30, 60}:
+            raise ValueError("unsupported intraday scale")
+        if datalen < 1:
+            raise ValueError("datalen must be positive")
+        payload = self._intraday_fetcher(symbol, scale, datalen)
+        if not isinstance(payload, dict):
+            raise TypeError("legacy intraday fetcher must return dict")
+        return legacy_intraday_result(payload, available_time=_now_iso())
