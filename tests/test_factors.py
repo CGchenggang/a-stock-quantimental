@@ -56,7 +56,8 @@ def test_decorrelation_retains_only_one_highly_correlated_series():
 def test_ohlcv_candidate_factors_are_deterministic():
     data = []
     for i in range(21):
-        close = 100 + i\n        data.append({"close": close, "high": close * 1.02, "low": close * 0.98, "volume": 1000 + i * 10})
+        close = 100 + i
+        data.append({"close": close, "high": close * 1.02, "low": close * 0.98, "volume": 1000 + i * 10})
     high = compute_factor("close_to_high", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
     low = compute_factor("close_to_low", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
     rr = compute_factor("range_ratio", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
