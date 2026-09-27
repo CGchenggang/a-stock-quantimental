@@ -88,3 +88,19 @@ def test_regime_inputs_use_index_volatility_but_not_non_pit_turnover():
     result = LegacyMarketInputs(provider).regime_inputs()
     assert result["inputs"]["volatility_z"] is None
     assert result["inputs"]["turnover_z"] is None
+
+
+def test_regime_bridge_explains_unavailable_liquidity():
+    result = LegacyMarketInputs(_provider()).regime_inputs()
+    assert result["inputs"]["liquidity"] is None
+    assert result["missing_reasons"]["liquidity"] == "no PIT-complete dedicated liquidity history is currently migrated"
+
+
+def test_regime_bridge_rejects_future_market_snapshot():
+    provider = _provider()
+    result = LegacyMarketInputs(provider).regime_inputs(
+        decision_time="2026-09-27T03:00:00+00:00"
+    )
+    assert result["inputs"]["breadth"] is None
+    assert result["inputs"]["index_trend"] is None
+    assert result["inputs"]["sector_dispersion"] is None
