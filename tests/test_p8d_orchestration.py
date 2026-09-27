@@ -39,3 +39,19 @@ def test_legacy_collectors_share_one_v2_boundary():
     assert result["legacy_fallback"] is True
     assert result["outputs"]["morning"]["source"] == "legacy_morning_collector"
     assert result["outputs"]["pre_market"]["source"] == "legacy_pre_market_pipeline"
+
+
+def test_legacy_research_packet_requires_explicit_decision_time():
+    from astock_v2.orchestration import legacy_snapshot_to_research_packet
+    import pytest
+    with pytest.raises(ValueError, match="decision_time is required"):
+        legacy_snapshot_to_research_packet({"generated_at": "2026-09-27T08:30:00+08:00"})
+
+
+def test_legacy_research_packet_uses_explicit_decision_time():
+    from astock_v2.orchestration import legacy_snapshot_to_research_packet
+    packet = legacy_snapshot_to_research_packet(
+        {"generated_at": "2026-09-27T08:30:00+08:00"},
+        decision_time="2026-09-27T08:31:00+08:00",
+    )
+    assert packet.decision_time == "2026-09-27T00:31:00+00:00"
