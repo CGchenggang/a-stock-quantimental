@@ -66,6 +66,7 @@ def build_research_packet_from_provider(
             "regime_provenance": market_inputs["provenance"],
             "regime_proxy_fields": market_inputs["proxy_fields"],
             "regime_missing_fields": market_inputs["missing_fields"],
+            "regime_data_quality": market_inputs["data_quality"],
         },
         stock={
             "daily": daily.data if _pit_admissible(daily, decision) else [],
