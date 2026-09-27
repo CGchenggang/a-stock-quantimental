@@ -75,6 +75,8 @@ def test_provider_research_attaches_conservative_market_regime_context():
     assert packet.market["regime"]["confidence"] == 0.0
     assert "turnover_z" in packet.market["regime_missing_fields"]
     assert packet.market["regime_proxy_fields"]
+    assert packet.market["regime_data_quality"]["provider_results"] == 4
+    assert packet.market["regime_data_quality"]["pit_admissible"] is True
 
 
 def test_provider_research_rejects_future_available_time():
