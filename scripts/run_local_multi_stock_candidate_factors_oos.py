@@ -1,8 +1,8 @@
 """Strict OOS comparison of candidate OHLCV factors across local stocks.
 
 The baseline is the existing four-factor model. Candidates are added one at a
-time and as a small pre-specified pack. Every test window uses a train-rate
-probability baseline fitted only on that window's training labels.
+time and as a fixed small pack. Every test window uses a train-rate probability
+baseline fitted only on that window's training labels.
 """
 from __future__ import annotations
 
@@ -47,7 +47,10 @@ def metrics(ps, ys):
     eps = 1e-15
     accuracy = sum((p >= 0.5) == bool(y) for p, y in zip(ps, ys)) / len(ys)
     brier = sum((p - y) ** 2 for p, y in zip(ps, ys)) / len(ys)
-    logloss = -sum(y * log(max(p, eps)) + (1-y) * log(max(1-p, eps)) for p, y in zip(ps, ys)) / len(ys)
+    logloss = -sum(
+        y * log(max(p, eps)) + (1 - y) * log(max(1 - p, eps))
+        for p, y in zip(ps, ys)
+    ) / len(ys)
     return accuracy, brier, logloss
 
 
@@ -61,23 +64,25 @@ def factor_sets():
 
 def evaluate(store, symbol, factor_names):
     rows = list(build_local_factor_rows(store, symbol, factor_names=factor_names, lookback=20))
-    windows = walk_forward_windows(rows, train_size=TRAIN_SIZE, test_size=TEST_SIZE, step=STEP, gap=GAP)
-    model, base = [], []
-    for w in windows:
-        train = rows[w.train_start:w.train_end]
-        test = rows[w.test_start:w.test_end]
-        ty = [r.label for r in train]
-        yy = [r.label for r in test]
-        tx = [[float(r.factors[n]) for n in factor_names] for r in train]
-        xx = [[float(r.factors[n]) for n in factor_names] for r in test]
-        model.extend(zip(fit_predict(tx, ty, xx), yy))
-        rate = sum(ty) / len(ty)
-        base.extend(zip([rate] * len(yy), yy))
-    mp, ys = zip(*model)
-    bp, _ = zip(*base)
-    ma, mb, ml = metrics(mp, ys)
-    ba, bb, bl = metrics(bp, ys)
-    return len(rows), len(windows), len(ys), (ma, mb, ml), (ba, bb, bl)
+    windows = walk_forward_windows(
+        rows, train_size=TRAIN_SIZE, test_size=TEST_SIZE, step=STEP, gap=GAP
+    )
+    model_pairs, baseline_pairs = [], []
+    for window in windows:
+        train = rows[window.train_start:window.train_end]
+        test = rows[window.test_start:window.test_end]
+        train_y = [r.label for r in train]
+        test_y = [r.label for r in test]
+        train_x = [[float(r.factors[name]) for name in factor_names] for r in train]
+        test_x = [[float(r.factors[name]) for name in factor_names] for r in test]
+        model_pairs.extend(zip(fit_predict(train_x, train_y, test_x), test_y))
+        train_rate = sum(train_y) / len(train_y)
+        baseline_pairs.extend(zip([train_rate] * len(test_y), test_y))
+
+    model_ps = [p for p, _ in model_pairs]
+    labels = [y for _, y in model_pairs]
+    baseline_ps = [p for p, _ in baseline_pairs]
+    return len(rows), len(windows), model_ps, labels, baseline_ps
 
 
 def main():
@@ -85,46 +90,52 @@ def main():
     parser.add_argument("--symbol", action="append", required=True)
     parser.add_argument("--root", default="data")
     args = parser.parse_args()
+
     store = LocalHistoricalStore(args.root)
     sets = factor_sets()
-    pooled = {name: [[], []] for name in sets}
-    print("model,symbol,factor_rows,windows,oos_predictions,accuracy,brier,log_loss,baseline_accuracy,baseline_brier,baseline_log_loss,accuracy_delta,brier_delta,log_loss_delta")
+    pooled = {}
+
+    print(
+        "model,symbol,factor_rows,windows,oos_predictions,accuracy,brier,log_loss,"
+        "baseline_accuracy,baseline_brier,baseline_log_loss,"
+        "accuracy_delta,brier_delta,log_loss_delta"
+    )
+
     for name, factor_names in sets.items():
+        pooled_model, pooled_y, pooled_base = [], [], []
         for symbol in args.symbol:
-            rows, windows, n, model_m, base_m = evaluate(store, symbol, factor_names)
-            ma, mb, ml = model_m
-            ba, bb, bl = base_m
-            print(f"{name},{symbol},{rows},{windows},{n},{ma:.6f},{mb:.6f},{ml:.6f},{ba:.6f},{bb:.6f},{bl:.6f},{ma-ba:.6f},{mb-bb:.6f},{ml-bl:.6f}")
-            # Re-run at the same deterministic settings only for pooled summary.
-            # The first evaluation above remains the per-symbol report.
-            rows_data = list(build_local_factor_rows(store, symbol, factor_names=factor_names, lookback=20))
-            windows_data = walk_forward_windows(rows_data, train_size=TRAIN_SIZE, test_size=TEST_SIZE, step=STEP, gap=GAP)
-            for w in windows_data:
-                train = rows_data[w.train_start:w.train_end]
-                test = rows_data[w.test_start:w.test_end]
-                ty = [r.label for r in train]
-                yy = [r.label for r in test]
-                tx = [[float(r.factors[n]) for n in factor_names] for r in train]
-                xx = [[float(r.factors[n]) for n in factor_names] for r in test]
-                ps = fit_predict(tx, ty, xx)
-                rate = sum(ty) / len(ty)
-                pooled[name][0].extend(ps)
-                pooled[name][1].extend(yy)
-        ps, ys = pooled[name]
-        base = []
-        # Pooled baseline must preserve each window's train-rate; reconstruct it
-        # from the same windows rather than using pooled test labels.
-        for symbol in args.symbol:
-            rows_data = list(build_local_factor_rows(store, symbol, factor_names=factor_names, lookback=20))
-            for w in walk_forward_windows(rows_data, train_size=TRAIN_SIZE, test_size=TEST_SIZE, step=STEP, gap=GAP):
-                ty = [r.label for r in rows_data[w.train_start:w.train_end]]
-                yy = [r.label for r in rows_data[w.test_start:w.test_end]]
-                base.extend([sum(ty) / len(ty)] * len(yy))
-        ma, mb, ml = metrics(ps, ys)
-        ba, bb, bl = metrics(base, ys)
-        print(f"POOLED,{name},-,-,{len(ys)}, {ma:.6f},{mb:.6f},{ml:.6f},{ba:.6f},{bb:.6f},{bl:.6f},{ma-ba:.6f},{mb-bb:.6f},{ml-bl:.6f}".replace(", "," ,"))
-    print("Note: all models are independently trained per symbol; pooled rows aggregate independent OOS predictions.")
-    print("Candidates are fixed before seeing their OOS results; this script is a diagnostic, not a production-model selector.")
+            rows, windows, model_ps, labels, baseline_ps = evaluate(
+                store, symbol, factor_names
+            )
+            ma, mb, ml = metrics(model_ps, labels)
+            ba, bb, bl = metrics(baseline_ps, labels)
+            print(
+                f"{name},{symbol},{rows},{windows},{len(labels)},"
+                f"{ma:.6f},{mb:.6f},{ml:.6f},"
+                f"{ba:.6f},{bb:.6f},{bl:.6f},"
+                f"{ma-ba:.6f},{mb-bb:.6f},{ml-bl:.6f}"
+            )
+            pooled_model.extend(model_ps)
+            pooled_y.extend(labels)
+            pooled_base.extend(baseline_ps)
+
+        ma, mb, ml = metrics(pooled_model, pooled_y)
+        ba, bb, bl = metrics(pooled_base, pooled_y)
+        print(
+            f"POOLED,{name},-,-,{len(pooled_y)},"
+            f"{ma:.6f},{mb:.6f},{ml:.6f},"
+            f"{ba:.6f},{bb:.6f},{bl:.6f},"
+            f"{ma-ba:.6f},{mb-bb:.6f},{ml-bl:.6f}"
+        )
+
+    print(
+        "Note: all models are independently trained per symbol; pooled rows aggregate "
+        "independent OOS predictions."
+    )
+    print(
+        "Candidates were fixed before inspecting their OOS results; this is a diagnostic "
+        "experiment, not a production-model selector."
+    )
 
 
 if __name__ == "__main__":
