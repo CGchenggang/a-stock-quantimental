@@ -78,4 +78,16 @@ class LegacyMarketProvider(MarketProvider):
         payload = self._daily_fetcher(symbol, days)
         if not isinstance(payload, dict):
             raise TypeError("legacy daily fetcher must return dict")
+
+        # V1 history may append today's realtime quote when the historical
+        # endpoint is behind. Reject data beyond the requested end date.
+        latest_date = payload.get("latest_date")
+        if latest_date:
+            latest_day = str(latest_date)[:10]
+            requested_end = str(end)[:10]
+            if latest_day > requested_end:
+                raise ValueError(
+                    "legacy daily payload contains data after requested end date"
+                )
+
         return legacy_daily_result(payload, available_time=_now_iso())
