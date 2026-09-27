@@ -10,6 +10,23 @@ def test_provider_research_builds_evidence_packet_and_health():
             "source": "sina_spot",
             "fetched_at": "2026-09-27T04:00:00+00:00",
         },
+        index_fetcher=lambda symbol: {
+            "ok": True,
+            "symbol": symbol,
+            "latest_date": "2026-09-26",
+            "latest_close": 4000.0,
+            "pct": 1.0,
+            "ma20": 3950.0,
+            "above_ma20": True,
+            "source": "legacy_index",
+            "fetched_at": "2026-09-27T04:00:00+00:00",
+        },
+        sector_fetcher=lambda: {
+            "ok": True,
+            "sectors": [{"name": "A", "pct": 1.0}, {"name": "B", "pct": -1.0}],
+            "source": "legacy_sector",
+            "ts": "2026-09-27T04:00:00+00:00",
+        },
         daily_fetcher=lambda symbol, days: {
             "ok": True,
             "code": symbol,
