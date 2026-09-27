@@ -28,12 +28,19 @@ def run_walk_forward_probability(
     train_size: int,
     test_size: int,
     step: int | None = None,
+    gap: int = 0,
     learning_rate: float = 0.05,
     epochs: int = 500,
 ) -> WalkForwardReport:
     if len(rows) != len(labels):
         raise ValueError("rows and labels must have equal length")
-    windows = walk_forward_windows(rows, train_size=train_size, test_size=test_size, step=step)
+    windows = walk_forward_windows(
+        rows,
+        train_size=train_size,
+        test_size=test_size,
+        step=step,
+        gap=gap,
+    )
     predictions: list[OOSPrediction] = []
     models: list[LogisticProbabilityModel] = []
     for window in windows:
