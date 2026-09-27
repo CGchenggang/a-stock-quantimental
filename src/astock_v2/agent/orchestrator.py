@@ -25,6 +25,15 @@ class ResearchOrchestrator:
     def build_from_provider(self, provider, **kwargs) -> ResearchPacket:\n        from ..provider_research import build_research_packet_from_provider\n        return build_research_packet_from_provider(provider, **kwargs)\n\n    def as_json(self, packet: ResearchPacket)->dict[str,Any]:
         return asdict(packet)
 
+    def recommendation_record(self, packet: ResearchPacket, *, record_id: str, model_version: str):
+        from ..recommendation import RecommendationRecord
+        state=self.research_state(packet)
+        action={"PAPER_TEST":"HOLD","RESEARCH":"NO_ACTION","NO_ACTION":"NO_ACTION"}.get(state["decision_class"],"NO_ACTION")
+        p5=packet.model.get("p_up",{}).get(5)
+        confidence=packet.model.get("confidence")
+        rationale="; ".join(state["supporting_evidence"] + state["contradictory_evidence"]) or "quantitative evidence packet"
+        return RecommendationRecord(record_id,packet.symbol,packet.decision_time,action,p5,confidence,rationale,model_version,packet.data_quality,tuple(packet.model.get("provenance",())))
+
     def research_state(self, packet: ResearchPacket)->dict[str,Any]:
         quality=float(packet.data_quality.get("score",0.0))
         calibrated=packet.model.get("calibration_status")=="CALIBRATED"
