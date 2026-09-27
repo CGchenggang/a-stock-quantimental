@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 from .agent.orchestrator import ResearchPacket
+from .data_quality import summarize_pit
 from .data.providers import MarketProvider, PitStatus, ProviderResult, normalize_time, pit_admissible, pit_status
 from .data.legacy_market_inputs import LegacyMarketInputs
 from .regime import classify_regime
@@ -19,10 +20,8 @@ def _health(results: list[ProviderResult], decision_time: str) -> dict[str, Any]
     fallback = sum(bool(result.fallback) for result in results)
     warning_count = sum(len(result.warnings) for result in results)
     available = [result.available_time for result in results if result.available_time]
-    statuses = [pit_status(result, decision_time) for result in results]
-    future_data = sum(status is PitStatus.FUTURE for status in statuses)
-    pit_admissible_count = sum(status is PitStatus.ADMISSIBLE for status in statuses)
-    status_counts = {status.value: statuses.count(status) for status in PitStatus}
+    pit_quality = summarize_pit(results, decision_time)
+    status_counts = pit_quality.status_counts
     return {
         "score": round(
             max(0.0, 1.0 - missing / total) * 0.5
@@ -34,15 +33,13 @@ def _health(results: list[ProviderResult], decision_time: str) -> dict[str, Any]
         "warning_count": warning_count,
         "available_times": available,
         "decision_time": _iso(decision_time),
-        "pit_admissible_ratio": pit_admissible_count / total if total else 0.0,
+        "pit_admissible_ratio": pit_quality.admissible_ratio,
         "pit_status_counts": status_counts,
-        "future_data_count": future_data,
+        "future_data_count": status_counts[PitStatus.FUTURE.value],
         "availability_complete": all(
             result.available_time is not None and not result.fallback for result in results
         ) if results else False,
-        "pit_admissible": all(
-            _pit_admissible(result, decision_time) and not result.fallback for result in results
-        ) if results else False,
+        "pit_admissible": pit_quality.pit_admissible,
     }
 
 def build_research_packet_from_provider(
