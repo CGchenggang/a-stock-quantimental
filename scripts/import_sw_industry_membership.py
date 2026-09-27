@@ -1,8 +1,7 @@
-"""Import historical SW industry membership from AKShare's native SW endpoint.
+"""Import historical SW industry membership from AKShare or a local official SW XLS.
 
-AKShare's stock_industry_clf_hist_sw reads the official申万历史个股行业分类
-file and returns each stock's historical industry-code changes. This importer
-normalizes those changes to PIT-safe SW level-1 intervals.
+The local XLS path is useful when the official SWResearch download is reachable
+in a browser but not from Python due to local TLS/proxy differences.
 
 PIT convention:
 - effective_from: start_date at 00:00 +08:00
@@ -27,23 +26,24 @@ def parse_args():
     p.add_argument("--start", default="19900101")
     p.add_argument("--end", default="20991231")
     p.add_argument(
+        "--input",
+        help="Local official SW history XLS, e.g. data/industry/StockClassifyUse_stock.xls",
+    )
+    p.add_argument(
         "--output", default="data/industry/sw_official_sw1_membership.csv"
     )
-    p.add_argument("--raw-output", default="data/industry/sw_official_industry_history_raw.csv")
+    p.add_argument(
+        "--raw-output",
+        default="data/industry/sw_official_industry_history_raw.csv",
+    )
     return p.parse_args()
 
 
-def _load_history() -> pd.DataFrame:
-    import akshare as ak
-
-    df = ak.stock_industry_clf_hist_sw()
-    if df is None or df.empty:
-        raise RuntimeError("AKShare returned no SW industry history.")
-
+def _normalize_history(df: pd.DataFrame) -> pd.DataFrame:
     required = {"symbol", "start_date", "industry_code", "update_time"}
     missing = sorted(required - set(df.columns))
     if missing:
-        raise RuntimeError(f"AKShare SW history missing columns: {missing}")
+        raise RuntimeError(f"SW history missing columns: {missing}")
 
     out = df.copy()
     out["symbol"] = out["symbol"].astype("string").str.strip().str.zfill(6)
@@ -56,22 +56,59 @@ def _load_history() -> pd.DataFrame:
     return out
 
 
-def _build_intervals(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty:
-        return pd.DataFrame(
-            columns=[
-                "symbol",
-                "industry_code",
-                "industry_name",
-                "level",
-                "effective_from",
-                "effective_to",
-                "available_time",
-                "source",
-                "source_type",
-                "raw_ref",
-            ]
+def _load_history(input_path: Path | None) -> tuple[pd.DataFrame, str, str]:
+    if input_path is not None:
+        if not input_path.exists():
+            raise FileNotFoundError(f"SW history XLS not found: {input_path}")
+        df = pd.read_excel(
+            input_path,
+            dtype={"股票代码": "string", "行业代码": "string"},
         )
+        rename = {
+            "股票代码": "symbol",
+            "计入日期": "start_date",
+            "行业代码": "industry_code",
+            "更新日期": "update_time",
+        }
+        missing = sorted(set(rename) - set(df.columns))
+        if missing:
+            raise RuntimeError(f"Local SW XLS missing columns: {missing}")
+        return (
+            _normalize_history(df.rename(columns=rename)),
+            "official_sw_xls",
+            f"local_xls:{input_path.as_posix()}",
+        )
+
+    import akshare as ak
+
+    df = ak.stock_industry_clf_hist_sw()
+    if df is None or df.empty:
+        raise RuntimeError("AKShare returned no SW industry history.")
+
+    return (
+        _normalize_history(df),
+        "akshare_sw",
+        "akshare_stock_industry_clf_hist_sw",
+    )
+
+
+def _build_intervals(
+    df: pd.DataFrame, source: str, source_type: str
+) -> pd.DataFrame:
+    columns = [
+        "symbol",
+        "industry_code",
+        "industry_name",
+        "level",
+        "effective_from",
+        "effective_to",
+        "available_time",
+        "source",
+        "source_type",
+        "raw_ref",
+    ]
+    if df.empty:
+        return pd.DataFrame(columns=columns)
 
     work = df.copy()
     work["l1_code"] = work["industry_code"].str[:2] + "0000"
@@ -105,39 +142,29 @@ def _build_intervals(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     grouped["industry_code"] = "SW1:" + grouped["l1_code"]
-    # The official history endpoint supplies codes but no stable historical
-    # Chinese L1-name field. Use the code as the normalized name rather than
-    # joining a potentially mismatched current-name table.
+    # The historical source supplies codes but no stable historical Chinese
+    # L1-name field. Keep the code as the normalized name to avoid joining a
+    # potentially mismatched current-name table.
     grouped["industry_name"] = grouped["industry_code"]
     grouped["level"] = "l1"
-    grouped["source"] = "akshare_sw"
-    grouped["source_type"] = "akshare_stock_industry_clf_hist_sw"
+    grouped["source"] = source
+    grouped["source_type"] = source_type
     grouped["raw_ref"] = (
-        "akshare:stock_industry_clf_hist_sw:"
+        source_type
+        + ":"
         + grouped["symbol"].astype(str)
         + ":"
         + grouped["start_date"].dt.strftime("%Y-%m-%d")
     )
 
-    return grouped[
-        [
-            "symbol",
-            "industry_code",
-            "industry_name",
-            "level",
-            "effective_from",
-            "effective_to",
-            "available_time",
-            "source",
-            "source_type",
-            "raw_ref",
-        ]
-    ]
+    return grouped[columns]
 
 
 def main():
     args = parse_args()
-    history = _load_history()
+    history, source, source_type = _load_history(
+        Path(args.input) if args.input else None
+    )
 
     requested = {str(s).strip().zfill(6) for s in args.symbol}
     history = history[history["symbol"].isin(requested)].copy()
@@ -153,7 +180,7 @@ def main():
         raise SystemExit("No requested SW industry history returned.")
 
     raw_out = history.sort_values(["symbol", "start_date"]).reset_index(drop=True)
-    membership_out = _build_intervals(raw_out)
+    membership_out = _build_intervals(raw_out, source, source_type)
 
     out_path = Path(args.output)
     raw_path = Path(args.raw_output)
@@ -164,6 +191,7 @@ def main():
     membership_out.to_csv(out_path, index=False, encoding="utf-8-sig")
 
     print(f"symbols: {sorted(requested)}")
+    print(f"source: {source}")
     print(f"raw rows: {len(raw_out)} -> {raw_path}")
     print(f"membership rows: {len(membership_out)} -> {out_path}")
     print("coverage_start:")
