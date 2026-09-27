@@ -82,37 +82,63 @@ def download_symbol(symbol: str, start: str, end: str, root: str, adjust: str = 
     if df is None or df.empty:
         return 0
 
-    required = {"日期", "开盘", "收盘", "最高", "最低"}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"AKShare response missing columns: {sorted(missing)}")
-    if "股票代码" not in df.columns:
-        df["股票代码"] = symbol
-    if "成交量" not in df.columns:
-        if "成交量" in df.columns:
-            df["成交量"] = df["成交量"]
-        elif "volume" in df.columns:
-            df["成交量"] = df["volume"]
-        else:
-            df["成交量"] = 0.0
-    if "成交额" not in df.columns:
-        if "成交额" in df.columns:
-            df["成交额"] = df["成交额"]
-        elif "amount" in df.columns:
-            df["成交额"] = df["amount"]
-        else:
-            df["成交额"] = 0.0
+    # Normalize the two supported AKShare schemas into one internal schema.
+    # Eastmoney returns Chinese column names; Tencent returns English names.
+    if source_name == "akshare:stock_zh_a_hist":
+        rename_map = {
+            "日期": "date",
+            "开盘": "open",
+            "收盘": "close",
+            "最高": "high",
+            "最低": "low",
+            "成交量": "volume",
+            "成交额": "amount",
+            "股票代码": "symbol",
+        }
+        df = df.rename(columns=rename_map)
+        if "symbol" not in df.columns:
+            df["symbol"] = symbol
+        required = {"date", "open", "close", "high", "low", "volume", "amount"}
+        missing = required - set(df.columns)
+        if missing:
+            raise ValueError(
+                f"Eastmoney response missing columns after normalization: {sorted(missing)}"
+            )
+        amount_is_turnover = True
+    else:
+        # stock_zh_a_hist_tx returns date/open/close/high/low/amount.
+        # In this Tencent interface, amount is trading volume in lots, not
+        # turnover in currency. Convert lots to shares and do not fabricate
+        # a monetary turnover field.
+        required = {"date", "open", "close", "high", "low", "amount"}
+        missing = required - set(df.columns)
+        if missing:
+            raise ValueError(
+                f"Tencent response missing columns: {sorted(missing)}"
+            )
+        df = df.copy()
+        df["symbol"] = symbol
+        df["volume"] = pd.to_numeric(df["amount"], errors="coerce") * 100.0
+        df["turnover"] = None
+        amount_is_turnover = False
+
+    numeric_cols = ["open", "close", "high", "low", "volume"]
+    for column in numeric_cols:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+    if df[numeric_cols].isna().any().any():
+        bad = df.loc[df[numeric_cols].isna().any(axis=1), ["date"] + numeric_cols]
+        raise ValueError(f"Historical response contains non-numeric required values: {bad.head(3).to_dict('records')}")
 
     # The source documents that same-day daily data should be fetched after close.
     # We model a conservative, explicit availability assumption of 16:00 Asia/Shanghai.
     availability = "16:00:00+08:00"
     records = []
     for row in df.to_dict("records"):
-        date = pd.Timestamp(row["日期"]).strftime("%Y-%m-%d")
+        date = pd.Timestamp(row["date"]).strftime("%Y-%m-%d")
         event_time = f"{date}T15:00:00+08:00"
         available_time = f"{date}T{availability}"
         records.append(HistoricalRecord(
-            symbol=str(row["股票代码"]).zfill(6),
+            symbol=str(row["symbol"]).zfill(6),
             event_time=event_time,
             available_time=available_time,
             source=source_name,
@@ -123,8 +149,8 @@ def download_symbol(symbol: str, start: str, end: str, root: str, adjust: str = 
                 "close": float(row["收盘"]),
                 "high": float(row["最高"]),
                 "low": float(row["最低"]),
-                "volume": float(row["成交量"]),
-                "amount": float(row["成交额"]),
+                "volume": float(row["volume"]),
+                "amount": (float(row["amount"]) if amount_is_turnover else None),
                 "adjust": adjust,
             },
             layer=DataLayer.CLEAN,
