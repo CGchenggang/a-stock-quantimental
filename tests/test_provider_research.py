@@ -32,3 +32,4 @@ def test_provider_research_builds_evidence_packet_and_health():
     assert packet.model == {}
     assert packet.data_quality["provider_results"] == 2
     assert packet.data_quality["fallback_ratio"] == 0.0
+    assert packet.data_quality["availability_complete"] is True
