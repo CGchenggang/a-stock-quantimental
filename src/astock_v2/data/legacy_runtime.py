@@ -14,6 +14,7 @@ def build_legacy_market_provider(
     intraday_fetcher: Callable[[str, int, int], dict[str, Any]] | None = None,
     sector_fetcher: Callable[[], dict[str, Any]] | None = None,
     index_fetcher: Callable[[str], dict[str, Any]] | None = None,
+    turnover_fetcher: Callable[[], dict[str, Any]] | None = None,
 ) -> MarketProvider:
     """Build a V2 provider backed by V1 functions.
 
@@ -26,6 +27,7 @@ def build_legacy_market_provider(
         or intraday_fetcher is None
         or sector_fetcher is None
         or index_fetcher is None
+        or turnover_fetcher is None
     ):
         from scripts.data_layer import (
             get_realtime_quotes,
@@ -33,6 +35,7 @@ def build_legacy_market_provider(
             get_minute_kline,
             get_sector_board,
             get_index_daily,
+            get_market_turnover_snapshot,
         )
 
         realtime_fetcher = realtime_fetcher or get_realtime_quotes
@@ -40,6 +43,7 @@ def build_legacy_market_provider(
         intraday_fetcher = intraday_fetcher or get_minute_kline
         sector_fetcher = sector_fetcher or get_sector_board
         index_fetcher = index_fetcher or get_index_daily
+        turnover_fetcher = turnover_fetcher or get_market_turnover_snapshot
 
     return LegacyMarketProvider(
         realtime_fetcher=realtime_fetcher,
@@ -47,4 +51,5 @@ def build_legacy_market_provider(
         intraday_fetcher=intraday_fetcher,
         sector_fetcher=sector_fetcher,
         index_fetcher=index_fetcher,
+        turnover_fetcher=turnover_fetcher,
     )
