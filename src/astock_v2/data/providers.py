@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any
 
 @dataclass(frozen=True)
@@ -21,14 +22,31 @@ def normalize_time(value: str) -> str:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.isoformat()
 
+class PitStatus(str, Enum):
+    ADMISSIBLE = "ADMISSIBLE"
+    FUTURE = "FUTURE"
+    MISSING_TIME = "MISSING_TIME"
+    FALLBACK = "FALLBACK"
+    INVALID_TIME = "INVALID_TIME"
+
+
+def pit_status(result: ProviderResult, decision_time: str) -> PitStatus:
+    """Classify a provider result relative to a decision-time PIT boundary."""
+    if result.fallback:
+        return PitStatus.FALLBACK
+    if not result.available_time:
+        return PitStatus.MISSING_TIME
+    try:
+        available = normalize_time(result.available_time)
+        decision = normalize_time(decision_time)
+    except (TypeError, ValueError):
+        return PitStatus.INVALID_TIME
+    return PitStatus.ADMISSIBLE if available <= decision else PitStatus.FUTURE
+
+
 def pit_admissible(result: ProviderResult, decision_time: str) -> bool:
     """Return True only when the provider result is usable at decision_time."""
-    if not result.available_time or result.fallback:
-        return False
-    try:
-        return normalize_time(result.available_time) <= normalize_time(decision_time)
-    except (TypeError, ValueError):
-        return False
+    return pit_status(result, decision_time) is PitStatus.ADMISSIBLE
 
 class MarketProvider(ABC):
     name: str
