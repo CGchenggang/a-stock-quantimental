@@ -586,10 +586,7 @@ def get_minute_kline(code: str, scale: int = 5, datalen: int = 20) -> dict:
 # 4. 大盘指数
 # =========================================================
 def get_index_daily(symbol: str = "sh000300") -> dict:
-    """指数日K(沪深300=sh000300, 创业板=sz399006, 上证=sh000001)。
-
-    返回 {ok, latest{close,pct,...}, ma20, error}
-    """
+    """指数日K，并提供历史收益率/波动率观测供V2 regime使用."""
     cache_key = f"idx_{symbol}"
     cached = _cache_get(cache_key, 3600)
     if cached is not None:
@@ -610,6 +607,31 @@ def get_index_daily(symbol: str = "sh000300") -> dict:
     prev = df.iloc[-2] if len(df) >= 2 else None
     pct = round((latest["close"] - prev["close"]) / prev["close"] * 100, 2) if prev is not None else None
 
+    returns = [
+        (closes[k] / closes[k - 1] - 1.0) * 100
+        for k in range(1, len(closes))
+        if closes[k - 1] > 0
+    ]
+
+    def _stdev(values):
+        if len(values) < 2:
+            return None
+        mean = sum(values) / len(values)
+        return (sum((x - mean) ** 2 for x in values) / len(values)) ** 0.5
+
+    vol20 = _stdev(returns[-20:]) if len(returns) >= 20 else None
+    rolling_vols = [
+        _stdev(returns[k - 20:k])
+        for k in range(20, len(returns) + 1)
+    ]
+    rolling_vols = [v for v in rolling_vols if v is not None]
+    vol_z = None
+    if vol20 is not None and len(rolling_vols) >= 10:
+        baseline = rolling_vols[:-1]
+        baseline_std = _stdev(baseline)
+        if baseline and baseline_std and baseline_std > 0:
+            vol_z = round((vol20 - sum(baseline) / len(baseline)) / baseline_std, 4)
+
     result = {
         "ok": True,
         "symbol": symbol,
@@ -618,10 +640,68 @@ def get_index_daily(symbol: str = "sh000300") -> dict:
         "pct": pct,
         "ma20": ma20,
         "above_ma20": bool(latest["close"] > ma20) if ma20 else None,
+        "volatility20": round(vol20, 6) if vol20 is not None else None,
+        "volatility_z": vol_z,
+        "return_count": len(returns),
     }
     _cache_set(cache_key, result)
     return result
 
+
+def get_market_turnover_snapshot() -> dict:
+    """Aggregate A-share turnover from the full-market quote snapshot.
+
+    The z-score is only produced after enough dated local observations have
+    accumulated. It is explicitly a runtime observation series, not a
+    backtest-ready historical feed.
+    """
+    current = get_realtime_quotes()
+    if not current.get("ok"):
+        return {"ok": False, "error": current.get("error", "realtime unavailable")}
+
+    quotes = current.get("quotes", {})
+    amount = sum(
+        float(row.get("amount") or 0)
+        for key, row in quotes.items()
+        if str(key).isdigit() and isinstance(row, dict)
+    )
+    date_key = datetime.now().strftime("%Y-%m-%d")
+    history_key = "market_turnover_history"
+    history = _cache_get(history_key, 90 * 86400) or []
+    by_date = {str(row.get("date")): float(row.get("amount") or 0) for row in history}
+    by_date[date_key] = amount
+    history = [
+        {"date": d, "amount": by_date[d]}
+        for d in sorted(by_date)[-60:]
+    ]
+    _cache_set(history_key, history)
+
+    values = [float(row["amount"]) for row in history if float(row["amount"]) > 0]
+    z = None
+    if len(values) >= 20:
+        baseline = values[:-1]
+        mean = sum(baseline) / len(baseline)
+        sd = _stdev_numeric(baseline)
+        if sd and sd > 0:
+            z = round((amount - mean) / sd, 4)
+
+    return {
+        "ok": True,
+        "date": date_key,
+        "amount": amount,
+        "turnover_z": z,
+        "observation_count": len(values),
+        "source": current.get("source", "legacy_realtime"),
+        "pit_ready": False,
+        "warning": "local observation history; not backtest-ready until a dated historical source is migrated",
+    }
+
+
+def _stdev_numeric(values):
+    if len(values) < 2:
+        return None
+    mean = sum(values) / len(values)
+    return (sum((x - mean) ** 2 for x in values) / len(values)) ** 0.5
 
 def get_index_realtime() -> dict:
     """主要指数实时涨跌（从全市场行情缓存提取，或用指数日K兜底）。
