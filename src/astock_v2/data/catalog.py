@@ -55,21 +55,22 @@ class HistoricalRecord:
         if not self.available_time:
             return False
         try:
-            datetime.fromisoformat(self.available_time.replace("Z", "+00:00"))
-            datetime.fromisoformat(self.event_time.replace("Z", "+00:00"))
+            event = datetime.fromisoformat(self.event_time.replace("Z", "+00:00"))
+            available = datetime.fromisoformat(self.available_time.replace("Z", "+00:00"))
         except ValueError:
             return False
-        return True
+        return event.tzinfo is not None and available.tzinfo is not None and available >= event
 
     def admissible_at(self, decision_time: str) -> bool:
         if not self.pit_ready:
             return False
-        available = datetime.fromisoformat(self.available_time.replace("Z", "+00:00"))
-        decision = datetime.fromisoformat(decision_time.replace("Z", "+00:00"))
-        if available.tzinfo is None:
-            available = available.replace(tzinfo=timezone.utc)
-        if decision.tzinfo is None:
-            decision = decision.replace(tzinfo=timezone.utc)
+        try:
+            available = datetime.fromisoformat(self.available_time.replace("Z", "+00:00"))
+            decision = datetime.fromisoformat(decision_time.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if available.tzinfo is None or decision.tzinfo is None:
+            return False
         return available <= decision
 
 
