@@ -100,7 +100,12 @@ class LegacyMarketProvider(MarketProvider):
                     "legacy daily payload contains data after requested end date"
                 )
 
-        available = payload.get("available_time")\n        if not available:\n            # Fetch time is not publication time. Without explicit availability,\n            # PIT status must remain MISSING_TIME rather than being fabricated.\n            return legacy_daily_result(payload, available_time="")\n        return legacy_daily_result(payload, available_time=str(available))
+        available = payload.get("available_time")
+        if not available:
+            # Fetch time is not publication time. Without explicit availability,
+            # PIT status must remain MISSING_TIME rather than being fabricated.
+            return legacy_daily_result(payload, available_time="")
+        return legacy_daily_result(payload, available_time=str(available))
 
 
     def index_daily(self, symbol: str) -> ProviderResult:
