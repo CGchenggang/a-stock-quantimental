@@ -36,12 +36,14 @@ class LegacyMarketProvider(MarketProvider):
         intraday_fetcher: Callable[[str, int, int], dict[str, Any]] | None = None,
         sector_fetcher: Callable[[], dict[str, Any]] | None = None,
         index_fetcher: Callable[[str], dict[str, Any]] | None = None,
+        turnover_fetcher: Callable[[], dict[str, Any]] | None = None,
     ) -> None:
         self._realtime_fetcher = realtime_fetcher
         self._daily_fetcher = daily_fetcher
         self._intraday_fetcher = intraday_fetcher
         self._sector_fetcher = sector_fetcher
         self._index_fetcher = index_fetcher
+        self._turnover_fetcher = turnover_fetcher
 
     def quote(self, symbols: list[str]) -> ProviderResult:
         payload = self._realtime_fetcher()
@@ -118,6 +120,26 @@ class LegacyMarketProvider(MarketProvider):
             raise TypeError("legacy sector fetcher must return dict")
         available = payload.get("ts") or _now_iso()
         return legacy_sector_result(payload, available_time=available)
+
+    def market_turnover(self) -> ProviderResult:
+        if self._turnover_fetcher is None:
+            raise NotImplementedError("legacy market turnover fetcher is not configured")
+        payload = self._turnover_fetcher()
+        if not isinstance(payload, dict):
+            raise TypeError("legacy market turnover fetcher must return dict")
+        fetched = payload.get("fetched_at") or payload.get("ts") or _now_iso()
+        warnings = []
+        if payload.get("warning"):
+            warnings.append(str(payload["warning"]))
+        return ProviderResult(
+            data=payload,
+            source=str(payload.get("source") or "legacy_market_turnover"),
+            source_type="legacy_market_turnover",
+            fetched_at=fetched,
+            available_time=fetched,
+            fallback=False,
+            warnings=warnings,
+        )
 
     def intraday(self, symbol: str, scale: int = 5, datalen: int = 20) -> ProviderResult:
         if self._intraday_fetcher is None:
