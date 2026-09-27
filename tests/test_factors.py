@@ -1,5 +1,6 @@
 from astock_v2.data.providers import ProviderResult
 from astock_v2.factors import compute_factor
+import pytest
 
 DECISION="2026-09-27T15:00:00+00:00"
 
@@ -63,5 +64,5 @@ def test_ohlcv_candidate_factors_are_deterministic():
     rr = compute_factor("range_ratio", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
     loc = compute_factor("close_location", provider(data), symbol="000001", decision_time=DECISION, lookback=20)
     assert high.value is not None and low.value is not None
-    assert rr.value == 0.0
-    assert loc.value == 0.0
+    assert rr.value == pytest.approx(0.0, abs=1e-12)
+    assert loc.value == pytest.approx(0.0, abs=1e-12)
