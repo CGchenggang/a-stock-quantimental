@@ -2,7 +2,7 @@ from astock_v2.data.pit_adapter import daily_latest_cached_to_datapoint
 
 def test_cached_daily_uses_persisted_cache_time():
     point=daily_latest_cached_to_datapoint({
-        "saved_at_unix":1790419200.0,
+        "saved_at_unix":1790380800.0,
         "data":{
             "code":"000001",
             "latest_date":"2026-09-25",
