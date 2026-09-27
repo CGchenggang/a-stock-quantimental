@@ -126,7 +126,7 @@ def load_industry_membership_csv(
     timezone-aware UTC datetimes. No membership is inferred before the first
     explicitly observed effective_from.
     """
-    df = pd.read_csv(path)
+    df = pd.read_csv(path, dtype={"symbol": "string"})
     missing = sorted(_REQUIRED_CSV_COLUMNS - set(df.columns))
     if missing:
         raise ValueError(f"industry membership CSV missing columns: {missing}")
