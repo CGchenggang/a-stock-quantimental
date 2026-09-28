@@ -84,8 +84,9 @@ def _daily_returns(
 def _membership_schedule(memberships):
     """Prepare one stock's membership schedule for fast PIT lookups."""
     ordered = sorted(memberships, key=lambda item: item.effective_from)
-    effective = [item.effective_from for item in ordered]
-    available = sorted(item.available_time for item in ordered)
+    ordered = tuple(ordered)
+    effective = tuple(item.effective_from for item in ordered)
+    available = tuple(sorted(item.available_time for item in ordered))
     return ordered, effective, available
 
 
