@@ -121,7 +121,12 @@ def _historical_membership_maps(schedule, days):
     day is not yet available and must be excluded.
     """
     ordered, effective, _available = schedule
-    effective_days = tuple(item.effective_from[:10] for item in ordered)
+    effective_days = tuple(
+        item.effective_from.date().isoformat()
+        if hasattr(item.effective_from, "date")
+        else item.effective_from[:10]
+        for item in ordered
+    )
     on_or_before = {}
     before = {}
     for day in days:
