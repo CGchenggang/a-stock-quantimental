@@ -13,7 +13,6 @@ effective/availability schedules and binary search.
 from __future__ import annotations
 
 from bisect import bisect_right
-from functools import lru_cache
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -90,7 +89,6 @@ def _membership_schedule(memberships):
     return ordered, effective, available
 
 
-@lru_cache(maxsize=4096)
 def _scheduled_industry(schedule, day: str, decision_time: str):
     """Resolve the latest effective assignment known at decision_time.
 
@@ -101,7 +99,7 @@ def _scheduled_industry(schedule, day: str, decision_time: str):
     ordered, effective, available = schedule
     if not ordered:
         return None
-    decision_dt = _parse_aware(decision_time)
+    decision_dt = decision_time if isinstance(decision_time, datetime) else _parse_aware(decision_time)
     event_dt = datetime.fromisoformat(f"{day}T00:00:00+08:00")
     available_end = bisect_right(available, decision_dt)
     if available_end == 0:
@@ -349,11 +347,19 @@ def build_universe_industry_relative_context_maps(
         day = event_days[pos]
         decision_time = f"{day}T16:00:00+08:00"
         _advance_pit_return_state(state, decision_time)
+        decision_dt = _parse_aware(decision_time)
+        membership_cache: dict[tuple[str, str], object] = {}
+
+        def scheduled(symbol: str, lookup_day: str):
+            key = (symbol, lookup_day)
+            if key not in membership_cache:
+                membership_cache[key] = _scheduled_industry(
+                    memberships_by_symbol[symbol], lookup_day, decision_dt
+                )
+            return membership_cache[key]
 
         current_membership = {
-            symbol: _scheduled_industry(
-                memberships_by_symbol[symbol], day, decision_time
-            )
+            symbol: scheduled(symbol, day)
             for symbol in symbols
         }
 
@@ -372,14 +378,19 @@ def build_universe_industry_relative_context_maps(
                 stock_return = state[symbol]["returns"].get(return_day)
                 if stock_return is None:
                     continue
-                membership = _scheduled_industry(
-                    memberships_by_symbol[symbol], return_day, decision_time
-                )
+                membership = scheduled(symbol, return_day)
                 if membership is None:
                     continue
                 key = (return_day, membership.industry_code)
                 total, count = recent_peer_stats.get(key, (0.0, 0.0))
                 recent_peer_stats[key] = (total + stock_return, count + 1.0)
+
+        candidate_days_by_industry: dict[str, list[str]] = {}
+        for (return_day, industry_code), (_, peer_count) in recent_peer_stats.items():
+            if peer_count >= 2.0:
+                candidate_days_by_industry.setdefault(industry_code, []).append(return_day)
+        for days in candidate_days_by_industry.values():
+            days.sort(reverse=True)
 
         for symbol in symbols:
             target_current = state[symbol]["selected"].get(day)
@@ -391,7 +402,9 @@ def build_universe_industry_relative_context_maps(
             common_days: list[str] = []
             industry_recent_by_day: dict[str, float] = {}
 
-            for return_day in candidate_days:
+            for return_day in candidate_days_by_industry.get(
+                target_membership.industry_code, ()
+            ):
                 target_return = target_returns.get(return_day)
                 if target_return is None:
                     continue
@@ -437,9 +450,7 @@ def build_universe_industry_relative_context_maps(
                             peer_sum += peer_return
                             peer_count += 1.0
                         recent_peer_stats[key] = (peer_sum, peer_count)
-                    target_historical_membership = _scheduled_industry(
-                        memberships_by_symbol[symbol], return_day, decision_time
-                    )
+                    target_historical_membership = scheduled(symbol, return_day)
                     if (
                         target_historical_membership is not None
                         and target_historical_membership.industry_code == target_membership.industry_code
