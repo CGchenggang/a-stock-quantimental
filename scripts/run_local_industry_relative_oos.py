@@ -19,7 +19,10 @@ from math import log
 import numpy as np
 
 from astock_v2.data.local_store import LocalHistoricalStore
-from astock_v2.industry_relative import build_universe_industry_relative_context_maps
+from astock_v2.industry_relative import (
+    build_stock_industry_relative_context_map,
+    build_universe_industry_relative_context_maps,
+)
 from astock_v2.local_pipeline import build_local_factor_rows
 from astock_v2.validation import walk_forward_windows
 
@@ -163,9 +166,20 @@ def main():
     variants = _variants()
     results = []
     requested_symbols = tuple(dict.fromkeys(args.symbol))
-    context_maps = build_universe_industry_relative_context_maps(
-        store, args.membership, tuple(universe), lookback=20
-    )
+    if len(requested_symbols) == 1:
+        # A single-stock benchmark only needs the exact target-specific context.
+        # Avoid building the full pooled universe context when --symbol is used
+        # once; the target-specific builder applies the same PIT semantics with
+        # an exact industry-code candidate reduction.
+        symbol = requested_symbols[0]
+        context_map = build_stock_industry_relative_context_map(
+            store, args.membership, symbol, tuple(universe), lookback=20
+        )
+        context_maps = {symbol: context_map}
+    else:
+        context_maps = build_universe_industry_relative_context_maps(
+            store, args.membership, tuple(universe), lookback=20
+        )
 
     for symbol in requested_symbols:
         rows = _factor_rows(store, context_maps.get(symbol, {}), symbol)
