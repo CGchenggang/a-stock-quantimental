@@ -12,7 +12,7 @@ effective/availability schedules and binary search.
 """
 from __future__ import annotations
 
-from bisect import bisect_right
+from bisect import bisect_left, bisect_right, insort
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -166,8 +166,13 @@ def _build_pit_return_state(
     return state
 
 
-def _advance_pit_return_state(state, decision_time: str) -> None:
-    """Advance all stocks to one monotonically increasing decision boundary."""
+def _advance_pit_return_state(state, decision_time: str) -> set[str]:
+    """Advance all stocks to one monotonically increasing decision boundary.
+
+    Returns the set of return days whose admissible return values were added,
+    changed or removed, so memoized per-day aggregates can be pruned.
+    """
+    changed: set[str] = set()
     for item in state.values():
         selected = item["selected"]
         returns = item["returns"]
@@ -198,14 +203,17 @@ def _advance_pit_return_state(state, decision_time: str) -> None:
                 previous = selected.get(previous_day)
                 current_record = selected.get(return_day)
                 if previous is None or current_record is None:
-                    returns.pop(return_day, None)
+                    if returns.pop(return_day, None) is not None:
+                        changed.add(return_day)
                     continue
                 previous_close = float(previous.value["close"])
                 close = float(current_record.value["close"])
                 if previous_close > 0 and close > 0:
                     returns[return_day] = close / previous_close - 1.0
-                else:
-                    returns.pop(return_day, None)
+                    changed.add(return_day)
+                elif returns.pop(return_day, None) is not None:
+                    changed.add(return_day)
+    return changed
 
 
 def _compounded(values) -> float:
@@ -381,10 +389,12 @@ def build_universe_industry_relative_context_maps(
 ) -> dict[str, dict[str, dict[str, float]]]:
     """Build PIT-safe industry-relative contexts once for the whole universe.
 
-    The return state is shared across target stocks. For each decision day,
-    peer benchmarks are computed lazily only for the historical return days
-    actually requested by targets. This avoids rebuilding a full
-    day x stock x history matrix at every decision boundary.
+    The return state is shared across target stocks. Peer benchmarks are
+    aggregated per (return day, industry code). For a return day earlier than
+    the decision day the effective-date membership map is decision-time
+    independent, so aggregates are memoized across decision days and pruned
+    whenever a late-admissible record changes that return day. The decision
+    day itself keeps its own unavailable-today semantics and is never cached.
     """
     if lookback < 20:
         raise ValueError("lookback must be at least 20")
@@ -415,12 +425,44 @@ def build_universe_industry_relative_context_maps(
         )
         for symbol in symbols
     }
+
+    # Decision-independent superset filter: if a symbol never carried an
+    # industry code it can never be admissible for that code at any PIT
+    # decision time. Keeping universe order preserves single-stock summation
+    # order, so aggregate values stay exactly equal to the single builder.
+    ever_codes: dict[str, set[str]] = {}
+    for symbol in symbols:
+        for membership in memberships_by_symbol[symbol][0]:
+            if membership.industry_code:
+                ever_codes.setdefault(membership.industry_code, set()).add(symbol)
+    symbols_by_ever_code: dict[str, tuple[str, ...]] = {
+        code: tuple(symbol for symbol in symbols if symbol in members)
+        for code, members in ever_codes.items()
+    }
+
+    # return_day -> {industry_code: (sum, count)} memoized across decision days.
+    peer_aggregates: dict[str, dict[str, tuple[float, float]]] = {}
+    # Admissible return days, ascending. Advances only touch the days reported
+    # by _advance_pit_return_state, so the union is maintained incrementally
+    # instead of being rebuilt from every stock's returns on each decision day.
+    candidate_day_set: set[str] = set()
+    candidate_days: list[str] = []
     result = {symbol: {} for symbol in symbols}
 
     for pos in range(lookback, len(event_days)):
         day = event_days[pos]
         decision_time = f"{day}T16:00:00+08:00"
-        _advance_pit_return_state(state, decision_time)
+        for changed_day in _advance_pit_return_state(state, decision_time):
+            peer_aggregates.pop(changed_day, None)
+            if any(changed_day in item["returns"] for item in state.values()):
+                if changed_day not in candidate_day_set:
+                    candidate_day_set.add(changed_day)
+                    insort(candidate_days, changed_day)
+            else:
+                candidate_day_set.discard(changed_day)
+                day_index = bisect_left(candidate_days, changed_day)
+                if day_index < len(candidate_days) and candidate_days[day_index] == changed_day:
+                    candidate_days.pop(day_index)
         decision_dt = _parse_aware(decision_time)
         membership_cache: dict[tuple[str, str], object] = {}
 
@@ -434,7 +476,6 @@ def build_universe_industry_relative_context_maps(
 
         # Only active target industries are relevant on this decision day.
         current_membership: dict[str, object] = {}
-        active_targets: list[tuple[str, object, HistoricalRecord]] = []
         target_industry_codes: set[str] = set()
         for symbol in symbols:
             target_current = state[symbol]["selected"].get(day)
@@ -442,56 +483,38 @@ def build_universe_industry_relative_context_maps(
             if target_current is None or target_membership is None:
                 continue
             current_membership[symbol] = target_membership
-            active_targets.append((symbol, target_membership, target_current))
             target_industry_codes.add(target_membership.industry_code)
 
-        recent_peer_stats: dict[tuple[str, str], tuple[float, float]] = {}
-        candidate_days = sorted(
-            {return_day for item in state.values() for return_day in item["returns"]},
-            reverse=True,
-        )
-        recent_candidate_days = candidate_days[:60]
+        def peer_stats(return_day: str, industry_code: str) -> tuple[float, float]:
+            """Equal-weight (sum, count) of candidate returns in one industry.
 
-        # Historical membership is an exact superset filter: if a symbol has
-        # never carried an industry code, it can never be admissible for that
-        # code at a later PIT decision time.
-        historical_symbols_by_code: dict[str, tuple[str, ...]] = {}
-        for code in target_industry_codes:
-            historical_symbols_by_code[code] = tuple(
-                symbol
-                for symbol in symbols
-                if any(
-                    membership.industry_code == code
-                    for membership in memberships_by_symbol[symbol][0]
-                )
-            )
-
-        candidate_symbols = tuple(
-            dict.fromkeys(
-                symbol
-                for code in target_industry_codes
-                for symbol in historical_symbols_by_code[code]
-            )
-        )
-
-        # Precompute only the industry aggregates actually requested by the
-        # active targets.
-        for return_day in recent_candidate_days:
-            for symbol in candidate_symbols:
-                stock_return = state[symbol]["returns"].get(return_day)
+            Historical (return_day < day) aggregates are exact and cached; the
+            decision day itself uses the not-yet-available exclusion map and
+            stays uncached because its result depends on decision_time.
+            """
+            day_cache = peer_aggregates.get(return_day)
+            if day_cache is not None and industry_code in day_cache:
+                return day_cache[industry_code]
+            total = 0.0
+            count = 0.0
+            for peer_symbol in symbols_by_ever_code.get(industry_code, ()):
+                stock_return = state[peer_symbol]["returns"].get(return_day)
                 if stock_return is None:
                     continue
                 membership = (
-                    historical_memberships[symbol][1].get(return_day)
+                    historical_memberships[peer_symbol][1].get(return_day)
                     if return_day == day
-                    else historical_memberships[symbol][0].get(return_day)
+                    else historical_memberships[peer_symbol][0].get(return_day)
                 )
-                if membership is None or membership.industry_code not in target_industry_codes:
+                if membership is None or membership.industry_code != industry_code:
                     continue
-                key = (return_day, membership.industry_code)
-                total, count = recent_peer_stats.get(key, (0.0, 0.0))
-                recent_peer_stats[key] = (total + stock_return, count + 1.0)
-
+                total += stock_return
+                count += 1.0
+            if return_day != day:
+                if day_cache is None:
+                    day_cache = peer_aggregates.setdefault(return_day, {})
+                day_cache[industry_code] = (total, count)
+            return total, count
 
         for symbol in symbols:
             target_current = state[symbol]["selected"].get(day)
@@ -504,18 +527,17 @@ def build_universe_industry_relative_context_maps(
                 continue
 
             target_returns = state[symbol]["returns"]
+            industry_code = target_membership.industry_code
             common_days: list[str] = []
             industry_recent_by_day: dict[str, float] = {}
 
-            # Preserve the exact single-stock search order: each target scans
-            # its own available return days newest-first. The shared peer
-            # aggregates are only an optimization for those same days.
-            for return_day in recent_candidate_days:
+            # Preserve the exact single-stock search order: scan return days
+            # newest-first and keep the first `lookback` days that have peers.
+            for return_day in reversed(candidate_days):
                 target_return = target_returns.get(return_day)
                 if target_return is None:
                     continue
-                key = (return_day, target_membership.industry_code)
-                peer_sum, peer_count = recent_peer_stats.get(key, (0.0, 0.0))
+                peer_sum, peer_count = peer_stats(return_day, industry_code)
                 target_historical_membership = (
                     historical_memberships[symbol][1].get(return_day)
                     if return_day == day
@@ -523,8 +545,7 @@ def build_universe_industry_relative_context_maps(
                 )
                 if (
                     target_historical_membership is not None
-                    and target_historical_membership.industry_code
-                    == target_membership.industry_code
+                    and target_historical_membership.industry_code == industry_code
                 ):
                     peer_sum -= target_return
                     peer_count -= 1.0
@@ -534,48 +555,6 @@ def build_universe_industry_relative_context_maps(
                 industry_recent_by_day[return_day] = peer_sum / peer_count
                 if len(common_days) >= lookback:
                     break
-
-            if len(common_days) < lookback:
-                # Exact fallback for sparse or short-lived industry membership.
-                for return_day in candidate_days[60:]:
-                    target_return = target_returns.get(return_day)
-                    if target_return is None:
-                        continue
-                    key = (return_day, target_membership.industry_code)
-                    peer_sum, peer_count = recent_peer_stats.get(key, (0.0, 0.0))
-                    if key not in recent_peer_stats:
-                        peer_sum = peer_count = 0.0
-                        for peer_symbol in symbols:
-                            peer_return = state[peer_symbol]["returns"].get(return_day)
-                            if peer_return is None:
-                                continue
-                            peer_membership = (
-                                historical_memberships[peer_symbol][1].get(return_day)
-                                if return_day == day
-                                else historical_memberships[peer_symbol][0].get(return_day)
-                            )
-                            if peer_membership is None or peer_membership.industry_code != target_membership.industry_code:
-                                continue
-                            peer_sum += peer_return
-                            peer_count += 1.0
-                        recent_peer_stats[key] = (peer_sum, peer_count)
-                    target_historical_membership = (
-                        historical_memberships[symbol][1].get(return_day)
-                        if return_day == day
-                        else historical_memberships[symbol][0].get(return_day)
-                    )
-                    if (
-                        target_historical_membership is not None
-                        and target_historical_membership.industry_code == target_membership.industry_code
-                    ):
-                        peer_sum -= target_return
-                        peer_count -= 1.0
-                    if peer_count <= 0:
-                        continue
-                    common_days.append(return_day)
-                    industry_recent_by_day[return_day] = peer_sum / peer_count
-                    if len(common_days) >= lookback:
-                        break
 
             if len(common_days) < lookback:
                 continue
