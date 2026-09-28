@@ -411,9 +411,7 @@ def build_universe_industry_relative_context_maps(
                 peer_sum, peer_count = recent_peer_stats.get(
                     (return_day, target_membership.industry_code), (0.0, 0.0)
                 )
-                target_historical_membership = _scheduled_industry(
-                    memberships_by_symbol[symbol], return_day, decision_time
-                )
+                target_historical_membership = scheduled(symbol, return_day)
                 if (
                     target_historical_membership is not None
                     and target_historical_membership.industry_code
@@ -442,9 +440,7 @@ def build_universe_industry_relative_context_maps(
                             peer_return = state[peer_symbol]["returns"].get(return_day)
                             if peer_return is None:
                                 continue
-                            peer_membership = _scheduled_industry(
-                                memberships_by_symbol[peer_symbol], return_day, decision_time
-                            )
+                            peer_membership = scheduled(peer_symbol, return_day)
                             if peer_membership is None or peer_membership.industry_code != target_membership.industry_code:
                                 continue
                             peer_sum += peer_return
