@@ -457,7 +457,11 @@ def build_universe_industry_relative_context_maps(
 
         for symbol in symbols:
             target_current = state[symbol]["selected"].get(day)
-            target_membership = current_membership[symbol]
+            # Some validation symbols have no official SW1 history. They are
+            # valid price-series symbols but cannot produce a PIT-safe
+            # industry-relative factor, so skip them rather than indexing a
+            # missing membership entry.
+            target_membership = current_membership.get(symbol)
             if target_current is None or target_membership is None:
                 continue
 
