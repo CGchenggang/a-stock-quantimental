@@ -90,7 +90,7 @@ def _membership_schedule(memberships):
     return ordered, effective, available
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=4096)
 def _scheduled_industry(schedule, day: str, decision_time: str):
     """Resolve the latest effective assignment known at decision_time.
 
