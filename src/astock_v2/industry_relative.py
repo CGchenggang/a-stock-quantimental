@@ -89,7 +89,8 @@ def _membership_schedule(memberships):
     return ordered, effective, available
 
 
-@lru_cache(maxsize=None)\ndef _scheduled_industry(schedule, day: str, decision_time: str):
+@lru_cache(maxsize=None)
+def _scheduled_industry(schedule, day: str, decision_time: str):
     """Resolve the latest effective assignment known at decision_time.
 
     The importer uses monotone availability (effective date + one day), so
