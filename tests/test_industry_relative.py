@@ -98,12 +98,25 @@ def test_pooled_context_matches_single_stock_context(tmp_path):
     single = build_stock_industry_relative_context_map(
         store, membership, "000001", symbols
     )
-    pooled = build_universe_industry_relative_context_maps(
+    pooled_all = build_universe_industry_relative_context_maps(
         store, membership, symbols
-    )["000001"]
+    )
 
-    assert pooled.keys() == single.keys()
-    for decision_time in single:
-        assert pooled[decision_time].keys() == single[decision_time].keys()
-        for factor_name in single[decision_time]:
-            assert pooled[decision_time][factor_name] == single[decision_time][factor_name]
+    # Every target must match its independent single-stock execution. This
+    # catches cross-symbol state contamination in shared pooled context.
+    for symbol in symbols:
+        single = build_stock_industry_relative_context_map(
+            store, membership, symbol, symbols
+        )
+        pooled = pooled_all[symbol]
+        assert pooled.keys() == single.keys()
+        for decision_time in single:
+            assert pooled[decision_time].keys() == single[decision_time].keys()
+            for factor_name in single[decision_time]:
+                assert pooled[decision_time][factor_name] == single[decision_time][factor_name]
+
+    # Reusing the same process must not leak mutable pooled state between runs.
+    pooled_again = build_universe_industry_relative_context_maps(
+        store, membership, symbols
+    )
+    assert pooled_again == pooled_all
