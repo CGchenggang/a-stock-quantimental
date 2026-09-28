@@ -381,29 +381,67 @@ def build_universe_industry_relative_context_maps(
                 total, count = recent_peer_stats.get(key, (0.0, 0.0))
                 recent_peer_stats[key] = (total + stock_return, count + 1.0)
 
-            target_current = state[symbol]["selected"].get(day)
-            target_membership = current_membership[symbol]
-            if target_current is None or target_membership is None:
+        target_current = state[symbol]["selected"].get(day)
+        target_membership = current_membership[symbol]
+        if target_current is None or target_membership is None:
+            continue
+
+        target_returns = state[symbol]["returns"]
+        common_days: list[str] = []
+        industry_recent_by_day: dict[str, float] = {}
+
+        for return_day in candidate_days:
+            target_return = target_returns.get(return_day)
+            if target_return is None:
                 continue
+            peer_sum, peer_count = recent_peer_stats.get(
+                (return_day, target_membership.industry_code), (0.0, 0.0)
+            )
+            target_historical_membership = _scheduled_industry(
+                memberships_by_symbol[symbol], return_day, decision_time
+            )
+            if (
+                target_historical_membership is not None
+                and target_historical_membership.industry_code
+                == target_membership.industry_code
+            ):
+                peer_sum -= target_return
+                peer_count -= 1.0
+            if peer_count <= 0:
+                continue
+            common_days.append(return_day)
+            industry_recent_by_day[return_day] = peer_sum / peer_count
+            if len(common_days) >= lookback:
+                break
 
-            target_returns = state[symbol]["returns"]
-            common_days: list[str] = []
-            industry_recent_by_day: dict[str, float] = {}
-
-            for return_day in candidate_days:
+        if len(common_days) < lookback:
+            # Exact fallback for sparse or short-lived industry membership.
+            for return_day in candidate_days[60:]:
                 target_return = target_returns.get(return_day)
                 if target_return is None:
                     continue
-                peer_sum, peer_count = recent_peer_stats.get(
-                    (return_day, target_membership.industry_code), (0.0, 0.0)
-                )
+                key = (return_day, target_membership.industry_code)
+                peer_sum, peer_count = recent_peer_stats.get(key, (0.0, 0.0))
+                if key not in recent_peer_stats:
+                    peer_sum = peer_count = 0.0
+                    for peer_symbol in symbols:
+                        peer_return = state[peer_symbol]["returns"].get(return_day)
+                        if peer_return is None:
+                            continue
+                        peer_membership = _scheduled_industry(
+                            memberships_by_symbol[peer_symbol], return_day, decision_time
+                        )
+                        if peer_membership is None or peer_membership.industry_code != target_membership.industry_code:
+                            continue
+                        peer_sum += peer_return
+                        peer_count += 1.0
+                    recent_peer_stats[key] = (peer_sum, peer_count)
                 target_historical_membership = _scheduled_industry(
                     memberships_by_symbol[symbol], return_day, decision_time
                 )
                 if (
                     target_historical_membership is not None
-                    and target_historical_membership.industry_code
-                    == target_membership.industry_code
+                    and target_historical_membership.industry_code == target_membership.industry_code
                 ):
                     peer_sum -= target_return
                     peer_count -= 1.0
@@ -414,62 +452,24 @@ def build_universe_industry_relative_context_maps(
                 if len(common_days) >= lookback:
                     break
 
-            if len(common_days) < lookback:
-                # Exact fallback for sparse or short-lived industry membership.
-                for return_day in candidate_days[60:]:
-                    target_return = target_returns.get(return_day)
-                    if target_return is None:
-                        continue
-                    key = (return_day, target_membership.industry_code)
-                    peer_sum, peer_count = recent_peer_stats.get(key, (0.0, 0.0))
-                    if key not in recent_peer_stats:
-                        peer_sum = peer_count = 0.0
-                        for peer_symbol in symbols:
-                            peer_return = state[peer_symbol]["returns"].get(return_day)
-                            if peer_return is None:
-                                continue
-                            peer_membership = _scheduled_industry(
-                                memberships_by_symbol[peer_symbol], return_day, decision_time
-                            )
-                            if peer_membership is None or peer_membership.industry_code != target_membership.industry_code:
-                                continue
-                            peer_sum += peer_return
-                            peer_count += 1.0
-                        recent_peer_stats[key] = (peer_sum, peer_count)
-                    target_historical_membership = _scheduled_industry(
-                        memberships_by_symbol[symbol], return_day, decision_time
-                    )
-                    if (
-                        target_historical_membership is not None
-                        and target_historical_membership.industry_code == target_membership.industry_code
-                    ):
-                        peer_sum -= target_return
-                        peer_count -= 1.0
-                    if peer_count <= 0:
-                        continue
-                    common_days.append(return_day)
-                    industry_recent_by_day[return_day] = peer_sum / peer_count
-                    if len(common_days) >= lookback:
-                        break
+        if len(common_days) < lookback:
+            continue
+        recent_days = sorted(common_days)
+        target_recent = [target_returns[d] for d in recent_days]
+        industry_recent = [industry_recent_by_day[d] for d in recent_days]
+        target_return_20 = _compounded(target_recent)
+        industry_return_20 = _compounded(industry_recent)
+        target_return_5 = _compounded(target_recent[-5:])
+        industry_return_5 = _compounded(industry_recent[-5:])
 
-            if len(common_days) < lookback:
-                continue
-            recent_days = sorted(common_days)
-            target_recent = [target_returns[d] for d in recent_days]
-            industry_recent = [industry_recent_by_day[d] for d in recent_days]
-            target_return_20 = _compounded(target_recent)
-            industry_return_20 = _compounded(industry_recent)
-            target_return_5 = _compounded(target_recent[-5:])
-            industry_return_5 = _compounded(industry_recent[-5:])
-
-            result[symbol][decision_time] = {
-                "industry_relative_return_5": (
-                    target_return_5 - industry_return_5
-                ),
-                "industry_relative_return_20": (
-                    target_return_20 - industry_return_20
-                ),
-            }
+        result[symbol][decision_time] = {
+            "industry_relative_return_5": (
+                target_return_5 - industry_return_5
+            ),
+            "industry_relative_return_20": (
+                target_return_20 - industry_return_20
+            ),
+        }
 
     return result
 
