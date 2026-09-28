@@ -111,6 +111,29 @@ def _scheduled_industry(schedule, day: str, decision_time: str):
     return ordered[index]
 
 
+def _historical_membership_maps(schedule, days):
+    """Precompute effective-date membership for historical return-day lookups.
+
+    With the project convention that an assignment effective on day D becomes
+    available at 16:00 on the next calendar day, a return day earlier than the
+    decision day can use the latest assignment effective on or before that
+    return day. For the decision day itself, an assignment effective that same
+    day is not yet available and must be excluded.
+    """
+    ordered, effective, _available = schedule
+    effective_days = tuple(item.effective_from[:10] for item in ordered)
+    on_or_before = {}
+    before = {}
+    for day in days:
+        index = bisect_right(effective_days, day) - 1
+        on_or_before[day] = ordered[index] if index >= 0 else None
+        before_index = index
+        while before_index >= 0 and effective_days[before_index] == day:
+            before_index -= 1
+        before[day] = ordered[before_index] if before_index >= 0 else None
+    return on_or_before, before
+
+
 def _build_pit_return_state(
     records_by_symbol: dict[str, tuple[HistoricalRecord, ...]],
 ):
@@ -381,6 +404,12 @@ def build_universe_industry_relative_context_maps(
         }
     )
     state = _build_pit_return_state(all_records)
+    historical_memberships = {
+        symbol: _historical_membership_maps(
+            memberships_by_symbol[symbol], event_days
+        )
+        for symbol in symbols
+    }
     result = {symbol: {} for symbol in symbols}
 
     for pos in range(lookback, len(event_days)):
@@ -447,7 +476,11 @@ def build_universe_industry_relative_context_maps(
                 stock_return = state[symbol]["returns"].get(return_day)
                 if stock_return is None:
                     continue
-                membership = scheduled(symbol, return_day)
+                membership = (
+                    historical_memberships[symbol][1].get(return_day)
+                    if return_day == day
+                    else historical_memberships[symbol][0].get(return_day)
+                )
                 if membership is None or membership.industry_code not in target_industry_codes:
                     continue
                 key = (return_day, membership.industry_code)
@@ -478,7 +511,11 @@ def build_universe_industry_relative_context_maps(
                     continue
                 key = (return_day, target_membership.industry_code)
                 peer_sum, peer_count = recent_peer_stats.get(key, (0.0, 0.0))
-                target_historical_membership = scheduled(symbol, return_day)
+                target_historical_membership = (
+                    historical_memberships[symbol][1].get(return_day)
+                    if return_day == day
+                    else historical_memberships[symbol][0].get(return_day)
+                )
                 if (
                     target_historical_membership is not None
                     and target_historical_membership.industry_code
@@ -507,13 +544,21 @@ def build_universe_industry_relative_context_maps(
                             peer_return = state[peer_symbol]["returns"].get(return_day)
                             if peer_return is None:
                                 continue
-                            peer_membership = scheduled(peer_symbol, return_day)
+                            peer_membership = (
+                                historical_memberships[peer_symbol][1].get(return_day)
+                                if return_day == day
+                                else historical_memberships[peer_symbol][0].get(return_day)
+                            )
                             if peer_membership is None or peer_membership.industry_code != target_membership.industry_code:
                                 continue
                             peer_sum += peer_return
                             peer_count += 1.0
                         recent_peer_stats[key] = (peer_sum, peer_count)
-                    target_historical_membership = scheduled(symbol, return_day)
+                    target_historical_membership = (
+                        historical_memberships[symbol][1].get(return_day)
+                        if return_day == day
+                        else historical_memberships[symbol][0].get(return_day)
+                    )
                     if (
                         target_historical_membership is not None
                         and target_historical_membership.industry_code == target_membership.industry_code
