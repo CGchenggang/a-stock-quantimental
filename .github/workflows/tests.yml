@@ -52,3 +52,6 @@ jobs:
             tests/test_p8c_legacy_intraday_semantics.py \
             tests/test_p8d_orchestration.py \
             tests/test_regime.py
+      - name: P13-M pooled industry regression
+        run: |
+          python -m pytest -q -ra tests/test_industry_relative.py
