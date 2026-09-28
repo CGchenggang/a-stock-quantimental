@@ -156,7 +156,7 @@ def main():
 
     universe = tuple(
         line.strip().zfill(6)
-        for line in open(args.universe_file, encoding="utf-8")
+        for line in open(args.universe_file, encoding="utf-8-sig")
         if line.strip() and not line.lstrip().startswith("#")
     )
     if not universe:
