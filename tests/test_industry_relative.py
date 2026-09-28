@@ -2,7 +2,11 @@ from datetime import datetime, timedelta, timezone
 
 from astock_v2.data.catalog import HistoricalRecord
 from astock_v2.data.local_store import LocalHistoricalStore
-from astock_v2.industry_relative import build_stock_industry_relative_context
+from astock_v2.industry_relative import (
+    build_stock_industry_relative_context,
+    build_stock_industry_relative_context_map,
+    build_universe_industry_relative_context_maps,
+)
 
 
 TZ = timezone(timedelta(hours=8))
@@ -79,3 +83,27 @@ def test_industry_relative_context_excludes_other_industries(tmp_path):
     # The factor is finite and the extreme outsider series cannot dominate it.
     assert latest.factors["industry_relative_return_5"] < 0.0
     assert latest.factors["industry_relative_return_20"] < 0.0
+
+
+def test_pooled_context_matches_single_stock_context(tmp_path):
+    store = LocalHistoricalStore(tmp_path)
+    target = [_record("000001", day, 100.0 + day) for day in range(1, 25)]
+    peer = [_record("000333", day, 100.0 + 2.0 * day) for day in range(1, 25)]
+    outsider = [_record("000651", day, 1000.0 + 50.0 * day) for day in range(1, 25)]
+    peer2 = [_record("000652", day, 100.0 + 3.0 * day) for day in range(1, 25)]
+    store.append_records("cn_stock_daily", target + peer + outsider + peer2)
+
+    membership = _membership_csv(tmp_path)
+    symbols = ("000001", "000333", "000651", "000652")
+    single = build_stock_industry_relative_context_map(
+        store, membership, "000001", symbols
+    )
+    pooled = build_universe_industry_relative_context_maps(
+        store, membership, symbols
+    )["000001"]
+
+    assert pooled.keys() == single.keys()
+    for decision_time in single:
+        assert pooled[decision_time].keys() == single[decision_time].keys()
+        for factor_name in single[decision_time]:
+            assert pooled[decision_time][factor_name] == single[decision_time][factor_name]
