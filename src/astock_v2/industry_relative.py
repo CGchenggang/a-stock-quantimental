@@ -98,10 +98,12 @@ def _scheduled_industry(schedule, day: str, decision_time: str):
     ordered, effective, available = schedule
     if not ordered:
         return None
-    available_end = bisect_right(available, decision_time)
+    decision_dt = _parse_aware(decision_time)
+    event_dt = datetime.fromisoformat(f"{day}T00:00:00+08:00")
+    available_end = bisect_right(available, decision_dt)
     if available_end == 0:
         return None
-    effective_end = bisect_right(effective, f"{day}T00:00:00+08:00")
+    effective_end = bisect_right(effective, event_dt)
     index = min(available_end, effective_end) - 1
     if index < 0:
         return None
