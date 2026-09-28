@@ -14,6 +14,7 @@ historical membership file.
 from __future__ import annotations
 
 import argparse
+import json
 from math import log
 
 import numpy as np
@@ -152,6 +153,9 @@ def main():
     parser.add_argument("--membership", required=True,
                         help="PIT-safe SW1 membership CSV.")
     parser.add_argument("--root", default="data")
+    parser.add_argument("--context-out",
+                        help="Optional JSON path to dump the PIT industry context maps "
+                             "for audit (pooled-vs-single and determinism checks).")
     args = parser.parse_args()
 
     universe = tuple(
@@ -165,7 +169,11 @@ def main():
     store = LocalHistoricalStore(args.root)
     variants = _variants()
     results = []
-    requested_symbols = tuple(dict.fromkeys(args.symbol))
+    # Symbols can arrive from pipelines that keep a UTF-8 BOM (str.strip()
+    # does not remove U+FEFF), so normalize explicitly.
+    requested_symbols = tuple(
+        dict.fromkeys(s.strip().lstrip("\ufeff").zfill(6) for s in args.symbol)
+    )
     if len(requested_symbols) == 1:
         # A single-stock benchmark only needs the exact target-specific context.
         # Avoid building the full pooled universe context when --symbol is used
@@ -180,6 +188,15 @@ def main():
         context_maps = build_universe_industry_relative_context_maps(
             store, args.membership, tuple(universe), lookback=20
         )
+
+    if args.context_out:
+        with open(args.context_out, "w", encoding="utf-8") as f:
+            json.dump(
+                {symbol: context_maps.get(symbol, {}) for symbol in requested_symbols},
+                f,
+                sort_keys=True,
+            )
+        print(f"context_map_written={args.context_out}")
 
     for symbol in requested_symbols:
         rows = _factor_rows(store, context_maps.get(symbol, {}), symbol)
