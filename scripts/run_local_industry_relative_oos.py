@@ -14,7 +14,9 @@ historical membership file.
 from __future__ import annotations
 
 import argparse
-from math import exp, log
+from math import log
+
+import numpy as np
 
 from astock_v2.data.local_store import LocalHistoricalStore
 from astock_v2.industry_relative import build_stock_industry_relative_context_map
@@ -26,29 +28,37 @@ INDUSTRY_FACTORS = ("industry_relative_return_5", "industry_relative_return_20")
 TRAIN_SIZE, TEST_SIZE, STEP, GAP = 252, 20, 20, 1
 
 
-def sigmoid(x: float) -> float:
-    if x >= 0:
-        z = exp(-x)
-        return 1.0 / (1.0 + z)
-    z = exp(x)
-    return z / (1.0 + z)
-
-
 def fit_predict(train_x, train_y, test_x, epochs: int = 500, lr: float = 0.05):
-    n = float(len(train_x))
-    p = len(train_x[0])
-    w, b = [0.0] * p, 0.0
+    """Fit the same logistic model with vectorized NumPy gradients.
+
+    This preserves the original unregularized 500-epoch gradient-descent
+    protocol while avoiding Python-level sample/feature loops.
+    """
+    x_train = np.asarray(train_x, dtype=np.float64)
+    y_train = np.asarray(train_y, dtype=np.float64)
+    x_test = np.asarray(test_x, dtype=np.float64)
+    n = float(len(x_train))
+    w = np.zeros(x_train.shape[1], dtype=np.float64)
+    b = 0.0
+
     for _ in range(epochs):
-        gw, gb = [0.0] * p, 0.0
-        for x, y in zip(train_x, train_y):
-            q = sigmoid(b + sum(a * v for a, v in zip(w, x)))
-            e = q - y
-            gb += e
-            for j, v in enumerate(x):
-                gw[j] += e * v
-        b -= lr * gb / n
-        w = [a - lr * g / n for a, g in zip(w, gw)]
-    return [sigmoid(b + sum(a * v for a, v in zip(w, x))) for x in test_x]
+        logits = b + x_train @ w
+        q = np.empty_like(logits)
+        positive = logits >= 0
+        q[positive] = 1.0 / (1.0 + np.exp(-logits[positive]))
+        exp_logits = np.exp(logits[~positive])
+        q[~positive] = exp_logits / (1.0 + exp_logits)
+        error = q - y_train
+        w -= lr * (x_train.T @ error) / n
+        b -= lr * float(error.sum()) / n
+
+    test_logits = b + x_test @ w
+    test_q = np.empty_like(test_logits)
+    positive = test_logits >= 0
+    test_q[positive] = 1.0 / (1.0 + np.exp(-test_logits[positive]))
+    exp_test = np.exp(test_logits[~positive])
+    test_q[~positive] = exp_test / (1.0 + exp_test)
+    return test_q.tolist()
 
 
 def metrics(probabilities, labels):
