@@ -5,12 +5,14 @@ daily returns whose SW level-1 membership is admissible at the decision time.
 The target stock is excluded from its own benchmark. A missing or singleton
 industry therefore produces no factor rather than a fabricated value.
 
-At decision time t, historical membership assignments are evaluated using only
-information available by t. Daily member returns are then averaged cross-
-sectionally and compounded over the requested lookback horizon.
+The implementation keeps the original PIT semantics but avoids rebuilding every
+stock's full return history for every decision day. Daily closes are advanced
+incrementally as records become admissible; membership lookups use sorted
+effective/availability schedules and binary search.
 """
 from __future__ import annotations
 
+from bisect import bisect_right
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -78,6 +80,110 @@ def _daily_returns(
     return result
 
 
+def _membership_schedule(memberships):
+    """Prepare one stock's membership schedule for fast PIT lookups."""
+    ordered = sorted(memberships, key=lambda item: item.effective_from)
+    effective = [item.effective_from for item in ordered]
+    available = sorted(item.available_time for item in ordered)
+    return ordered, effective, available
+
+
+def _scheduled_industry(schedule, day: str, decision_time: str):
+    """Resolve the latest effective assignment known at decision_time.
+
+    The importer uses monotone availability (effective date + one day), so
+    admissible assignments form a prefix of the effective-date schedule.
+    Binary search keeps the hot peer loop logarithmic in membership history.
+    """
+    ordered, effective, available = schedule
+    if not ordered:
+        return None
+    available_end = bisect_right(available, decision_time)
+    if available_end == 0:
+        return None
+    effective_end = bisect_right(effective, f"{day}T00:00:00+08:00")
+    index = min(available_end, effective_end) - 1
+    if index < 0:
+        return None
+    return ordered[index]
+
+
+def _build_pit_return_state(
+    records_by_symbol: dict[str, tuple[HistoricalRecord, ...]],
+):
+    """Create mutable PIT state advanced by decision time.
+
+    Each stock keeps its latest admissible close per trading day and only the
+    affected adjacent returns are recomputed when a revision becomes known.
+    """
+    state = {}
+    for symbol, records in records_by_symbol.items():
+        days = sorted({record.event_time[:10] for record in records})
+        index = {day: pos for pos, day in enumerate(days)}
+        ordered = sorted(
+            (record for record in records if record.pit_ready),
+            key=lambda record: (record.available_time or "", record.revision),
+        )
+        state[symbol] = {
+            "days": days,
+            "index": index,
+            "records": ordered,
+            "cursor": 0,
+            "selected": {},
+            "returns": {},
+        }
+    return state
+
+
+def _advance_pit_return_state(state, decision_time: str) -> None:
+    """Advance all stocks to one monotonically increasing decision boundary."""
+    for item in state.values():
+        selected = item["selected"]
+        returns = item["returns"]
+        days = item["days"]
+        index = item["index"]
+        records = item["records"]
+
+        while item["cursor"] < len(records):
+            record = records[item["cursor"]]
+            if record.available_time is None or record.available_time > decision_time:
+                break
+            item["cursor"] += 1
+
+            day = record.event_time[:10]
+            current = selected.get(day)
+            if current is not None and current.revision >= record.revision:
+                continue
+            selected[day] = record
+
+            pos = index[day]
+            for neighbor_pos, return_day in (
+                (pos, day),
+                (pos + 1, days[pos + 1] if pos + 1 < len(days) else None),
+            ):
+                if return_day is None or neighbor_pos == 0:
+                    continue
+                previous_day = days[neighbor_pos - 1]
+                previous = selected.get(previous_day)
+                current_record = selected.get(return_day)
+                if previous is None or current_record is None:
+                    returns.pop(return_day, None)
+                    continue
+                previous_close = float(previous.value["close"])
+                close = float(current_record.value["close"])
+                if previous_close > 0 and close > 0:
+                    returns[return_day] = close / previous_close - 1.0
+                else:
+                    returns.pop(return_day, None)
+
+
+def _compounded(values) -> float:
+    result = 1.0
+    for value in values:
+        result *= 1.0 + value
+    return result - 1.0
+
+
 def build_stock_industry_relative_context(
     store: LocalHistoricalStore,
     membership_path: str | Path,
@@ -95,6 +201,12 @@ def build_stock_industry_relative_context(
         symbols = (stock_symbol, *symbols)
 
     memberships = load_industry_memberships(membership_path)
+    memberships_by_symbol = {}
+    for symbol in symbols:
+        memberships_by_symbol[symbol] = _membership_schedule(
+            [m for m in memberships if m.symbol == symbol]
+        )
+
     all_records = {
         symbol: store.read_records("cn_stock_daily", symbol)
         for symbol in symbols
@@ -106,72 +218,71 @@ def build_stock_industry_relative_context(
             for record in records
         }
     )
+    state = _build_pit_return_state(all_records)
 
     rows: list[IndustryRelativeContextRow] = []
     for pos in range(lookback, len(event_days)):
         day = event_days[pos]
         decision_time = f"{day}T16:00:00+08:00"
         _parse_aware(decision_time)
+        _advance_pit_return_state(state, decision_time)
 
-        target_daily = _admissible_daily(all_records[stock_symbol], decision_time)
-        target_current = target_daily.get(day)
+        target_current = state[stock_symbol]["selected"].get(day)
         if target_current is None:
             continue
 
-        target_membership = _industry_for_day(
-            memberships, stock_symbol, day, decision_time
+        target_membership = _scheduled_industry(
+            memberships_by_symbol[stock_symbol], day, decision_time
         )
         if target_membership is None:
             continue
 
-        target_returns = _daily_returns(
-            all_records[stock_symbol], decision_time
-        )
+        target_returns = state[stock_symbol]["returns"]
 
-        # The industry benchmark is reconstructed from member-level daily
-        # returns. Membership is evaluated at today's decision boundary, so no
-        # classification information unavailable at t can enter the factor.
-        industry_returns_by_day: dict[str, list[float]] = {}
-        for symbol in symbols:
-            if symbol == stock_symbol:
-                continue
-            symbol_records = all_records[symbol]
-            symbol_returns = _daily_returns(symbol_records, decision_time)
-            symbol_daily = _admissible_daily(symbol_records, decision_time)
-            for return_day, stock_return in symbol_returns.items():
-                membership = _industry_for_day(
-                    memberships, symbol, return_day, decision_time
+        # Only the most recent target return days can enter a lookback factor.
+        # Scan backward until enough common peer days have been found. This
+        # avoids constructing a full historical peer benchmark for every t.
+        common_days = []
+        industry_recent_by_day: dict[str, list[float]] = {}
+        for return_day in sorted(target_returns, reverse=True):
+            peer_values: list[float] = []
+            for symbol in symbols:
+                if symbol == stock_symbol:
+                    continue
+                stock_return = state[symbol]["returns"].get(return_day)
+                if stock_return is None:
+                    continue
+                membership = _scheduled_industry(
+                    memberships_by_symbol[symbol],
+                    return_day,
+                    decision_time,
                 )
                 if membership is None:
                     continue
                 if membership.industry_code != target_membership.industry_code:
                     continue
-                industry_returns_by_day.setdefault(return_day, []).append(stock_return)
+                peer_values.append(stock_return)
 
-        common_days = [
-            d for d in sorted(target_returns)
-            if d in industry_returns_by_day and industry_returns_by_day[d]
-        ]
+            if peer_values:
+                common_days.append(return_day)
+                industry_recent_by_day[return_day] = peer_values
+                if len(common_days) >= lookback:
+                    break
+
         if len(common_days) < lookback:
             continue
 
-        recent_days = common_days[-lookback:]
+        recent_days = sorted(common_days)
         target_recent = [target_returns[d] for d in recent_days]
         industry_recent = [
-            sum(industry_returns_by_day[d]) / len(industry_returns_by_day[d])
+            sum(industry_recent_by_day[d]) / len(industry_recent_by_day[d])
             for d in recent_days
         ]
 
-        def compounded(values: list[float]) -> float:
-            result = 1.0
-            for value in values:
-                result *= 1.0 + value
-            return result - 1.0
-
-        target_return_20 = compounded(target_recent)
-        industry_return_20 = compounded(industry_recent)
-        target_return_5 = compounded(target_recent[-5:])
-        industry_return_5 = compounded(industry_recent[-5:])
+        target_return_20 = _compounded(target_recent)
+        industry_return_20 = _compounded(industry_recent)
+        target_return_5 = _compounded(target_recent[-5:])
+        industry_return_5 = _compounded(industry_recent[-5:])
 
         rows.append(
             IndustryRelativeContextRow(
