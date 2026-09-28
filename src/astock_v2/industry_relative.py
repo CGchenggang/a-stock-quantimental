@@ -398,7 +398,63 @@ def build_universe_industry_relative_context_maps(
                 )
             return membership_cache[key]
 
-        # Only active target industries are relevant on this decision day.\n        # Build the historical candidate set once so unrelated symbols never\n        # enter the hot peer-aggregate loop. A symbol can contribute only if\n        # it has used the target industry code at some point in its history.\n        current_membership: dict[str, object] = {}\n        active_targets: list[tuple[str, object, HistoricalRecord]] = []\n        target_industry_codes: set[str] = set()\n        for symbol in symbols:\n            target_current = state[symbol]["selected"].get(day)\n            target_membership = scheduled(symbol, day)\n            if target_current is None or target_membership is None:\n                continue\n            current_membership[symbol] = target_membership\n            active_targets.append((symbol, target_membership, target_current))\n            target_industry_codes.add(target_membership.industry_code)\n\n        recent_peer_stats: dict[tuple[str, str], tuple[float, float]] = {}\n        candidate_days = sorted(\n            {return_day for item in state.values() for return_day in item["returns"]},\n            reverse=True,\n        )\n        recent_candidate_days = candidate_days[:60]\n\n        # Historical membership is an exact superset filter: if a symbol has\n        # never carried an industry code, it can never be admissible for that\n        # code at a later PIT decision time.\n        historical_symbols_by_code: dict[str, tuple[str, ...]] = {}\n        for code in target_industry_codes:\n            historical_symbols_by_code[code] = tuple(\n                symbol\n                for symbol in symbols\n                if any(\n                    membership.industry_code == code\n                    for membership in memberships_by_symbol[symbol][0]\n                )\n            )\n\n        candidate_symbols = tuple(\n            dict.fromkeys(\n                symbol\n                for code in target_industry_codes\n                for symbol in historical_symbols_by_code[code]\n            )\n        )\n\n        # Precompute only the industry aggregates actually requested by the\n        # active targets. The previous implementation built every industry\n        # aggregate for every recent day, even when no target used that code.\n        for return_day in recent_candidate_days:\n            for symbol in candidate_symbols:\n                stock_return = state[symbol]["returns"].get(return_day)\n                if stock_return is None:\n                    continue\n                membership = scheduled(symbol, return_day)\n                if membership is None or membership.industry_code not in target_industry_codes:\n                    continue\n                key = (return_day, membership.industry_code)\n                total, count = recent_peer_stats.get(key, (0.0, 0.0))\n                recent_peer_stats[key] = (total + stock_return, count + 1.0)\n
+        # Only active target industries are relevant on this decision day.
+        current_membership: dict[str, object] = {}
+        active_targets: list[tuple[str, object, HistoricalRecord]] = []
+        target_industry_codes: set[str] = set()
+        for symbol in symbols:
+            target_current = state[symbol]["selected"].get(day)
+            target_membership = scheduled(symbol, day)
+            if target_current is None or target_membership is None:
+                continue
+            current_membership[symbol] = target_membership
+            active_targets.append((symbol, target_membership, target_current))
+            target_industry_codes.add(target_membership.industry_code)
+
+        recent_peer_stats: dict[tuple[str, str], tuple[float, float]] = {}
+        candidate_days = sorted(
+            {return_day for item in state.values() for return_day in item["returns"]},
+            reverse=True,
+        )
+        recent_candidate_days = candidate_days[:60]
+
+        # Historical membership is an exact superset filter: if a symbol has
+        # never carried an industry code, it can never be admissible for that
+        # code at a later PIT decision time.
+        historical_symbols_by_code: dict[str, tuple[str, ...]] = {}
+        for code in target_industry_codes:
+            historical_symbols_by_code[code] = tuple(
+                symbol
+                for symbol in symbols
+                if any(
+                    membership.industry_code == code
+                    for membership in memberships_by_symbol[symbol][0]
+                )
+            )
+
+        candidate_symbols = tuple(
+            dict.fromkeys(
+                symbol
+                for code in target_industry_codes
+                for symbol in historical_symbols_by_code[code]
+            )
+        )
+
+        # Precompute only the industry aggregates actually requested by the
+        # active targets.
+        for return_day in recent_candidate_days:
+            for symbol in candidate_symbols:
+                stock_return = state[symbol]["returns"].get(return_day)
+                if stock_return is None:
+                    continue
+                membership = scheduled(symbol, return_day)
+                if membership is None or membership.industry_code not in target_industry_codes:
+                    continue
+                key = (return_day, membership.industry_code)
+                total, count = recent_peer_stats.get(key, (0.0, 0.0))
+                recent_peer_stats[key] = (total + stock_return, count + 1.0)
+
+
         for symbol in symbols:
             target_current = state[symbol]["selected"].get(day)
             target_membership = current_membership[symbol]
