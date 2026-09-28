@@ -22,7 +22,13 @@ import pandas as pd
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--symbol", action="append", required=True)
+    scope = p.add_mutually_exclusive_group(required=True)
+    scope.add_argument("--symbol", action="append")
+    scope.add_argument(
+        "--all-symbols",
+        action="store_true",
+        help="Import every stock present in the supplied SW history source.",
+    )
     p.add_argument("--start", default="19900101")
     p.add_argument("--end", default="20991231")
     p.add_argument(
@@ -115,8 +121,6 @@ def _build_intervals(
     work = df.copy()
     work["l1_code"] = work["industry_code"].str[:2] + "0000"
 
-    # Multiple rows can share a start date in source revisions. For the L1
-    # experiment, a single stock/date must resolve to exactly one L1 code.
     grouped = (
         work.groupby(["symbol", "start_date"], as_index=False)["l1_code"]
         .agg(lambda s: sorted(set(str(x) for x in s)))
@@ -144,9 +148,6 @@ def _build_intervals(
     )
 
     grouped["industry_code"] = "SW1:" + grouped["l1_code"]
-    # The historical source supplies codes but no stable historical Chinese
-    # L1-name field. Keep the code as the normalized name to avoid joining a
-    # potentially mismatched current-name table.
     grouped["industry_name"] = grouped["industry_code"]
     grouped["level"] = "l1"
     grouped["source"] = source
@@ -168,7 +169,11 @@ def main():
         Path(args.input) if args.input else None
     )
 
-    requested = {str(s).strip().zfill(6) for s in args.symbol}
+    if args.all_symbols:
+        requested = set(history["symbol"].dropna().astype(str))
+    else:
+        requested = {str(s).strip().zfill(6) for s in args.symbol}
+
     history = history[history["symbol"].isin(requested)].copy()
 
     if args.start:
@@ -192,7 +197,9 @@ def main():
     raw_out.to_csv(raw_path, index=False, encoding="utf-8-sig")
     membership_out.to_csv(out_path, index=False, encoding="utf-8-sig")
 
-    print(f"symbols: {sorted(requested)}")
+    print(f"symbols: {len(requested)}")
+    if not args.all_symbols:
+        print(f"requested: {sorted(requested)}")
     print(f"source: {source}")
     print(f"raw rows: {len(raw_out)} -> {raw_path}")
     print(f"membership rows: {len(membership_out)} -> {out_path}")
