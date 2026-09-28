@@ -357,38 +357,28 @@ def build_universe_industry_relative_context_maps(
             for symbol in symbols
         }
 
-        # Resolve peer aggregates lazily. A requested key is
-        # (historical return day, current target industry). The aggregate is
-        # computed once and then reused by every target in that industry.
-        peer_stats_cache: dict[tuple[str, str], tuple[float, float]] = {}
-
-        def peer_stats(return_day: str, industry_code: str) -> tuple[float, float]:
-            key = (return_day, industry_code)
-            cached = peer_stats_cache.get(key)
-            if cached is not None:
-                return cached
-
-            total = 0.0
-            count = 0.0
+        # Precompute peer aggregates only for return days currently present in the
+        # PIT state. Each day/industry aggregate is built once and then reused
+        # by every target stock in that industry.
+        recent_peer_stats: dict[tuple[str, str], tuple[float, float]] = {}
+        candidate_days = sorted(
+            {return_day for item in state.values() for return_day in item["returns"]},
+            reverse=True,
+        )
+        for return_day in candidate_days:
             for symbol in symbols:
                 stock_return = state[symbol]["returns"].get(return_day)
                 if stock_return is None:
                     continue
                 membership = _scheduled_industry(
-                    memberships_by_symbol[symbol],
-                    return_day,
-                    decision_time,
+                    memberships_by_symbol[symbol], return_day, decision_time
                 )
-                if membership is None or membership.industry_code != industry_code:
+                if membership is None:
                     continue
-                total += stock_return
-                count += 1.0
+                key = (return_day, membership.industry_code)
+                total, count = recent_peer_stats.get(key, (0.0, 0.0))
+                recent_peer_stats[key] = (total + stock_return, count + 1.0)
 
-            value = (total, count)
-            peer_stats_cache[key] = value
-            return value
-
-        for symbol in symbols:
             target_current = state[symbol]["selected"].get(day)
             target_membership = current_membership[symbol]
             if target_current is None or target_membership is None:
@@ -398,19 +388,15 @@ def build_universe_industry_relative_context_maps(
             common_days: list[str] = []
             industry_recent_by_day: dict[str, float] = {}
 
-            # Preserve the original definition: walk backward through the
-            # target's available return days until exactly lookback days with
-            # at least one admissible peer remain.
-            for return_day in sorted(target_returns, reverse=True):
-                peer_sum, peer_count = peer_stats(
-                    return_day, target_membership.industry_code
+            for return_day in candidate_days:
+                target_return = target_returns.get(return_day)
+                if target_return is None:
+                    continue
+                peer_sum, peer_count = recent_peer_stats.get(
+                    (return_day, target_membership.industry_code), (0.0, 0.0)
                 )
-
-                target_return = target_returns[return_day]
                 target_historical_membership = _scheduled_industry(
-                    memberships_by_symbol[symbol],
-                    return_day,
-                    decision_time,
+                    memberships_by_symbol[symbol], return_day, decision_time
                 )
                 if (
                     target_historical_membership is not None
@@ -419,10 +405,8 @@ def build_universe_industry_relative_context_maps(
                 ):
                     peer_sum -= target_return
                     peer_count -= 1.0
-
                 if peer_count <= 0:
                     continue
-
                 common_days.append(return_day)
                 industry_recent_by_day[return_day] = peer_sum / peer_count
                 if len(common_days) >= lookback:
