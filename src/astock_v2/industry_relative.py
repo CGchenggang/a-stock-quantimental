@@ -305,6 +305,150 @@ def build_stock_industry_relative_context(
     return tuple(rows)
 
 
+
+def build_universe_industry_relative_context_maps(
+    store: LocalHistoricalStore,
+    membership_path: str | Path,
+    universe_symbols: tuple[str, ...],
+    *,
+    lookback: int = 20,
+) -> dict[str, dict[str, dict[str, float]]]:
+    """Build PIT-safe industry-relative contexts once for the whole universe.
+
+    The benchmark state and PIT membership lookups are shared across target
+    stocks. This preserves the single-stock factor definition while avoiding
+    rebuilding the same return history 76 times in pooled experiments.
+    """
+    if lookback < 20:
+        raise ValueError("lookback must be at least 20")
+
+    symbols = tuple(dict.fromkeys(str(s).strip().zfill(6) for s in universe_symbols))
+    memberships = load_industry_memberships(membership_path)
+    memberships_by_symbol = {
+        symbol: _membership_schedule(
+            [m for m in memberships if m.symbol == symbol]
+        )
+        for symbol in symbols
+    }
+    all_records = {
+        symbol: store.read_records("cn_stock_daily", symbol)
+        for symbol in symbols
+    }
+    event_days = sorted(
+        {
+            record.event_time[:10]
+            for records in all_records.values()
+            for record in records
+        }
+    )
+    state = _build_pit_return_state(all_records)
+    result = {symbol: {} for symbol in symbols}
+
+    for pos in range(lookback, len(event_days)):
+        day = event_days[pos]
+        decision_time = f"{day}T16:00:00+08:00"
+        _parse_aware(decision_time)
+        _advance_pit_return_state(state, decision_time)
+
+        # Resolve each symbol's current PIT industry once for this decision
+        # boundary. Historical peer membership is resolved separately below,
+        # matching the original factor definition exactly.
+        current_membership = {
+            symbol: _scheduled_industry(
+                memberships_by_symbol[symbol], day, decision_time
+            )
+            for symbol in symbols
+        }
+
+        # Aggregate peer returns by their PIT industry on each historical
+        # return day. Sum/count lets each target exclude itself without
+        # materializing a separate peer list.
+        industry_stats_by_day: dict[str, dict[str, list[float]]] = {}
+        for symbol in symbols:
+            returns = state[symbol]["returns"]
+            schedule = memberships_by_symbol[symbol]
+            for return_day, stock_return in returns.items():
+                membership = _scheduled_industry(
+                    schedule, return_day, decision_time
+                )
+                if membership is None:
+                    continue
+                by_industry = industry_stats_by_day.setdefault(return_day, {})
+                stats = by_industry.setdefault(
+                    membership.industry_code, [0.0, 0.0]
+                )
+                stats[0] += stock_return
+                stats[1] += 1.0
+
+        for symbol in symbols:
+            target_current = state[symbol]["selected"].get(day)
+            target_membership = current_membership[symbol]
+            if target_current is None or target_membership is None:
+                continue
+
+            target_returns = state[symbol]["returns"]
+            common_days: list[str] = []
+            industry_recent_by_day: dict[str, float] = {}
+
+            for return_day in sorted(target_returns, reverse=True):
+                stats = industry_stats_by_day.get(return_day, {}).get(
+                    target_membership.industry_code
+                )
+                if stats is None:
+                    continue
+
+                peer_sum, peer_count = stats
+                # The benchmark excludes the target stock itself. Subtract it
+                # only when its historical PIT industry on return_day matches
+                # the target's current industry, which is the exact condition
+                # under which the original peer loop included it in the stats.
+                target_return = target_returns[return_day]
+                target_historical_membership = _scheduled_industry(
+                    memberships_by_symbol[symbol],
+                    return_day,
+                    decision_time,
+                )
+                if (
+                    target_historical_membership is not None
+                    and target_historical_membership.industry_code
+                    == target_membership.industry_code
+                ):
+                    peer_sum -= target_return
+                    peer_count -= 1.0
+
+                if peer_count <= 0:
+                    continue
+
+                common_days.append(return_day)
+                industry_recent_by_day[return_day] = peer_sum / peer_count
+                if len(common_days) >= lookback:
+                    break
+
+            if len(common_days) < lookback:
+                continue
+
+            recent_days = sorted(common_days)
+            target_recent = [target_returns[d] for d in recent_days]
+            industry_recent = [
+                industry_recent_by_day[d] for d in recent_days
+            ]
+            target_return_20 = _compounded(target_recent)
+            industry_return_20 = _compounded(industry_recent)
+            target_return_5 = _compounded(target_recent[-5:])
+            industry_return_5 = _compounded(industry_recent[-5:])
+
+            result[symbol][decision_time] = {
+                "industry_relative_return_5": (
+                    target_return_5 - industry_return_5
+                ),
+                "industry_relative_return_20": (
+                    target_return_20 - industry_return_20
+                ),
+            }
+
+    return result
+
+
 def build_stock_industry_relative_context_map(
     store: LocalHistoricalStore,
     membership_path: str | Path,
