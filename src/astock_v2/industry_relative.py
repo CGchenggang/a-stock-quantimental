@@ -195,7 +195,15 @@ def build_stock_industry_relative_context(
     *,
     lookback: int = 20,
 ) -> tuple[IndustryRelativeContextRow, ...]:
-    """Build stock-minus-SW1-industry returns from a local stock universe."""
+    """Build stock-minus-SW1-industry returns from a local stock universe.
+
+    For the single-stock path, restrict the return-state universe to stocks
+    whose historical membership ever uses an industry code that the target
+    stock itself has used. This is an exact candidate reduction: a peer can
+    contribute only when its PIT membership code equals the target's
+    decision-time industry code. Stocks that never share any such code can
+    never contribute, so excluding them does not change the factor values.
+    """
     if lookback < 20:
         raise ValueError("lookback must be at least 20")
 
@@ -205,14 +213,40 @@ def build_stock_industry_relative_context(
 
     memberships = load_industry_memberships(membership_path)
     memberships_by_symbol = {}
+    all_symbol_memberships = {}
     for symbol in symbols:
-        memberships_by_symbol[symbol] = _membership_schedule(
+        schedule = _membership_schedule(
             [m for m in memberships if m.symbol == symbol]
         )
+        all_symbol_memberships[symbol] = schedule
+        memberships_by_symbol[symbol] = schedule
 
+    target_schedule = memberships_by_symbol[stock_symbol]
+    target_industry_codes = {
+        membership.industry_code for membership in target_schedule[0]
+        if membership.industry_code
+    }
+
+    candidate_symbols = tuple(
+        symbol
+        for symbol in symbols
+        if symbol == stock_symbol
+        or any(
+            membership.industry_code in target_industry_codes
+            for membership in all_symbol_memberships[symbol][0]
+        )
+    )
+
+    # Only candidate peers can contribute to the target's industry benchmark.
+    # This keeps the exact PIT lookup semantics while avoiding unrelated stocks
+    # in the hot return-state and peer loop.
+    memberships_by_symbol = {
+        symbol: all_symbol_memberships[symbol]
+        for symbol in candidate_symbols
+    }
     all_records = {
         symbol: store.read_records("cn_stock_daily", symbol)
-        for symbol in symbols
+        for symbol in candidate_symbols
     }
     event_days = sorted(
         {
@@ -235,23 +269,31 @@ def build_stock_industry_relative_context(
             continue
 
         target_membership = _scheduled_industry(
-            memberships_by_symbol[stock_symbol], day, decision_time
+            target_schedule, day, decision_time
         )
         if target_membership is None:
             continue
 
         target_returns = state[stock_symbol]["returns"]
 
-        # Only the most recent target return days can enter a lookback factor.
-        # Scan backward until enough common peer days have been found. This
-        # avoids constructing a full historical peer benchmark for every t.
+        # Only stocks that have ever used the target's industry codes can
+        # contribute. Within that exact candidate set, preserve the original
+        # newest-first target-return-day search semantics.
+        peer_symbols = tuple(
+            symbol
+            for symbol in candidate_symbols
+            if symbol != stock_symbol
+            and target_membership.industry_code in {
+                membership.industry_code
+                for membership in memberships_by_symbol[symbol][0]
+            }
+        )
+
         common_days = []
         industry_recent_by_day: dict[str, list[float]] = {}
         for return_day in sorted(target_returns, reverse=True):
             peer_values: list[float] = []
-            for symbol in symbols:
-                if symbol == stock_symbol:
-                    continue
+            for symbol in peer_symbols:
                 stock_return = state[symbol]["returns"].get(return_day)
                 if stock_return is None:
                     continue
@@ -301,8 +343,6 @@ def build_stock_industry_relative_context(
         )
 
     return tuple(rows)
-
-
 
 def build_universe_industry_relative_context_maps(
     store: LocalHistoricalStore,
