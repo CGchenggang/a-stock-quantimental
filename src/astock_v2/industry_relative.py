@@ -385,13 +385,6 @@ def build_universe_industry_relative_context_maps(
                 total, count = recent_peer_stats.get(key, (0.0, 0.0))
                 recent_peer_stats[key] = (total + stock_return, count + 1.0)
 
-        candidate_days_by_industry: dict[str, list[str]] = {}
-        for (return_day, industry_code), (_, peer_count) in recent_peer_stats.items():
-            if peer_count >= 2.0:
-                candidate_days_by_industry.setdefault(industry_code, []).append(return_day)
-        for days in candidate_days_by_industry.values():
-            days.sort(reverse=True)
-
         for symbol in symbols:
             target_current = state[symbol]["selected"].get(day)
             target_membership = current_membership[symbol]
@@ -402,15 +395,15 @@ def build_universe_industry_relative_context_maps(
             common_days: list[str] = []
             industry_recent_by_day: dict[str, float] = {}
 
-            for return_day in candidate_days_by_industry.get(
-                target_membership.industry_code, ()
-            ):
+            # Preserve the exact single-stock search order: each target scans
+            # its own available return days newest-first. The shared peer
+            # aggregates are only an optimization for those same days.
+            for return_day in recent_candidate_days:
                 target_return = target_returns.get(return_day)
                 if target_return is None:
                     continue
-                peer_sum, peer_count = recent_peer_stats.get(
-                    (return_day, target_membership.industry_code), (0.0, 0.0)
-                )
+                key = (return_day, target_membership.industry_code)
+                peer_sum, peer_count = recent_peer_stats.get(key, (0.0, 0.0))
                 target_historical_membership = scheduled(symbol, return_day)
                 if (
                     target_historical_membership is not None
