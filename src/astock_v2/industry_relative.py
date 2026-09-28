@@ -13,6 +13,7 @@ effective/availability schedules and binary search.
 from __future__ import annotations
 
 from bisect import bisect_right
+from functools import lru_cache
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -88,7 +89,7 @@ def _membership_schedule(memberships):
     return ordered, effective, available
 
 
-def _scheduled_industry(schedule, day: str, decision_time: str):
+@lru_cache(maxsize=None)\ndef _scheduled_industry(schedule, day: str, decision_time: str):
     """Resolve the latest effective assignment known at decision_time.
 
     The importer uses monotone availability (effective date + one day), so
