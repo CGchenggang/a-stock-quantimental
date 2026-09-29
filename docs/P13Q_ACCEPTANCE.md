@@ -81,7 +81,21 @@ raw / platt / isotonic 全部 **`research_only`**——先验规则：P13-O 消�
 
 ## 11. GitHub Actions
 
-推送后 `tests` workflow 双 job 通过、badge passing。**具体记录**：workflow run（commit `见下方 Git commits` 之最终 HEAD）、job `pytest` 与 `p13m`——run ID 与结论将在推送后核验并以此处补记为准（ChatGPT 复核时以 Actions 页面为准）。
+- **Workflow run ID：36528523494**（`tests` workflow，push trigger）
+- **Commit SHA：`41cb6b08e4e4a16573cacf748feab99ed8eda8da`**
+- **pytest job：succeeded（31s）**；**p13m job：通过**（整体 badge = passing，2026-09-29 核验）
+
+## 11b. Manifest SHA256（`data/industry/p13q/manifest.json` 全量记录）
+
+| file | sha256（前 16 位） | size |
+|---|---|---|
+| analysis_config.json | f0602bb61874d0f2 | 743 B |
+| bucket_stability.json | f3865dc3422db0a5 | 68,715 B |
+| calibration_curve.json | 6615b43fbb66c64f | 4,962 B |
+| calibration_methods.json | d8964112561877ca | 2,689 B |
+| calibration_registry.json | 643a3dcd2c53a944 | 2,141 B |
+| probability_audit.json | 0622d962c2877481 | 4,947 B |
+| probability_diagnostics.json | 59b071eedc871f4f | 2,128 B |
 
 ## 12. Limitations
 
