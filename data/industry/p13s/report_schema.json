@@ -1,0 +1,43 @@
+{
+  "schema_version": "p13s-report-1",
+  "description": "Deterministic research report generated from one P13-R recommendation packet. All value fields pass through from the packet; P13-S adds only validation, freshness, uncertainty, evidence refs and research-only status.",
+  "required_inputs": [
+    "symbol", "decision_time", "policy_id", "calibration_method",
+    "raw_probability", "calibrated_probability", "expected_return",
+    "risk_score", "cost_scenario", "cost_adjusted_expected_return",
+    "market_regime", "selection_reason", "risk_flags", "data_available_time"
+  ],
+  "report_fields": {
+    "report_id": "sha256(canonical packet + schema_version)[:16]",
+    "schema_version": "constant p13s-report-1",
+    "symbol": "passthrough",
+    "decision_time": "passthrough",
+    "policy_id": "passthrough (checked against the 8 known P13-R policies)",
+    "calibration_method": "passthrough; one of raw/platt/isotonic/none",
+    "raw_probability": "passthrough; never modified by P13-S",
+    "calibrated_probability": "passthrough; never re-calibrated by P13-S",
+    "expected_return": "passthrough (P13-R definition)",
+    "cost_scenario": "passthrough (P13-R cost model)",
+    "cost_adjusted_expected_return": "passthrough (P13-R cost model applied)",
+    "risk_score": "passthrough (P13-R risk features)",
+    "risk_flags": "passthrough list; P13-S validation conclusions go to p13s_validation_flags, never merged here",
+    "market_regime": "passthrough (P13-O regime label)",
+    "selection_reason": "passthrough (P13-R policy template)",
+    "data_available_time": "passthrough; conservative cutoff equal to decision_time in P13-R",
+    "data_freshness_status": "fresh if data_available_time <= decision_time; stale if later; missing if absent; unknown if unparseable",
+    "uncertainty": "subset of missing_data/stale_data/low_confidence/contradictory_evidence/unknown_policy, by fixed rules",
+    "missing_fields": "required fields absent from the packet",
+    "known_policy": "policy_id in the P13-R registry",
+    "p13s_validation_flags": "same list as uncertainty; P13-S-owned, never merged into risk_flags",
+    "evidence_refs": "fixed claim -> report field -> packet field -> upstream stage map",
+    "research_only": "always true",
+    "artifact_kind": "always research_report_not_an_order"
+  },
+  "fixed_rules": {
+    "freshness": "data_available_time <= decision_time -> fresh",
+    "low_confidence": "calibration_method == none (P13-Q measured raw slope ~0.17)",
+    "contradictory_evidence": "(raw >= 0.5) XOR (calibrated >= 0.5); flagged, never resolved",
+    "unknown_policy": "policy_id not in the P13-R registry",
+    "generated_at": "runtime metadata only; excluded from deterministic artifacts"
+  }
+}
