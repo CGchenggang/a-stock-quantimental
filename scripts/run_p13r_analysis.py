@@ -285,23 +285,51 @@ def _stability_tables(selected: list[dict]) -> dict:
     return out
 
 
-def build_packets(rows: list[dict], selected_keys: set, regime_of) -> list[dict]:
+SELECTION_REASON_TEMPLATE = {
+    "hold_all": "baseline_hold_all",
+    "threshold_raw_p50": "raw_probability_ge_0.50",
+    "threshold_platt_p50": "platt_probability_ge_0.50",
+    "threshold_iso_p50": "isotonic_probability_ge_0.50",
+    "topk_platt_k3": "top_3_platt_probability",
+    "percentile_platt_p80": "platt_probability_ge_daily_p80",
+    "er_platt_0": "expected_return_gt_0",
+    "er_platt_pos_risk": "expected_return_gt_0_and_volatility_le_daily_median",
+}
+PACKET_COST_SCENARIO = "low"
+# Adopting one recommendation is modelled as one unit of turnover at the
+# policy's low-cost rate (commission + slippage), deducted once per packet.
+
+
+def build_packets(rows: list[dict], selected_keys: set, regime_of, policy: dict) -> list[dict]:
+    prob_key = {"raw": "p", "platt": "p_platt", "isotonic": "p_iso",
+                "none": "p"}[policy["calibration_method"]]
+    cost_params = COST_SCENARIOS[PACKET_COST_SCENARIO]
+    cost_rate = (cost_params["commission_bp"] + cost_params["slippage_bp"]) / 10000.0
+    reason = SELECTION_REASON_TEMPLATE[policy["policy_id"]]
     packets = []
     for row in sorted(rows, key=lambda r: (r["decision_time"], r["symbol"])):
         key = (row["symbol"], row["decision_time"])
         if key not in selected_keys:
             continue
+        # data_available_time equals the decision boundary: every packet
+        # input (walk-forward probability, PIT features, industry, regime)
+        # is admissible at decision_time, and the audit makes no stronger
+        # field-level publication-time claim.
         packets.append({
             "decision_time": row["decision_time"],
             "symbol": row["symbol"],
+            "policy_id": policy["policy_id"],
+            "calibration_method": policy["calibration_method"],
             "raw_probability": row["p"],
-            "calibrated_probability": row["p_platt"],
+            "calibrated_probability": row[prob_key],
             "expected_return": row["expected_return"],
             "risk_score": row["volatility"],
-            "cost_adjusted_expected_return": row["expected_return"],
+            "cost_scenario": PACKET_COST_SCENARIO,
+            "cost_adjusted_expected_return": (
+                float(row["expected_return"]) - cost_rate
+            ),
             "market_regime": regime_of(row["decision_time"]),
-            "policy_id": row.get("policy_id", ""),
-            "selection_reason": row.get("selection_reason", ""),
+            "selection_reason": reason,
             "risk_flags": row.get("risk_flags", []),
             "data_available_time": row["decision_time"],
         })
@@ -536,7 +564,7 @@ def evaluate_policies(policies, rows, cost_scenarios, out_dir, regime_of):
         policy_metrics[policy["policy_id"]] = block
         packets[policy["policy_id"]] = build_packets(
             rows, {(r["symbol"], r["decision_time"]) for r in selected},
-            regime_of,
+            regime_of, policy,
         )
     (out_dir / "policy_metrics.json").write_text(
         json.dumps(policy_metrics, sort_keys=True, indent=1), encoding="utf-8"

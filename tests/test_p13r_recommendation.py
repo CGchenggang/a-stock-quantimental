@@ -9,6 +9,9 @@ import pytest
 from scripts.run_p13r_analysis import (
     BOOTSTRAP_ROUNDS,
     COST_SCENARIOS,
+    PACKET_COST_SCENARIO,
+    SELECTION_REASON_TEMPLATE,
+    COST_SCENARIOS,
     MAX_PER_INDUSTRY,
     POLICY_IDS,
     SEED,
@@ -243,11 +246,13 @@ def test_packet_schema_and_manifest_hash_stability(tmp_path):
 
     rows = [_row("000001", "2025-01-02", p_platt=0.55)]
     keys = {("000001", "2025-01-02T16:00:00+08:00")}
-    packets = build_packets(rows, keys, lambda dt: "NEUTRAL")
+    packets = build_packets(rows, keys, lambda dt: "NEUTRAL",
+                            _policy("threshold_platt_p50"))
     required = {
-        "decision_time", "symbol", "raw_probability", "calibrated_probability",
-        "expected_return", "risk_score", "cost_adjusted_expected_return",
-        "market_regime", "policy_id", "selection_reason", "risk_flags",
+        "decision_time", "symbol", "policy_id", "calibration_method",
+        "raw_probability", "calibrated_probability", "expected_return",
+        "cost_adjusted_expected_return", "cost_scenario", "risk_score",
+        "market_regime", "selection_reason", "risk_flags",
         "data_available_time",
     }
     assert packets and required <= set(packets[0])
@@ -279,3 +284,115 @@ def test_production_factor_registry_unchanged():
 # split semantics used everywhere
 def test_split_date_boundary_goes_to_validation():
     assert SPLIT_DATE == "2025-01-01"
+
+
+# ---------------- P13-Q acceptance blocker fixes ----------------
+
+def _policy(pid):
+    return {p["policy_id"]: p for p in _registry_policies()}[pid]
+
+
+def _packet_for(pid, prob_fields=("p", "p_platt", "p_iso")):
+    policy = _policy(pid)
+    row = _row("000001", "2025-02-03", p=0.52)
+    row["p_platt"] = 0.48
+    row["p_iso"] = 0.60
+    row["expected_return"] = 0.004
+    row["volatility"] = 0.01
+    packets = build_packets(
+        [row], {("000001", "2025-02-03T16:00:00+08:00")}, lambda dt: "NEUTRAL", policy
+    )
+    assert len(packets) == 1
+    return packets[0]
+
+
+def test_packet_calibration_matches_policy():
+    # raw / platt / isotonic policies must each carry their own probability
+    assert _packet_for("threshold_raw_p50")["calibrated_probability"] == 0.52
+    assert _packet_for("threshold_raw_p50")["calibration_method"] == "raw"
+    assert _packet_for("threshold_platt_p50")["calibrated_probability"] == 0.48
+    assert _packet_for("threshold_platt_p50")["calibration_method"] == "platt"
+    assert _packet_for("threshold_iso_p50")["calibrated_probability"] == 0.60
+    assert _packet_for("threshold_iso_p50")["calibration_method"] == "isotonic"
+    assert _packet_for("hold_all")["calibration_method"] == "none"
+    assert _packet_for("hold_all")["calibrated_probability"] == 0.52
+
+
+def test_cost_adjusted_expected_return_uses_low_cost_model():
+    packet = _packet_for("threshold_platt_p50")
+    assert packet["cost_scenario"] == PACKET_COST_SCENARIO == "low"
+    params = COST_SCENARIOS["low"]
+    cost_rate = (params["commission_bp"] + params["slippage_bp"]) / 10000.0
+    assert packet["cost_adjusted_expected_return"] == pytest.approx(
+        packet["expected_return"] - cost_rate
+    )
+    # the three fields keep their explicit relationship
+    assert packet["cost_adjusted_expected_return"] < packet["expected_return"]
+
+
+def test_selection_reason_is_policy_specific_and_deterministic():
+    for pid in POLICY_IDS:
+        packet = _packet_for(pid)
+        expected = SELECTION_REASON_TEMPLATE[pid]
+        assert packet["selection_reason"] == expected
+        assert packet["selection_reason"]  # non-empty
+    # deterministic: repeating the build reproduces the same reason
+    assert _packet_for("threshold_platt_p50")["selection_reason"] == (
+        _packet_for("threshold_platt_p50")["selection_reason"]
+    )
+
+
+def test_packet_schema_includes_acceptance_fields():
+    packet = _packet_for("threshold_platt_p50")
+    for field in (
+        "decision_time", "symbol", "policy_id", "calibration_method",
+        "raw_probability", "calibrated_probability", "expected_return",
+        "cost_adjusted_expected_return", "cost_scenario", "risk_score",
+        "market_regime", "selection_reason", "risk_flags",
+        "data_available_time",
+    ):
+        assert field in packet, field
+
+
+def test_packet_has_no_order_intent():
+    for pid in POLICY_IDS:
+        blob = json.dumps(_packet_for(pid)).lower()
+        for fragment in ("buy", "sell", "broker", '"order"'):
+            assert fragment not in blob, (pid, fragment)
+
+
+def test_packet_is_byte_identical_on_repeat():
+    rows = [_row("000001", "2025-02-03"), _row("000002", "2025-02-03")]
+    keys = {(r["symbol"], r["decision_time"]) for r in rows}
+    policy = _policy("topk_platt_k3")
+    first = json.dumps(build_packets(rows, keys, lambda dt: "BULL", policy),
+                       sort_keys=True)
+    second = json.dumps(build_packets(rows, keys, lambda dt: "BULL", policy),
+                        sort_keys=True)
+    assert first == second
+
+
+def test_policy_packet_isolation():
+    """Different policies must not share calibrated probability or reason."""
+    raw = _packet_for("threshold_raw_p50")
+    platt = _packet_for("threshold_platt_p50")
+    iso = _packet_for("threshold_iso_p50")
+    assert raw["calibrated_probability"] != platt["calibrated_probability"]
+    assert platt["calibrated_probability"] != iso["calibrated_probability"]
+    reasons = {p["selection_reason"] for p in (raw, platt, iso)}
+    assert len(reasons) == 3
+    assert raw["policy_id"] != platt["policy_id"] != iso["policy_id"]
+
+
+def test_packet_pit_availability_ignores_future_rows():
+    """Packet inputs derive from the row itself and the fixed cost model;
+    mutating other (future) rows cannot change an existing packet."""
+    rows_a = [_row("000001", "2025-02-03", p_platt=0.55)]
+    rows_b = rows_a + [_row("000002", "2025-03-03", p_platt=0.99)]
+    policy = _policy("threshold_raw_p50")
+    pa = build_packets(rows_a, {("000001", "2025-02-03T16:00:00+08:00")},
+                       lambda dt: "BULL", policy)
+    pb = build_packets(rows_b, {("000001", "2025-02-03T16:00:00+08:00")},
+                       lambda dt: "BULL", policy)
+    assert pa == pb
+    assert pa[0]["data_available_time"] == pa[0]["decision_time"]

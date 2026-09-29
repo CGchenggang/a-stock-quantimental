@@ -34,3 +34,10 @@ label（= next_return > 0）仅用于评估统计与 discovery 窗口内的 cali
 ## 8. 结论
 
 Recommendation 在 decision_time 产生时可用的信息 = discovery 拟合的校准器 + 该 symbol 在 t 之前已完结的收益历史 + PIT 行业/Regime 标签。无未来信息进入任何环节（测试锁定 + 本审计逐项核验）。
+
+## 9. Recommendation Packet 语义（验收修复后补充）
+
+- `calibrated_probability` 严格来自所属 policy 的 `calibration_method`（raw→raw 概率、platt→Platt 输出、isotonic→Isotonic 输出、none→raw），与 `policy_id` 一一对应（`test_packet_calibration_matches_policy` / `test_policy_packet_isolation` 锁定）。
+- `cost_adjusted_expected_return = expected_return − low-cost rate × 1`：采纳一个推荐建模为一次单位换手、按 low 情景（5+5=10bp）单边扣减；`cost_scenario: "low"` 随 packet 记录。组合层的零/中情景核算在 `policy_metrics.json`，两者不混用。
+- `selection_reason` 按 policy 从固定模板 deterministic 生成（如 `platt_probability_ge_0.50`、`expected_return_gt_0_and_volatility_le_daily_median`），不含任何交易执行指令（`test_packet_has_no_order_intent`）。
+- `data_available_time = decision_time` 是保守截止的事实陈述：packet 的全部输入（walk-forward 概率、PIT 滚动特征、行业归属、Regime 标签）在 decision_time（16:00 +08:00）边界均已可得；本审计不声称任何更强的字段级发布时间（见 §4/§5/§6）。未来行无法影响已生成 packet（`test_packet_pit_availability_ignores_future_rows`）。
