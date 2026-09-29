@@ -1,6 +1,8 @@
 """Build a PIT-safe factor/label dataset from local A-share daily history."""
 from __future__ import annotations
 
+from bisect import bisect_right
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Mapping
@@ -50,42 +52,42 @@ def build_local_factor_rows(
 
     ordered = sorted(records, key=lambda r: (r.event_time, r.revision))
     event_times = sorted({record.event_time for record in ordered})
-    by_event: dict[str, list[HistoricalRecord]] = {}
+    event_index = {event_time: index for index, event_time in enumerate(event_times)}
+    by_event: dict[str, list[HistoricalRecord]] = defaultdict(list)
     for record in ordered:
-        by_event.setdefault(record.event_time, []).append(record)
+        by_event[record.event_time].append(record)
+    updates = _prepare_pit_updates(ordered, event_index)
 
     rows: list[LocalFactorRow] = []
+    update_pointer = 0
+    admitted_by_event: list[HistoricalRecord | None] = [None] * len(event_times)
     for index in range(lookback, len(event_times) - 1):
         event_time = event_times[index]
         # Daily A-share research uses a fixed post-close decision boundary.
         # This is the same explicit 16:00 Asia/Shanghai availability
         # convention used by the downloader, not a fetch-time assumption.
         decision_time = f"{event_time[:10]}T16:00:00+08:00"
-        _parse_aware(decision_time)
+        decision_dt = _parse_aware(decision_time)
+        while update_pointer < len(updates) and updates[update_pointer][0] <= decision_dt:
+            _, revision, event_idx, record = updates[update_pointer]
+            current = admitted_by_event[event_idx]
+            if current is None or revision > current.revision:
+                admitted_by_event[event_idx] = record
+            update_pointer += 1
 
-        current_candidates = [
-            record
-            for record in by_event[event_time]
-            if record.admissible_at(decision_time)
-        ]
-        if not current_candidates:
+        current = admitted_by_event[index]
+        if current is None:
             continue
-        current = max(current_candidates, key=lambda record: record.revision)
-
-        admitted: list[HistoricalRecord] = []
-        for prior_event in event_times[: index + 1]:
-            candidates = [
-                record
-                for record in by_event[prior_event]
-                if record.admissible_at(decision_time)
-            ]
-            if candidates:
-                admitted.append(max(candidates, key=lambda record: record.revision))
+        active = admitted_by_event[: index + 1]
+        if None in active:
+            admitted = [record for record in active if record is not None]
+        else:
+            admitted = active
         if len(admitted) < lookback + 1:
             continue
 
         provider = ProviderResult(
-            data=[dict(record.value) for record in admitted],
+            data=[record.value for record in admitted],
             source="local:cn_stock_daily",
             source_type="local_historical",
             fetched_at="",
