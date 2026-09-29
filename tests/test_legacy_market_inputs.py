@@ -13,6 +13,7 @@ def _provider():
             },
             "source": "sina_spot",
             "fetched_at": "2026-09-27T04:00:00+00:00",
+            "available_time": "2026-09-27T04:00:00+00:00",
         },
         daily_fetcher=lambda symbol, days: {},
         sector_fetcher=lambda: {
@@ -24,7 +25,7 @@ def _provider():
             "source": "legacy_sector",
             "ts": "2026-09-27T04:00:00+00:00",
         },
-        turnover_fetcher=lambda: {"turnover_z": None, "pit_ready": False, "amount": 100.0},
+        turnover_fetcher=lambda: {"turnover_z": None, "pit_ready": False, "amount": 100.0, "ts": "2026-09-27T04:00:00+00:00"},
         index_fetcher=lambda symbol: {
             "ok": True,
             "symbol": symbol,

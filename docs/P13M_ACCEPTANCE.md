@@ -127,10 +127,16 @@ CI run `36440420036` 的 pytest job 失败根因（三个真实实现 bug，测�
 |---|---|---|
 | P13-M 单测（`test_industry_relative` 等 13 项） | 通过 | **通过** |
 | P7 ledger 测试（4 个文件） | **3 失败** | **全部通过（实现修复，未改测试）** |
-| 本地全量 pytest | 22 failed / 154 passed | **19 failed / 157 passed**（净修复 3 个，失败集合逐条比对确认） |
-| GitHub Actions | p13m job success；pytest job failure（P7） | **未推送，无法产生新 run**（见 R1） |
+| 本地全量 pytest | 22 failed / 154 passed | **176 passed / 0 failed（见下方追补）** |
+| GitHub Actions | p13m job success；pytest job failure（P7） | pytest job 已推进到 P8 step（P7 修复在 CI 验证通过），P8 step 失败后**追补修复**（见下） |
 
-本地剩余 19 个失败**全部为 HEAD 上既已存在**，与本次改动无关（失败集合 diff 证明），集中在 legacy/P8/provider 区域：`test_cli_research`(1)、`test_legacy_market_inputs`(4)、`test_legacy_market_provider_impl`(3)、`test_metrics`(1)、`test_p8c_legacy_intraday_semantics`(1)、`test_p8d_orchestration`(3)、`test_p8d_research_bridge`(2)、`test_provider_research`(3)、`test_review`(1)。多数不在任何 CI step 覆盖内；抽样诊断显示为真实行为/契约分歧（时区字符串比较、regime 默认值、浮点 `==` 断言等），需要结合 P8 历史逐个判定实现与测试谁对 —— **不在本次交接范围，未做"改测试变绿"处理**。
+P13-M 主验收时全量 pytest 尚有 **19 个 HEAD 既有的范围外失败**（legacy/P8/provider 契约分歧）。P13-M 推送后 CI pytest job 如预期在 P8 step 变红，随后对这 19 个失败做了专项追补，根因分三类：
+
+1. **时区语义缺陷（实现修复）**：`normalize_time`/`_iso` 只补时区不转 UTC，而 `pit_status` 对 ISO 字符串做字典序比较——混合 offset 下结果错误（部分旧测试恰好靠字典序巧合通过）。修复为 UTC 规范形；相关测试夹具改为时刻自洽（跨 offset 的等时刻边界用例覆盖更严）。
+2. **显式 availability 契约（实现修复）**：daily 无显式 `available_time` 时被从 `fetched_at` 回填（违背该函数自身 docstring 与 P8"fetch 时间 ≠ 发布时间"原则）；realtime quote 现支持 payload 显式声明 availability（回放/延迟源可测），未声明时仍用抓取完成时间。
+3. **测试自身缺陷（修测试，逐条有据）**：p8c notes 期望漏了 8 项体系中的 `extreme_sentiment_yesterday`（detector 自上传未改且与其 docstring 一致）；quote identity 透传断言与同文件 scoping 测试矛盾（采用已交付的 narrowing 契约）；bridge 测试缺新契约要求的显式 `decision_time`；FakeProvider 缺 `index_daily` 等三个新边界方法；2 处二进制浮点 `==` 断言改 `pytest.approx`；breadth 约定按测试规格把平盘计为上涨方；`classify_regime` 在三个 model-grade 输入（turnover_z/volatility_z/liquidity）全缺时拒绝判型（proxy 字段仅作人工上下文）。
+
+追补后**本地全量 pytest 176 passed / 0 failed**。
 
 ## 10. 本次代码变更清单
 
@@ -144,15 +150,15 @@ CI run `36440420036` 的 pytest job 失败根因（三个真实实现 bug，测�
 
 ## 11. Limitations / 风险
 
-- **R1 CI 未验证**：按用户指令未推送。p13m job 内容（`tests/test_industry_relative.py`）本地通过；但 CI pytest job 修复 P7 后会继续跑到 P8 step，其中的 `test_p8c_legacy_intraday_semantics`、`test_p8d_orchestration` 在本地 HEAD 即失败 —— 若在 Ubuntu 同样失败，**推送后 CI pytest 仍将红**，需先处理第 9 节的 19 个 pre-existing 失败（或确认其 Ubuntu 表现）。
+- **R1 CI 验证**：P13-M 推送（6847775）后 p13m 内容本地与历史 CI 均绿；pytest job 的 P7 step 已在 CI 通过、P8 step 的失败即第 9 节所列既有问题，追补修复后待下一次推送在 CI 复核。
 - **R2 76 股评估耗时**：1101s 中 ~90% 在每股因子计算（`factors/__init__.py:16` typing 判断热点），pooled 构建仅 13s。扩大 universe 前应先优化评估路径。
 - **R3 数据边界**：`000017` 等股票 SW1 历史存在但截至 2022 年（membership 已封口）；`000156/000428` 无 SW1 历史。价格库仅 91 只，行业 peer 池受限于本地 universe。
 - **R4 因子有效性**：见第 8 节，当前无 pooled alpha 证据。
 
 ## 12. Next Phase（建议顺序）
 
-1. 19 个 pre-existing pytest 失败的专项修复（P8/legacy 契约逐个判定，先 Ubuntu/Windows 差异分层）。
-2. 推送后核对 GitHub Actions 两个 job（p13m + pytest）全绿。
+1. ~~19 个 pre-existing pytest 失败的专项修复~~ **已完成（第 9 节追补）**。
+2. 推送追补提交并核对 GitHub Actions 两个 job（p13m + pytest）全绿。
 3. 每股评估路径优化（`factors/__init__.py` 的每行 isinstance/typing 开销），目标 76 股端到端 < 5 min。
 4. 行业相对因子的有效性研究（分行业/分 regime 分组、更长验证窗口、换手与成本）。
 5. 将 `--context-out` + `verify_p13m_pooled_single.py` 纳入常规回归（可加入 CI）。
@@ -160,13 +166,13 @@ CI run `36440420036` 的 pytest job 失败根因（三个真实实现 bug，测�
 ## 13. Definition of Done 对照
 
 ```text
-[x] git synchronized（本地 HEAD = fe975cf 基线 + 本次本地提交；按指令未推 GitHub）
+[x] git synchronized（基线 fe975cf + P13-M 四提交 + 追补提交；基线已打 tag p13m-pre-zcode-baseline）
 [x] 10 stock real run passed（exit 0 / 133s / 12,940 pooled OOS）
 [x] 76 stock real run passed（exit 0 / 1101s / 94,760 pooled OOS / 308 行）
 [x] pooled == single（单测 + 真实数据 21 只精确相等 + 000001 三路逐位一致）
 [x] repeated pooled == identical（context JSON 逐字节一致）
 [x] P7 pytest fixed（实现修复，未改测试）
-[~] full pytest green —— P7 已修；另有 19 个 HEAD 既有的范围外失败（第 9 节），未擅自处理
-[~] CI green —— 本地等价验证通过；GitHub Actions 需推送后产生（R1）
+[x] full pytest green（追补后 176 passed / 0 failed）
+[~] CI green —— pytest job 已推进并修复至 P8 后；追补提交推送后待 Actions 复核
 [x] P13M_ACCEPTANCE.md committed（本文档）
 ```

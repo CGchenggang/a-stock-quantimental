@@ -10,22 +10,24 @@ def test_provider_research_builds_evidence_packet_and_health():
             "ok": True,
             "quotes": {"000001": {"price": 10.2}},
             "source": "sina_spot",
-            "fetched_at": "2026-09-27T04:00:00+00:00",
+            "fetched_at": "2026-09-26T16:00:00+00:00",
+            "available_time": "2026-09-26T16:00:00+00:00",
         },
         index_fetcher=lambda symbol: {
             "ok": True, "symbol": symbol, "latest_date": "2026-09-26",
             "latest_close": 4000.0, "pct": 1.0, "ma20": 3950.0,
             "above_ma20": True, "source": "legacy_index",
-            "fetched_at": "2026-09-27T04:00:00+00:00",
+            "fetched_at": "2026-09-26T16:00:00+00:00",
         },
         sector_fetcher=lambda: {
             "ok": True, "sectors": [{"name": "A", "pct": 1.0}, {"name": "B", "pct": -1.0}],
-            "source": "legacy_sector", "ts": "2026-09-27T04:00:00+00:00",
+            "source": "legacy_sector", "ts": "2026-09-26T16:00:00+00:00",
         },
         daily_fetcher=lambda symbol, days: {
             "ok": True, "code": symbol, "latest_date": "2026-09-26",
             "latest": {"close": 10.0}, "source": "legacy_daily",
-            "fetched_at": "2026-09-27T04:00:00+00:00",
+            "fetched_at": "2026-09-26T16:00:00+00:00",
+            "available_time": "2026-09-26T16:00:00+00:00",
         },
     )
     packet = build_research_packet_from_provider(
@@ -49,22 +51,28 @@ def test_provider_research_attaches_conservative_market_regime_context():
         realtime_fetcher=lambda: {
             "ok": True,
             "quotes": {"000001": {"price": 10.2, "pct": 2.0}, "000002": {"price": 8.0, "pct": -1.0}},
-            "source": "sina_spot", "fetched_at": "2026-09-27T04:00:00+00:00",
+            "source": "sina_spot", "fetched_at": "2026-09-26T16:00:00+00:00",
+            "available_time": "2026-09-26T16:00:00+00:00",
         },
         daily_fetcher=lambda symbol, days: {
             "ok": True, "code": symbol, "latest_date": "2026-09-26",
             "latest": {"close": 10.0}, "source": "legacy_daily",
-            "fetched_at": "2026-09-27T04:00:00+00:00",
+            "fetched_at": "2026-09-26T16:00:00+00:00",
+            "available_time": "2026-09-26T16:00:00+00:00",
         },
         index_fetcher=lambda symbol: {
             "ok": True, "symbol": symbol, "latest_date": "2026-09-26",
             "latest_close": 4000.0, "pct": 1.2, "ma20": 3950.0,
             "above_ma20": True, "source": "legacy_index",
-            "fetched_at": "2026-09-27T04:00:00+00:00",
+            "fetched_at": "2026-09-26T16:00:00+00:00",
         },
         sector_fetcher=lambda: {
             "ok": True, "sectors": [{"name": "A", "pct": 2.0}, {"name": "B", "pct": -1.0}],
-            "source": "legacy_sector", "ts": "2026-09-27T04:00:00+00:00",
+            "source": "legacy_sector", "ts": "2026-09-26T16:00:00+00:00",
+        },
+        turnover_fetcher=lambda: {
+            "turnover_z": None, "pit_ready": False, "amount": 100.0,
+            "ts": "2026-09-26T16:00:00+00:00",
         },
     )
     packet = build_research_packet_from_provider(
@@ -83,22 +91,24 @@ def test_provider_research_rejects_future_available_time():
     provider = LegacyMarketProvider(
         realtime_fetcher=lambda: {
             "ok": True, "quotes": {"000001": {"price": 10.2}},
-            "source": "sina_spot", "fetched_at": "2026-09-27T10:00:00+00:00",
+            "source": "sina_spot", "fetched_at": "2026-09-27T02:00:00+00:00",
+            "available_time": "2026-09-27T02:00:00+00:00",
         },
         daily_fetcher=lambda symbol, days: {
             "ok": True, "code": symbol, "latest_date": "2026-09-26",
             "latest": {"close": 10.0}, "source": "legacy_daily",
-            "fetched_at": "2026-09-27T04:00:00+00:00",
+            "fetched_at": "2026-09-26T16:00:00+00:00",
+            "available_time": "2026-09-26T16:00:00+00:00",
         },
         index_fetcher=lambda symbol: {
             "ok": True, "symbol": symbol, "latest_date": "2026-09-26",
             "latest_close": 4000.0, "pct": 1.2, "ma20": 3950.0,
             "above_ma20": True, "source": "legacy_index",
-            "fetched_at": "2026-09-27T10:00:00+00:00",
+            "fetched_at": "2026-09-27T02:00:00+00:00",
         },
         sector_fetcher=lambda: {
             "ok": True, "sectors": [{"name": "A", "pct": 2.0}, {"name": "B", "pct": -1.0}],
-            "source": "legacy_sector", "ts": "2026-09-27T10:00:00+00:00",
+            "source": "legacy_sector", "ts": "2026-09-27T02:00:00+00:00",
         },
     )
     packet = build_research_packet_from_provider(
@@ -121,25 +131,27 @@ def test_provider_research_allows_exact_decision_time_boundary():
         realtime_fetcher=lambda: {
             "ok": True, "quotes": {"000001": {"price": 10.2}},
             "source": "sina_spot", "fetched_at": "2026-09-27T08:00:00+00:00",
+            "available_time": "2026-09-27T00:00:00+00:00",
         },
         daily_fetcher=lambda symbol, days: {
             "ok": True, "code": symbol, "latest_date": "2026-09-26",
             "latest": {"close": 10.0}, "source": "legacy_daily",
             "fetched_at": "2026-09-27T08:00:00+00:00",
+            "available_time": "2026-09-27T00:00:00+00:00",
         },
         index_fetcher=lambda symbol: {
             "ok": True, "symbol": symbol, "latest_date": "2026-09-26",
             "latest_close": 4000.0, "pct": 1.2, "ma20": 3950.0,
             "above_ma20": True, "source": "legacy_index",
-            "fetched_at": "2026-09-27T08:00:00+00:00",
+            "fetched_at": "2026-09-27T00:00:00+00:00",
         },
         sector_fetcher=lambda: {
             "ok": True, "sectors": [{"name": "A", "pct": 2.0}, {"name": "B", "pct": -1.0}],
-            "source": "legacy_sector", "ts": "2026-09-27T08:00:00+00:00",
+            "source": "legacy_sector", "ts": "2026-09-27T00:00:00+00:00",
         },
     )
     packet = build_research_packet_from_provider(
-        provider, symbol="000001", decision_time="2026-09-27T08:00:00+00:00",
+        provider, symbol="000001", decision_time="2026-09-27T08:00:00+08:00",
         daily_start="2026-09-20", daily_end="2026-09-26",
     )
     assert packet.data_quality["pit_admissible_ratio"] == 1.0
@@ -164,11 +176,13 @@ def test_provider_research_health_reports_structured_pit_status_counts():
         realtime_fetcher=lambda: {
             "ok": True, "quotes": {"000001": {"price": 10.2}},
             "source": "sina_spot", "fetched_at": "2026-09-27T10:00:00+00:00",
+            "available_time": "2026-09-27T10:00:00+00:00",
         },
         daily_fetcher=lambda symbol, days: {
             "ok": True, "code": symbol, "latest_date": "2026-09-26",
             "latest": {"close": 10.0}, "source": "legacy_daily",
             "fetched_at": "2026-09-27T04:00:00+00:00",
+            "available_time": "2026-09-27T04:00:00+00:00",
         },
         index_fetcher=lambda symbol: {
             "ok": True, "symbol": symbol, "latest_date": "2026-09-26",

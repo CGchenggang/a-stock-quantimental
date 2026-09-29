@@ -20,7 +20,10 @@ def test_intraday_detector_requires_explicit_minute_snapshot_contract():
     # that the snapshot is minute-granular. V2 must carry timestamp metadata.
     result = detect(intraday={"vwap_break": True})
     assert result["item_scores"]["vwap_breakout"] == 1
+    # Every one of the eight v3.86 items without data is noted in ITEMS order,
+    # including the prev_state-derived extreme_sentiment_yesterday.
     assert result["notes"] == [
+        "extreme_sentiment_yesterday:数据缺失按0分",
         "low_open_volume_shrink:数据缺失按0分",
         "decline_narrowing:数据缺失按0分",
         "weights_stable:数据缺失按0分",

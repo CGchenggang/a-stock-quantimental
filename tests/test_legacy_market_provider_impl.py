@@ -13,7 +13,11 @@ def test_legacy_market_provider_wraps_v1_quote_without_recomputing():
         daily_fetcher=lambda symbol, days: {},
     )
     result = provider.quote(["000001"])
-    assert result.data is payload
+    # The V1 payload is wrapped, never recomputed: the untouched original is
+    # preserved verbatim as provenance while the V2 view narrows to the
+    # requested symbols.
+    assert result.data["legacy_payload"] is payload
+    assert result.data["quotes"]["000001"]["price"] == 10.2
     assert result.source == "sina_spot"
     assert result.source_type == "legacy_quote_provider"
     assert result.available_time is not None

@@ -1,4 +1,6 @@
 from astock_v2.recommendation import RecommendationRecord
+import pytest
+
 from astock_v2.review import build_review_window, make_review
 
 def test_review_window_rejects_backwards_time():
@@ -10,4 +12,4 @@ def test_buy_review_is_correct_when_return_positive():
     r=RecommendationRecord("r1","000001","2026-01-01","BUY",.7,.8,"x","m1",{})
     review=make_review(r,review_time="2026-01-03",entry_price=10,exit_price=11)
     assert review.outcome=="CORRECT"
-    assert review.realized_return==.1
+    assert review.realized_return==pytest.approx(.1)
