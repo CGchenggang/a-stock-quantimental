@@ -23,8 +23,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-RESEARCH_END = "2026-09-22"   # frozen: last OOS decision day consumed by research
-VIRGIN_START = "2026-09-23"   # frozen: first possible virgin trading day
+from astock_v2.research_boundary import (
+    RESEARCH_END,
+    VIRGIN_START,
+)
+
 MINIMUM_TRADING_DAYS = 20     # one walk-forward test window
 RECOMMENDED_TRADING_DAYS = 60 # statistically meaningful window
 
