@@ -15,11 +15,16 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 from collections import defaultdict
 from math import log
 from pathlib import Path
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from scripts.run_p13u_gate import assert_research_zone
 
 SEED = 20260929
 BOOTSTRAP_ROUNDS = 1000
@@ -578,6 +583,7 @@ def main():
         audit = json.load(f)
     with open(args.audit.replace(".json", ".meta.json"), encoding="utf-8") as f:
         audit["meta"] = json.load(f)
+    assert_research_zone([r["decision_time"] for r in audit["predictions"]])
     rows = _baseline_rows(audit)
     next_returns = _next_return_map(audit)
     out_dir = Path(args.out_dir)

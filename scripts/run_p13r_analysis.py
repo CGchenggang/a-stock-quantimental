@@ -24,6 +24,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts.run_p13u_gate import assert_research_zone
 from scripts.run_p13o_analysis import RegimeLabeler, _md_table, _write
 from scripts.run_p13q_analysis import (
     SEED,
@@ -370,6 +371,7 @@ def main():
         audit = json.load(f)
     with open(args.audit.replace(".json", ".meta.json"), encoding="utf-8") as f:
         audit["meta"] = json.load(f)
+    assert_research_zone([r["decision_time"] for r in audit["predictions"]])
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
