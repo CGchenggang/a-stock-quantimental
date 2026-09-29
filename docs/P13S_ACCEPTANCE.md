@@ -40,9 +40,14 @@
 
 开发中由测试抓到并修复的实现问题：`write_manifest` 最初 rglob 整个输出目录，把非本脚本的文件（report_schema.json）卷进 outputs、且会受目录残留影响——改为显式收集本次生成的文件集，保证 manifest 确定性；`process_packets` 的一次静默替换失败（调用点更新了、函数体没更新）导致 KeyError——本会话已知坑的再次实例化。
 
-## 5. CI
+## 5. CI（已核验，客观事实）
 
-`tests.yml` 的 Full pytest suite step 保留；P13-S 测试文件被完整套件覆盖。推送后以 GitHub API 核验 run → job → step（pytest / p13m / Full pytest suite），具体 run ID 在推送后核验并记录于下方 Git Commits 同轮的报告更新中（以 Actions 页面为准）。
+- **Workflow**: tests；**Run ID**: 36577323987；**Commit**: `9c33979b3e5cf4b6bf27ff725aaeeaff222a2e39`（push 触发）
+- **Run**: completed / **success**
+- **pytest job**: success —— 全部步骤 success，其中 `Full pytest suite`（实际命令 `python -m pytest -q -ra`）= **success**；分组步骤 Core data / Agent-backtest-ledger / P8 / P13-M pooled regression 均 success
+- **p13m job**: success（P13-M pooled industry regression step success）
+- **P13-S coverage**: 本地 `pytest --collect-only tests/test_p13s_research_agent.py` = 22 tests collected；全量 243 passed（= 221 既有 + 22 P13-S）
+- Run 日志文本下载需认证（匿名 API 返回 403）；匿名可独立核验的证据为上述 run/job/step 结论（GitHub API）+ workflow 文件中的命令定义 + 本地同命令结果（243 passed）。核验 URL：https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36577323987
 
 ## 6. Known Limitations
 
