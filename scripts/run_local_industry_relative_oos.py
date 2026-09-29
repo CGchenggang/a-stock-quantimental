@@ -217,7 +217,12 @@ def main():
         rows = _factor_rows(store, context_maps.get(symbol, {}), symbol)
         if args.predictions_out:
             for row, factors in rows:
-                factor_values[symbol][row.decision_time] = dict(factors)
+                entry = dict(factors)
+                # The realized next-day return and its label power quantile
+                # and cost analyses; label == (next_return > 0) by protocol.
+                entry["next_return"] = row.next_return
+                entry["label"] = row.label
+                factor_values[symbol][row.decision_time] = entry
         for variant, factor_names in variants.items():
             details = [] if args.predictions_out else None
             result = evaluate(rows, factor_names, details=details)
@@ -251,6 +256,14 @@ def main():
         }
         with open(args.predictions_out, "w", encoding="utf-8") as f:
             json.dump(payload, f, sort_keys=True)
+        meta = {
+            "protocol": payload["protocol"],
+            "universe": list(universe),
+            "requested_symbols": list(requested_symbols),
+            "prediction_rows": len(prediction_rows),
+        }
+        with open(args.predictions_out.replace(".json", ".meta.json"), "w", encoding="utf-8") as f:
+            json.dump(meta, f, sort_keys=True, indent=1)
         print(f"predictions_written={args.predictions_out} rows={len(prediction_rows)}")
 
     print(
