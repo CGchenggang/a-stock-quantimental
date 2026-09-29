@@ -2,7 +2,7 @@
 from __future__ import annotations
 from math import log, sqrt
 from statistics import mean, pstdev
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable
 from ..data.providers import ProviderResult
 from ..factor_contracts import FactorOutput
 from ..factor_inputs import gate_factor_inputs
