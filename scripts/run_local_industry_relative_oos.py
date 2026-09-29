@@ -103,7 +103,7 @@ def _factor_rows(store, context_map, symbol):
     return rows
 
 
-def evaluate(rows, factor_names):
+def evaluate(rows, factor_names, details=None):
     windows = walk_forward_windows(
         rows, train_size=TRAIN_SIZE, test_size=TEST_SIZE, step=STEP, gap=GAP
     )
@@ -120,6 +120,11 @@ def evaluate(rows, factor_names):
         train_rate = sum(train_y) / len(train_y)
         predictions.extend(zip(model_ps, test_y))
         baselines.extend(zip([train_rate] * len(test_y), test_y))
+        if details is not None:
+            for item, p in zip(test, model_ps):
+                details.append(
+                    (item[0].decision_time, p, item[0].label, train_rate)
+                )
 
     ps = [p for p, _ in predictions]
     ys = [y for _, y in predictions]
@@ -156,6 +161,10 @@ def main():
     parser.add_argument("--context-out",
                         help="Optional JSON path to dump the PIT industry context maps "
                              "for audit (pooled-vs-single and determinism checks).")
+    parser.add_argument("--predictions-out",
+                        help="Optional JSON path to dump per-prediction OOS audit data "
+                             "(variant, symbol, decision_time, p, y, baseline_p) plus the "
+                             "paired factor values. Metrics output is unchanged.")
     args = parser.parse_args()
 
     universe = tuple(
@@ -198,13 +207,51 @@ def main():
             )
         print(f"context_map_written={args.context_out}")
 
+    # Per-prediction audit export for research phases (P13-O). The metrics
+    # path below is untouched: details collection is side-effect free.
+    prediction_rows = []
+    factor_values: dict[str, dict[str, dict[str, float]]] = (
+        {symbol: {} for symbol in requested_symbols} if args.predictions_out else {}
+    )
     for symbol in requested_symbols:
         rows = _factor_rows(store, context_maps.get(symbol, {}), symbol)
+        if args.predictions_out:
+            for row, factors in rows:
+                factor_values[symbol][row.decision_time] = dict(factors)
         for variant, factor_names in variants.items():
-            result = evaluate(rows, factor_names)
+            details = [] if args.predictions_out else None
+            result = evaluate(rows, factor_names, details=details)
             result["symbol"] = symbol
             result["variant"] = variant
             results.append(result)
+            if details is not None:
+                for decision_time, p, y, base_p in details:
+                    prediction_rows.append(
+                        {
+                            "variant": variant,
+                            "symbol": symbol,
+                            "decision_time": decision_time,
+                            "p": p,
+                            "y": y,
+                            "baseline_p": base_p,
+                        }
+                    )
+
+    if args.predictions_out:
+        payload = {
+            "protocol": {
+                "train_size": TRAIN_SIZE, "test_size": TEST_SIZE,
+                "step": STEP, "gap": GAP,
+                "universe_file": args.universe_file,
+                "membership": args.membership,
+                "variants": sorted(variants),
+            },
+            "factors": factor_values,
+            "predictions": prediction_rows,
+        }
+        with open(args.predictions_out, "w", encoding="utf-8") as f:
+            json.dump(payload, f, sort_keys=True)
+        print(f"predictions_written={args.predictions_out} rows={len(prediction_rows)}")
 
     print(
         "variant,symbol,factor_rows,windows,oos_predictions,positive_rate,"
