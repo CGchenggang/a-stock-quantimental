@@ -1,6 +1,6 @@
 from astock_v2.provider_research import build_research_packet_from_provider
 from astock_v2.data.legacy_market_provider_impl import LegacyMarketProvider
-from astock_v2.data.providers import PitStatus, ProviderResult, pit_status
+from astock_v2.data.providers import PitStatus, ProviderResult, normalize_time, pit_status
 from astock_v2.data_quality import summarize_pit
 
 
@@ -228,3 +228,18 @@ def test_shared_pit_data_quality_summary_is_reason_specific():
         "FALLBACK": 1,
         "INVALID_TIME": 1,
     }
+
+
+def test_normalize_time_is_offset_exact_and_repeat_stable():
+    # lru_cache memoises this pure string->string mapping (the cache key is
+    # the full input, so a hit is always equivalent to a fresh parse);
+    # repeated calls and cache hits must return the canonical UTC form.
+    first = normalize_time("2026-09-27T08:00:00+08:00")
+    assert first == "2026-09-27T00:00:00+00:00"
+    assert normalize_time("2026-09-27T08:00:00+08:00") is first
+    # The Z and naive forms name a different instant (08:00 UTC, not
+    # 16:00+08:00) and must stay offset-exact, not collapse into `first`.
+    utc_form = normalize_time("2026-09-27T08:00:00Z")
+    assert utc_form == "2026-09-27T08:00:00+00:00"
+    assert normalize_time("2026-09-27T08:00:00") == utc_form
+    assert normalize_time("2026-09-27T08:00:00+00:00") == utc_form

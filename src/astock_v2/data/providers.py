@@ -1,5 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from functools import lru_cache
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -16,6 +17,7 @@ class ProviderResult:
     fallback: bool = False
     warnings: list[str] = field(default_factory=list)
 
+@lru_cache(maxsize=65536)
 def normalize_time(value: str) -> str:
     dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     if dt.tzinfo is None:
