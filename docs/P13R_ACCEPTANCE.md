@@ -54,9 +54,24 @@ zero +0.00040 / low +0.00016 / medium −0.00008（net/day）——换手 0.24/�
 - **完整二次运行：7 个研究 JSON 全部 byte-identical（cmp 逐个通过）**；manifest 记录 SHA256。
 - `git diff -- src/astock_v2`：**空**。
 
-## 8. CI
+## 8. CI（已核验，含验收查询问题根因）
 
-推送后 `tests` workflow（含 Full pytest suite step）双 job 通过、badge passing——具体 run ID 与 commit 见 §11 的推送记录，以 ChatGPT 复核时 Actions 页面为准。
+### 客观 CI 事实（GitHub API 认证核验，2026-09-29）
+
+- **Workflow**: tests；**Run ID**: 36543819808；**Commit**: `77594d9a5b4f142865f6a17885a846b2b13c6e8b`（push 触发）
+- **Run**: completed / **success**
+- **pytest job**: success —— 其中 `Full pytest suite` 步骤（实际命令 `python -m pytest -q -ra`）= **success**
+- **p13m job**: success
+- **check-runs**（`/commits/77594d9a…/check-runs`）：pytest 与 p13m 均 completed/success，details_url 直指具体 job 页面
+- 核验 URL：https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36543819808
+
+### 验收端查询返回空列表的根因（本机实测复现）
+
+1. **查询端点错误（主因）**：`GET /commits/{sha}/status`（combined **Status API**）对任何 commit 都返回 `statuses=[]`——GitHub Actions 从不创建 commit status，它创建 **check runs**（Checks API）。实测正确端点 `/commits/{sha}/check-runs` 返回 pytest/p13m 两条 success。
+2. **未认证限流**：匿名共享出口 IP 配额 60 次/小时，超限响应体为 `{"message": "API rate limit exceeded for 54.249.30.99 …"}`——该 JSON 没有 `workflow_runs`/`statuses` 键，客户端若用 `.get("workflow_runs", [])` 会把 403 错误**静默映射成空列表**。
+3. **短 SHA 过滤**：`?head_sha=77594d9`（7 位）实测返回 `total_count=0`；`head_sha` 过滤必须用完整 40 位 SHA（实测完整 SHA 返回 `total_count=1`）。
+
+正确核验路径（无需认证）：浏览器打开 run 页面，或用任一正确 API 端点 + 完整 40 位 SHA + User-Agent 头。
 
 ## 9. Limitations
 
