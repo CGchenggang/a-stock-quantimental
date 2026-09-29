@@ -56,9 +56,13 @@ Research-only 数据完整性闸门：冻结 P13-T 判定的边界（research_en
 | Production diff | `git diff 77594d9a..HEAD -- src/astock_v2` = **空** |
 | 污染状态 | **contamination_detected = False**（未发生 VIRGIN HOLDOUT CONTAMINATION DETECTED 停止条件） |
 
-## 6. CI
+## 6. CI（已核验，客观事实）
 
-推送后以 GitHub API 核验 run → job → step（pytest / p13m / Full pytest suite），具体 run ID 记录于下方 Git Commits 同轮的报告更新（以 Actions 页面为准）。
+- **Workflow**: tests；**Run ID**: 36591228302；**Commit**: `96a2aae`（push 触发）
+- **pytest job**: success —— 含 `Full pytest suite` step（实际命令 `python -m pytest -q -ra`）= **success**；P13-M pooled regression step success
+- **p13m job**: success
+- **P13-U coverage**: `pytest --collect-only tests/test_p13u_holdout_gate.py` = 18 tests collected，全部被 full suite 执行（全量 261 = 243 + 18）
+- 过程说明：首个 P13-U commit（1f3b9a3）曾因遗漏提交两个入口文件的 guard 修改而使 CI pytest job 失败（run 36590048778）；补提交 `96a2aae` 后全绿。核验 URL：https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36591228302
 
 ## 7. Known Limitations
 
