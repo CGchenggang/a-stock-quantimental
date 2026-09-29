@@ -1,7 +1,6 @@
 """Build a PIT-safe factor/label dataset from local A-share daily history."""
 from __future__ import annotations
 
-from bisect import bisect_right
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
