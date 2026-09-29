@@ -50,8 +50,12 @@ class LegacyMarketProvider(MarketProvider):
         if not isinstance(payload, dict):
             raise TypeError("legacy realtime fetcher must return dict")
 
+        # Realtime snapshots may declare their own availability (e.g. a replay
+        # or delayed feed); otherwise availability is the fetch completion.
+        declared = payload.get("available_time")
         result = legacy_quote_result(
-            payload, available_time=_now_iso()
+            payload,
+            available_time=str(declared) if declared else _now_iso(),
         )
         quotes = payload.get("quotes")
         if not isinstance(quotes, dict):
@@ -97,7 +101,7 @@ class LegacyMarketProvider(MarketProvider):
             requested_end = str(end)[:10]
             if latest_day > requested_end:
                 raise ValueError(
-                    "legacy daily payload contains data after requested end date"
+                    "legacy daily payload beyond requested end date"
                 )
 
         available = payload.get("available_time")

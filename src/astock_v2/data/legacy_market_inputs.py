@@ -13,7 +13,9 @@ def _std(values: list[float]) -> float | None:
 
 def _breadth_from_quotes(quotes: dict[str, Any]) -> dict[str, float | int | None]:
     rows = [v for v in quotes.values() if isinstance(v, dict) and v.get("price") is not None]
-    up = sum(float(r.get("pct") or 0) > 0 for r in rows)
+    # Proxy breadth convention: non-declining quotes (pct >= 0) count as
+    # advancers, so a flat market reads as mildly positive, not as zero sample.
+    up = sum(float(r.get("pct") or 0) >= 0 for r in rows)
     down = sum(float(r.get("pct") or 0) < 0 for r in rows)
     total = len(rows)
     limit_up = sum(float(r.get("pct") or 0) >= 9.8 for r in rows)

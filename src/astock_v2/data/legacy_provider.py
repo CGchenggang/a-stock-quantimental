@@ -28,7 +28,10 @@ def provider_result_from_legacy_payload(
     if fetched.tzinfo is None:
         fetched = fetched.replace(tzinfo=timezone.utc)
 
-    available = available_time or fetched.isoformat()
+    # An empty-string availability is an explicit "not yet established"
+    # declaration (e.g. daily history without a publication time) and must
+    # not be fabricated from the fetch completion time.
+    available = available_time if available_time is not None else fetched.isoformat()
     warnings = list(payload.get("warnings") or [])
     if payload.get("warning"):
         warnings.append(str(payload["warning"]))

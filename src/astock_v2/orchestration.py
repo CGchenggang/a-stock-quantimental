@@ -16,7 +16,9 @@ def _iso(value: str) -> str:
     dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-    return dt.isoformat()
+    # Canonical UTC form: lexicographic comparison of ISO boundary timestamps
+    # is only safe when every value carries the same offset.
+    return dt.astimezone(timezone.utc).isoformat()
 
 
 def legacy_snapshot_to_v2(

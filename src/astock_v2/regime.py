@@ -31,7 +31,16 @@ def classify_regime(values: Mapping[str, float | None]) -> dict[str, float | str
     )
     present = [values.get(k) for k in keys]
     missing = sum(v is None for v in present)
-    if missing >= 4:
+    # The three model-grade inputs are mandatory: proxy fields (breadth,
+    # index_trend, sector_dispersion, limit_pressure) carry explicit labels for
+    # human context, but classifying a regime from proxies alone would
+    # fabricate model output.
+    model_inputs_missing = (
+        values.get("turnover_z") is None
+        and values.get("volatility_z") is None
+        and values.get("liquidity") is None
+    )
+    if missing >= 4 or model_inputs_missing:
         return {"regime": "UNKNOWN", "confidence": 0.0, "missing_inputs": missing}
 
     def num(k: str) -> float:
