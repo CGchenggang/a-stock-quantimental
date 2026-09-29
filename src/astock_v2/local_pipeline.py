@@ -29,6 +29,43 @@ def _parse_aware(value: str) -> datetime:
     return parsed
 
 
+def _prepare_pit_updates(
+    ordered: list[HistoricalRecord],
+    event_index: dict[str, int],
+) -> list[tuple[datetime, int, int, HistoricalRecord]]:
+    """Flatten records into one availability-ordered admission schedule.
+
+    Each entry is (available_dt, revision, event_index, record) sorted by
+    availability so a single incremental pointer can admit everything known at
+    a decision boundary; the revision key stabilises same-instant ties.
+    Records that can never become PIT-admissible (unparseable or backwards
+    availability) are excluded exactly as admissible_at() would reject them,
+    but parsed once here instead of once per decision day.
+    """
+    updates: list[tuple[datetime, int, int, HistoricalRecord]] = []
+    for record in ordered:
+        if not record.available_time:
+            continue
+        try:
+            available_dt = datetime.fromisoformat(
+                record.available_time.replace("Z", "+00:00")
+            )
+            event_dt = datetime.fromisoformat(
+                record.event_time.replace("Z", "+00:00")
+            )
+        except ValueError:
+            continue
+        if available_dt.tzinfo is None or event_dt.tzinfo is None:
+            continue
+        if available_dt < event_dt:
+            continue
+        updates.append(
+            (available_dt, record.revision, event_index[record.event_time], record)
+        )
+    updates.sort(key=lambda item: (item[0], item[1]))
+    return updates
+
+
 def build_local_factor_rows(
     store: LocalHistoricalStore,
     symbol: str,

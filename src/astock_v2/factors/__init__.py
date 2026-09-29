@@ -1,5 +1,6 @@
 """Public factor API and backward-compatible deterministic price/volume factors."""
 from __future__ import annotations
+from collections.abc import Mapping, Sequence
 from math import log, sqrt
 from statistics import mean, pstdev
 from typing import Any, Callable
