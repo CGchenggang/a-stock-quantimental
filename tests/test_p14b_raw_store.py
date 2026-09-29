@@ -315,17 +315,36 @@ def test_p13q_p13r_guards_preserved():
 
 # 25.-27. production snapshots untouched
 def test_production_factor_policy_calibration_snapshots(tmp_path):
+    """P14-B must not mutate the production factor registry, the P13-R
+    policy registry or the P13-Q calibration registry. Registries are
+    rebuilt in-test from the shipped builders (CI has no data artifacts)."""
     from astock_v2.factors import FACTOR_REGISTRY
     assert set(FACTOR_REGISTRY) == {
         "momentum", "volatility", "trend", "volume_ratio",
         "close_to_high", "close_to_low", "range_ratio", "close_location",
     }
     import scripts.run_p13r_analysis as pr
-    assert len(pr.build_policy_registry(0.02)) == 8
-    registry = json.load(open("data/industry/p13q/calibration_registry.json",
-                              encoding="utf-8"))
+    policies_first = json.dumps(pr.build_policy_registry(0.02), sort_keys=True)
+    assert len(json.loads(policies_first)) == 8
+
+    from scripts.run_p13q_analysis import task_registry
+    methods = {
+        m: {"n": 5, "brier": 0.25, "log_loss": 0.69, "ece": 0.01,
+            "calibration_intercept": 0.0, "calibration_slope": 1.0,
+            "delta_brier": 0.0, "delta_log_loss": 0.0, "delta_ece": 0.0}
+        for m in ("raw", "platt", "isotonic")
+    }
+    payload = {"training_period": "t", "evaluation_period": "e",
+               "training_n": 1, "evaluation_n": 1, "methods": methods}
+    registry_first = tmp_path / "registry_run1.json"
+    task_registry(payload, tmp_path)
+    (tmp_path / "calibration_registry.json").rename(registry_first)
+    task_registry(payload, tmp_path)
+    registry_second = tmp_path / "calibration_registry.json"
+    assert registry_first.read_bytes() == registry_second.read_bytes()
+    rebuilt = json.loads(registry_second.read_text(encoding="utf-8"))
     assert all(e["status"] == "research_only"
-               for e in registry["methods"].values())
+               for e in rebuilt["methods"].values())
 
 
 # 28. no recommendation generation in the raw layer
