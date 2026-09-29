@@ -39,11 +39,11 @@ P14 is infrastructure/research-only work. It must not consume the protected virg
 
 ## Current Commit
 
-`967f52da5682d6e2b46f2fe73d8403d6c8a38588`
+`05878687f0a5314624647e9868546465931e5b27`
 
-Latest commit message: `docs: add long-lived project status and handoff state`.
+Latest commit message: `docs: add P14 ZCODE handoff task`.
 
-Current HEAD was independently checked on 2026-09-29.
+Current HEAD was independently checked on 2026-09-29; the P14 handoff document was then added as a documentation-only commit.
 
 Relevant current-head CI:
 - workflow: `tests`
@@ -218,4 +218,4 @@ When a new ZCODE stage is reported complete:
 9. If STOPPED because a data condition is not met, build/maintain integrity infrastructure rather than fabricating evidence.
 
 Last independently updated: 2026-09-29.
-Independent acceptance recorded against HEAD: `967f52da5682d6e2b46f2fe73d8403d6c8a38588`.
+Independent P13-U acceptance recorded before the P14 handoff documentation commit. Current documentation HEAD: `05878687f0a5314624647e9868546465931e5b27`.
