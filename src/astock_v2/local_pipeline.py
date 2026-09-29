@@ -1,6 +1,7 @@
 """Build a PIT-safe factor/label dataset from local A-share daily history."""
 from __future__ import annotations
 
+from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
@@ -121,6 +122,11 @@ def build_local_factor_rows(
     rows: list[LocalFactorRow] = []
     update_pointer = 0
     admitted_by_event: list[HistoricalRecord | None] = [None] * len(event_times)
+    # Dense, event-ordered view of the filled slots. Maintaining it
+    # incrementally replaces the per-day prefix slice and None scan (which
+    # cost O(days^2) comparisons per stock) with O(1) work per admission.
+    dense_admitted: list[HistoricalRecord] = []
+    dense_event_idx: list[int] = []
     for index in range(lookback, len(event_times) - 1):
         event_time = event_times[index]
         # Daily A-share research uses a fixed post-close decision boundary.
@@ -131,18 +137,32 @@ def build_local_factor_rows(
         while update_pointer < len(updates) and updates[update_pointer][0] <= decision_dt:
             _, revision, event_idx, record = updates[update_pointer]
             current = admitted_by_event[event_idx]
-            if current is None or revision > current.revision:
+            if current is None:
                 admitted_by_event[event_idx] = record
+                if not dense_event_idx or event_idx > dense_event_idx[-1]:
+                    dense_event_idx.append(event_idx)
+                    dense_admitted.append(record)
+                else:
+                    pos = bisect_right(dense_event_idx, event_idx)
+                    dense_event_idx.insert(pos, event_idx)
+                    dense_admitted.insert(pos, record)
+            elif revision > current.revision:
+                admitted_by_event[event_idx] = record
+                dense_admitted[bisect_left(dense_event_idx, event_idx)] = record
             update_pointer += 1
 
         current = admitted_by_event[index]
         if current is None:
             continue
-        active = admitted_by_event[: index + 1]
-        if None in active:
-            admitted = [record for record in active if record is not None]
+        # While pit_ready holds, a slot can never fill before its own event
+        # day (an admission needs available >= its own 15:00 event), so the
+        # dense view never outruns the decision day; the guard keeps the
+        # exact prefix semantics if that ever changes.
+        if dense_event_idx and dense_event_idx[-1] > index:
+            cutoff = bisect_right(dense_event_idx, index)
+            admitted = dense_admitted[:cutoff]
         else:
-            admitted = active
+            admitted = dense_admitted
         if len(admitted) < lookback + 1:
             continue
 
