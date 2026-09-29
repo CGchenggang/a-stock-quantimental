@@ -56,3 +56,18 @@ def test_local_factor_rows_reject_invalid_lookback(tmp_path):
         assert "lookback" in str(exc)
     else:
         assert False
+
+
+def test_late_revision_is_excluded_until_its_available_time(tmp_path):
+    store = LocalHistoricalStore(tmp_path)
+    days = [(f"2026-01-{day:02d}", float(day)) for day in range(1, 23)]
+    rows = [record(day, close) for day, close in days]
+    rows.append(record("2026-01-21", 99.0, revision=1, available="18:00:00"))
+    store.append_records("cn_stock_daily", rows)
+
+    result = build_local_factor_rows(store, "300308", lookback=20)
+
+    assert result
+    # The first decision is 16:00 on 2026-01-21, so revision=1 is not yet
+    # admissible; momentum must use the original close=21 observation.
+    assert result[0].factors["momentum"] == 21.0 / 1.0 - 1.0
