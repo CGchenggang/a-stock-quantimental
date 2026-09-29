@@ -274,18 +274,37 @@ def test_p13q_and_p13r_guards_still_active():
 
 
 # 21.-24. production snapshots untouched
-def test_production_snapshots_unchanged():
+def test_production_snapshots_unchanged(tmp_path):
+    """P14-A must not mutate the P13-Q calibration registry, the P13-R
+    policy registry or the production factor registry. Registries are
+    rebuilt in-test from the shipped builders (CI has no data artifacts)."""
     from astock_v2.factors import FACTOR_REGISTRY
     assert set(FACTOR_REGISTRY) == {
         "momentum", "volatility", "trend", "volume_ratio",
         "close_to_high", "close_to_low", "range_ratio", "close_location",
     }
     import scripts.run_p13r_analysis as pr
-    policies = pr.build_policy_registry(0.02)
-    assert len(policies) == 8
-    registry = json.load(open("data/industry/p13q/calibration_registry.json",
-                              encoding="utf-8"))
-    assert all(e["status"] == "research_only" for e in registry["methods"].values())
+    policies_first = json.dumps(pr.build_policy_registry(0.02), sort_keys=True)
+    assert len(json.loads(policies_first)) == 8
+
+    from scripts.run_p13q_analysis import task_registry
+    methods = {
+        m: {"n": 5, "brier": 0.25, "log_loss": 0.69, "ece": 0.01,
+            "calibration_intercept": 0.0, "calibration_slope": 1.0,
+            "delta_brier": 0.0, "delta_log_loss": 0.0, "delta_ece": 0.0}
+        for m in ("raw", "platt", "isotonic")
+    }
+    payload = {"training_period": "t", "evaluation_period": "e",
+               "training_n": 1, "evaluation_n": 1, "methods": methods}
+    registry_first = tmp_path / "registry_run1.json"
+    task_registry(payload, tmp_path)
+    (tmp_path / "calibration_registry.json").rename(registry_first)
+    task_registry(payload, tmp_path)
+    registry_second = tmp_path / "calibration_registry.json"
+    assert registry_first.read_bytes() == registry_second.read_bytes()
+    rebuilt = json.loads(registry_second.read_text(encoding="utf-8"))
+    assert all(e["status"] == "research_only"
+               for e in rebuilt["methods"].values())
 
 
 def test_information_records_are_research_only():
