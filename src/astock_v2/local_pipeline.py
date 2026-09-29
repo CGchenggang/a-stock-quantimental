@@ -66,6 +66,30 @@ def _prepare_pit_updates(
     return updates
 
 
+
+def _window_rows_fully_usable(window: list[HistoricalRecord]) -> bool:
+    """True when no per-factor row filter can drop any row of the window.
+
+    momentum/trend need a numeric close, volatility additionally close > 0,
+    and volume_ratio a numeric volume. If every window row satisfies all of
+    these, the filtered series tails are the same whether or not history
+    outside the window is present.
+    """
+    for record in window:
+        value = record.value
+        close = value.get("close")
+        volume = value.get("volume")
+        if close is None or volume is None:
+            return False
+        try:
+            close_f = float(close)
+            float(volume)
+        except (TypeError, ValueError):
+            return False
+        if not close_f > 0.0:
+            return False
+    return True
+
 def build_local_factor_rows(
     store: LocalHistoricalStore,
     symbol: str,
@@ -122,8 +146,20 @@ def build_local_factor_rows(
         if len(admitted) < lookback + 1:
             continue
 
+        # The four pipeline factors only read the trailing (lookback + 2)
+        # rows of their filtered series. When every trailing row is fully
+        # usable (positive float close, float volume), no filter can remove
+        # a window row, so factor values are identical to feeding the whole
+        # admitted history while skipping an O(history) rescan per day.
+        # Anything else falls back to the exact full-history input.
+        window = admitted[-(lookback + 2):]
+        if len(window) < len(admitted) and _window_rows_fully_usable(window):
+            factor_rows = [record.value for record in window]
+        else:
+            factor_rows = [record.value for record in admitted]
+
         provider = ProviderResult(
-            data=[record.value for record in admitted],
+            data=factor_rows,
             source="local:cn_stock_daily",
             source_type="local_historical",
             fetched_at="",
