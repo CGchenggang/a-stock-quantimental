@@ -5,11 +5,11 @@
 
 ## Current Phase
 
-**P13-U — Virgin Holdout Data Accumulation & Integrity Gate**
+**P14 — Multi-Market Information Infrastructure**
 
-P13-T was correctly stopped because no evaluable true virgin temporal holdout existed. P13-U now protects that virgin zone while new market data accumulates.
+P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
-Current gate state at last verified run: **ACCUMULATING**.
+Current P13-U gate state at the last verified data run: **ACCUMULATING**.
 
 - `research_end = 2026-09-22`
 - `virgin_start = 2026-09-23`
@@ -17,6 +17,8 @@ Current gate state at last verified run: **ACCUMULATING**.
 - P13-T minimum execution condition: **20 trading days**
 - P13-T recommended execution condition: **60 trading days**
 - contamination detected: **False**
+
+P14 is infrastructure/research-only work. It must not consume the protected virgin zone or promote new information into production factors, policy, or calibration.
 
 ## Accepted Phases
 
@@ -30,25 +32,31 @@ Current gate state at last verified run: **ACCUMULATING**.
 | P13-R | PASS | Recommendation/decision packet layer; research-only |
 | P13-S | PASS | Deterministic research-report layer; LLM interface remains non-production |
 | P13-T | STOPPED / NOT EXECUTED | No true evaluable virgin holdout was available |
-| P13-U | PASS | Virgin-holdout integrity gate; currently ACCUMULATING |
+| P13-U | PASS | Independently accepted virgin-holdout integrity gate; currently ACCUMULATING |
+| P14 | READY TO START | Multi-market information infrastructure; research-only, no alpha promotion |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`38c4692a74bf88bcdc9c477605e63707d1b3a1f5`
+`967f52da5682d6e2b46f2fe73d8403d6c8a38588`
 
-Latest verified commit message: `docs: record P13-U CI verification facts`.
+Latest commit message: `docs: add long-lived project status and handoff state`.
 
-Relevant CI verification:
+Current HEAD was independently checked on 2026-09-29.
+
+Relevant current-head CI:
 - workflow: `tests`
-- run: `36591228302`
-- commit containing the corrected P13-U guard wiring: `96a2aaeb65d7962ac4ad5c603f7df0f7f402cf1b`
+- run: `36594103957`
+- HEAD: `967f52da5682d6e2b46f2fe73d8403d6c8a38588`
 - pytest job: success
-- Full pytest suite: success
-- P13-M regression: success
 - p13m job: success
-- reported full suite: **261 passed / 0 failed**
+- Full pytest: **261 passed / 2 warnings / 0 failed**
+- Full pytest step executed `python -m pytest -q -ra`
+- P13-M regression step: success
+- P13-U dedicated tests are included in the 261-test suite; the workflow log enumerates all 18 P13-U tests.
+
+The earlier P13-U guard-wiring CI run `36591228302` on `96a2aae` was also independently inspected. The subsequent docs-only HEAD `967f52d` has its own successful CI run `36594103957`, so CI evidence is current rather than inherited from an older commit.
 
 ## Current Research Boundary
 
@@ -62,8 +70,7 @@ P13-O/P13-Q/P13-R research consumed the OOS history through this date.
 
 ### Frozen virgin zone
 
-`2026-09-23 onward
-`
+`2026-09-23 onward`
 
 No P13-Q/P13-R research pipeline may consume decision dates in this zone.
 
@@ -76,12 +83,14 @@ P13-T may only execute against a genuine virgin temporal holdout after the bound
 ## Data Boundary
 
 - Validation universe: frozen 76-stock universe.
-- Latest data observed by the last P13-U gate run: **2026-09-24**.
+- Last documented P13-U data endpoint: **2026-09-24**.
 - Virgin dates observed: 2026-09-23 and 2026-09-24.
 - Missing symbols on both observed virgin dates: `000004`, `000016`.
 - Missing data is reported; symbols are not silently dropped.
 - P13-U checks date/symbol existence and integrity; it does not calculate performance metrics.
 - Two stocks without SW1 membership remain subject to data-existence checking and are not silently removed.
+
+**Reproducibility note:** `data/industry/` is intentionally ignored by `.gitignore`, so the generated P13-U gate JSON artifacts and the local historical price store are not part of the GitHub commit. Therefore the live 2026-09-24 data endpoint is documented from the independently inspected P13-T/P13-U evidence, while current-head CI independently verifies the gate implementation and its tests. This is a data-availability limitation, not a P13-U acceptance failure.
 
 ## Frozen Parameters
 
@@ -97,7 +106,7 @@ P13-T may only execute against a genuine virgin temporal holdout after the bound
 - P13-T determination
 - P13-O consumed-date audit boundary
 
-P13-U records SHA256 hashes for the frozen inputs in `data/industry/p13u/frozen_manifest.json`.
+P13-U records SHA256 hashes for the frozen inputs in `data/industry/p13u/frozen_manifest.json` when the local gate is run.
 
 ## Known Limitations
 
@@ -108,6 +117,7 @@ P13-U records SHA256 hashes for the frozen inputs in `data/industry/p13u/frozen_
 5. P13-U is an integrity gate, not a prediction or recommendation stage.
 6. P13-U does not automatically execute P13-T when the threshold is reached; independent acceptance is still required.
 7. Research-only calibration/policy discoveries remain non-production until independently validated.
+8. The local P13-U generated data artifacts are intentionally outside Git version control; acceptance must therefore distinguish source/CI verification from the latest local data-state evidence.
 
 ## Next Phase
 
@@ -118,10 +128,14 @@ P14 should proceed independently of the still-accumulating P13-U virgin holdout.
 P14 must:
 - preserve the P13-U research-zone guard;
 - avoid consuming or contaminating the virgin holdout;
-- build the information/data infrastructure needed for the eventual information-factor and overseas-market extensions;
+- build an auditable information/data infrastructure for A-share, company, macro, overseas and market-state information;
+- explicitly model `event_time` versus `available_time`;
+- enforce PIT, freshness, provenance, revision and deduplication semantics;
 - remain research-only;
 - avoid adding unvalidated factors to production;
-- preserve PIT, freshness, source traceability and deterministic/reproducible outputs.
+- avoid changing production weights, P13-R policy, or calibration;
+- produce deterministic/reproducible outputs;
+- add full pytest coverage and preserve P13-M regression plus P13-U integrity protection.
 
 P13-T remains a parallel future gate: once the virgin zone reaches the agreed execution condition, stop new research consumption of that zone, freeze the manifest, and execute the pre-registered holdout evaluation.
 
@@ -143,16 +157,20 @@ ZCODE's acceptance report is evidence, not the final acceptance decision.
 
 ### P13-U
 
-Accepted because:
+**Independent acceptance: PASS.**
+
+Verified:
 - frozen boundary is explicit and does not move with latest data;
 - virgin dates are identified conservatively;
 - contamination checks and research-zone guards are implemented;
 - missing coverage is reported without silently changing the universe;
 - no performance/recommendation metrics are produced;
-- repeated artifacts are byte-identical;
+- repeated-artifact determinism is tested;
 - future-row immunity is tested;
-- full pytest and P13-M CI regression are green;
-- production source diff from the P13-R baseline is empty according to the acceptance report.
+- all 18 P13-U tests are included in the current 261-test suite and pass;
+- current HEAD GitHub Actions run `36594103957` is green at `967f52d`;
+- P13-M regression is green;
+- production source diff from the P13-R baseline contains no `src/astock_v2` changes attributable to P13-U/P13-S handoff work.
 
 ### P13-T future acceptance
 
@@ -166,6 +184,24 @@ P13-T may be accepted only if:
 7. results are deterministic;
 8. full pytest and required regression CI are green;
 9. no unvalidated policy/factor/calibration changes are promoted to production.
+
+### P14 acceptance
+
+P14 may be accepted only after independent verification of:
+1. raw → provenance → normalization → event/available time → PIT → freshness → deduplication → research information layer;
+2. explicit source provenance and source identity;
+3. late-arriving and revised information handling;
+4. available-time boundary correctness;
+5. future-row immunity;
+6. deterministic normalization and repeated-run byte identity;
+7. missing/duplicate/conflicting-source handling;
+8. virgin holdout protection;
+9. P13-U research-zone guard preservation;
+10. no production factor/policy/calibration mutation;
+11. production diff review;
+12. full pytest, P13-M regression, P13-U integrity tests and all new P14 tests in GitHub Actions;
+13. workflow job/step inspection;
+14. acceptance documentation matching actual implementation.
 
 ## Operating Rule
 
@@ -182,3 +218,4 @@ When a new ZCODE stage is reported complete:
 9. If STOPPED because a data condition is not met, build/maintain integrity infrastructure rather than fabricating evidence.
 
 Last independently updated: 2026-09-29.
+Independent acceptance recorded against HEAD: `967f52da5682d6e2b46f2fe73d8403d6c8a38588`.
