@@ -55,6 +55,9 @@ jobs:
       - name: P13-M pooled industry regression
         run: |
           python -m pytest -q -ra tests/test_industry_relative.py
+      - name: Full pytest suite
+        run: |
+          python -m pytest -q -ra
 
   p13m:
     runs-on: ubuntu-latest
