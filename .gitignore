@@ -5,3 +5,8 @@ __pycache__/
 
 # Local historical / vendor data (never commit)
 data/industry/
+data/clean/
+data/raw/
+workspace/
+ZCODE_AStock_Quantimental_Handoff_20260928/
+src/a_stock_quantimental_v2.egg-info/
