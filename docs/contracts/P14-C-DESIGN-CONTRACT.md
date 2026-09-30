@@ -177,6 +177,8 @@ SOURCE_EMPTY
 - **P14C-MISS-002**: SOURCE_EMPTY 不能被重新解释为 EXPECTED_ABSENCE。
 - **P14C-MISS-003**: PARSE_FAILURE 不能被重新解释为 SOURCE_ERROR。
 - **P14C-MISS-004**: EXPECTED_ABSENCE 不能由"实际没数据"自动推导。
+- **P14C-MISS-005**: UNEXPECTED_MISSING 要求 contract 期望 entity/date 存在但 actual 为空（不是 SOURCE_EMPTY）。
+- **P14C-MISS-006**: UNRESOLVED_AVAILABILITY 当 available_time 为 None 或格式错误。
 
 ---
 
@@ -288,11 +290,11 @@ completeness 只报告 **required** expected pairs 的 coverage。
 
 ## 11. Revision Integrity Contract
 
-### 11.1 REV-001: Revision sequence
+### P14C-REV-001: Revision sequence integrity
 
 revision 不要求连续（允许 gap）。gap 被检测并报告为 ANOMALY 但不影响 quality status。
 
-### 11.2 REV-002: Duplicate revision
+### P14C-REV-002: Duplicate revision
 
 ```text
 duplicate revision
@@ -301,7 +303,7 @@ duplicate revision
 
 如果 canonical JSON 不同 → same_revision_different_payload ANOMALY。
 
-### 11.3 REV-003: Payload mutation
+### P14C-REV-003: Payload mutation
 
 ```text
 same (source, source_id, revision) + different canonical JSON
@@ -310,17 +312,37 @@ same (source, source_id, revision) + different canonical JSON
 
 P14-B RawStore 已负责检测。P14-C 消费检测结果并统计。
 
-### 11.4 REV-004: available_time regression
+### P14C-REV-004: available_time regression
 
 如果 revision N+1 的 available_time 早于 revision N：
 - classification = revision_available_time_regression
 - severity = ANOMALY
 - research handling = 报告但保留，不删除
 
-### 11.5 REV-005: PIT visibility
+### P14C-REV-005: PIT visibility
 
 revision anomaly 不得破坏 P14-A `available_time <= decision_time`。
 P14-A 仍然是 PIT authority。
+
+---
+
+## P14C-BND: Boundary Contract
+
+### P14C-BND-001: Research end boundary
+
+RESEARCH_END = 2026-09-22。这是研究消费边界，不随 latest data date 移动。
+
+### P14C-BND-002: Virgin start boundary
+
+VIRGIN_START = 2026-09-23。这是 P13-T holdout 起始边界。
+
+### P14C-BND-003: P13-Q/P13-R guard
+
+`assert_research_zone` 在 P13-Q/P13-R 分析入口 fail-fast。
+
+### P14C-BND-004: Production factor registry
+
+FACTOR_REGISTRY 在 P14-C 期间不得修改。
 
 ---
 
@@ -363,7 +385,7 @@ P14-A `detect_conflicts` 已负责检测。P14-C 消费检测结果并统计。
 
 ---
 
-## 13. Freshness Contract
+## 14. Freshness Contract
 
 ### 13.1 唯一来源
 
@@ -385,7 +407,7 @@ P14-C 将 P14-A 的小写状态（fresh/stale/unknown/missing_policy）规范化
 
 ---
 
-## 14. Reconciliation Contract
+## 15. Reconciliation Contract
 
 ### 14.1 必须保留的字段
 
@@ -409,10 +431,11 @@ difference, relative_difference, policy_id, policy_version, status
 - **P14C-RECON-003**: 不得静默 resolution。
 - **P14C-RECON-004**: 不同 source 的 value 都必须保留。
 - **P14C-RECON-005**: tolerance policy 必须版本化（policy_id + policy_version）。
+- **P14C-RECON-006**: 不得自动选择 source winner（无 resolved_value 字段）。
 
 ---
 
-## 15. Provenance Contract
+## 16. Provenance Contract
 
 ### 15.1 Record Provenance（Type A）
 
@@ -446,7 +469,7 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 ---
 
-## 16. Source Health Contract
+## 17. Source Health Contract
 
 | 状态 | 条件 | 优先级 |
 |------|------|--------|
@@ -457,13 +480,25 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 | UNRESOLVED | attempted = 0 且 accepted = 0 且 errors = 0 | 低 |
 | OK | 无上述任何条件 | — |
 
+### P14C-SH-004: EMPTY
+
+attempted > 0, accepted = 0, errors = 0 → source returned zero observations。
+
+### P14C-SH-005: ERROR
+
+errors > 0 且 accepted = 0 → source fetch/transport/auth/timeout 失败。
+
+### P14C-SH-006: UNRESOLVED
+
+attempted = 0 且 accepted = 0 且 errors = 0 → no ingestion attempts observed。
+
 **P14C-SH-001**: health 状态由 deterministic 规则从 observable metrics 计算。
 **P14C-SH-002**: 不得硬编码 stale 计数。
 **P14C-SH-003**: 不得引入 ML health score。
 
 ---
 
-## 17. Nine Quality Dimensions（冻结）
+## 18. Nine Quality Dimensions（冻结）
 
 | # | dimension_id | 名称 | 输入 evidence | status domain |
 |---|-------------|------|--------------|--------------|
@@ -491,7 +526,7 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 ---
 
-## 18. Quality Report Contract
+## 19. Quality Report Contract
 
 最终 `quality_report.json` 必须包含：
 
@@ -515,7 +550,7 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 ---
 
-## 19. Determinism Contract
+## 20. Determinism Contract
 
 - **P14C-DET-001**: 相同输入 → byte-identical 输出（从两个独立空目录运行）。
 - **P14C-DET-002**: 禁止 runtime timestamp / random UUID / unordered iteration / machine path 进入 deterministic output。
@@ -523,7 +558,7 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 ---
 
-## 20. Restart / Replay Contract
+## 21. Restart / Replay Contract
 
 - **P14C-RR-001**: process restart 后 durable audit file 必须完整恢复。
 - **P14C-RR-002**: 重复 replay 同一 payload 不得产生新的 canonical record。
@@ -531,7 +566,7 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 ---
 
-## 21. Research Boundary Contract
+## 22. Research Boundary Contract
 
 - RESEARCH_END = 2026-09-22, VIRGIN_START = 2026-09-23。
 - P14-C fixture 日期必须 < 2026-09-23。
@@ -540,7 +575,7 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 - P14-C 不得使用 virgin zone 调参 / 做 calibration / 做 factor selection /
   做 policy selection / 将 P13-R validation 重新标记为 holdout。
 
-## 22. Invariant Registry
+## 23. Invariant Registry
 
 全部 P14C-* Contract ID 在本文件 §6-§21 中定义，此处不再重复列举。
 每个 P14C-* Contract ID 在 Acceptance Matrix 中至少对应一行。
