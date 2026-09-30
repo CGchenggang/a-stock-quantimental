@@ -360,3 +360,28 @@ Required repair:
 - preserve P13-U virgin boundary and do not introduce P13-T, factor, policy, calibration, recommendation, or production-alpha changes.
 
 P14-D remains blocked until P14-C is independently re-accepted.
+
+
+## P14-C Recheck — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-D.**
+
+Independently rechecked current HEAD `c5f2a86f17ce2978f7c50292af2e41915a5db8aa` against P14-B accepted baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+Blocking findings:
+1. The current `completeness.json` design remains source-presence based rather than entity/date completeness. The audit documentation reports `expected_sources` versus `sources_with_accepted_rows`, but there is no independently evidenced expected-entity set, expected-date set, actual-entity/date set, missing entities, missing dates, or coverage ratio required by the P14-C repair gate.
+2. The repository search and inspected audit material do not provide an independently verifiable durable evidence path for each required anomaly class: `SOURCE_ERROR`, `PARSE_FAILURE`, `SOURCE_EMPTY`, `EXPECTED_ABSENCE`, and `UNEXPECTED_MISSING`. The vocabulary and classifier exist, but declaring fixture coverage is not sufficient; the emitted audit artifacts must prove each path.
+3. GitHub Actions evidence for current HEAD is not independently available through the current workflow-run lookup. The current-head run therefore cannot be accepted merely from documentation claims.
+4. The claimed P14-C production diff is inaccurate: comparing `84021d6..c5f2a86` shows substantial additions outside the intended P14-C source/tests/docs boundary, including large `data/raw`, `data/clean`, and `workspace/` artifacts. The P14-C acceptance document's statement that the production diff is empty is therefore not an auditable description of the actual repository diff.
+5. The current status document still records the earlier P14-C FAIL and does not record a valid independent re-acceptance. This is appropriate; no phase advancement is authorized.
+
+Required next repair:
+- implement explicit expected entity/date sets and actual entity/date coverage with deterministic missing-entity/missing-date accounting and coverage ratio;
+- emit durable, inspectable evidence for all five required missingness/anomaly paths, including real source-error/parse-failure evidence rather than classifier-only tests;
+- ensure source-health freshness is derived from actual P14-A freshness evidence and audit inputs, with no hard-coded stale count;
+- make reconciliation integration artifacts explicitly preserve both source values, difference, event/available/ingested timestamps, provenance, and policy metadata;
+- remove unrelated generated `data/` and `workspace/` artifacts from the P14-C repair diff (or justify and separately scope them); do not mix them into the acceptance boundary;
+- provide a CI run on the final repair HEAD and make run/job/step evidence independently inspectable;
+- preserve P13-U virgin protection and keep P13-T STOPPED;
+- no factor, policy, calibration, recommendation, or production-alpha changes;
+- after repair, stop and await independent acceptance. Do not mark PASS or start P14-D.
