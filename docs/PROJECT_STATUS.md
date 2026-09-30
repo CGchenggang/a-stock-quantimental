@@ -335,3 +335,28 @@ When a new ZCODE stage is reported complete:
 
 Last independently updated: 2026-09-30.
 Independent P14-A acceptance recorded against HEAD `89349da30e656a571c7f97a4344a46502c3336ae`.
+
+
+## P14-C Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-D.**
+
+Independently inspected against P14-B accepted baseline 84021d6c9039582cfa831e1e3a85f1141fb87efd and P14-C HEAD 7f31d1f3807109625b459403f040eb2a7d5eb8f8.
+
+Blocking findings:
+1. The claimed deterministic P14-C audit does not actually exercise all declared anomaly classes. In particular, the fixture/audit path does not create durable SOURCE_ERROR/PARSE_FAILURE evidence or a genuine missing-entity/date completeness case, despite the acceptance document claiming those anomalies are covered.
+2. run_p14c_quality_audit.py computes source-health freshness with a hard-coded stale_n = 0 and passes stale: 0 to source_health. Therefore the audit artifact cannot detect/report stale-source health even though the implementation and plan claim STALE monitoring.
+3. Completeness is reduced to every registered fixture source having at least one accepted row. It does not implement expected entities/dates versus actual entities/dates, missing entities, missing dates, or coverage ratio required by the P14-C contract.
+4. The reconciliation output preserves values and provenance, but the integration audit does not demonstrate the required cross-source timestamp/provenance fields in its emitted reconciliation artifact beyond the minimal source records; this needs explicit end-to-end assertions.
+5. P14-C CI evidence is not independently available from fetch_commit_workflow_runs for the current HEAD, so the claimed CI result cannot be treated as independently verified yet. A green local/test claim is insufficient for acceptance.
+
+Required repair:
+- implement real completeness/missingness accounting over explicit expected entity/date sets;
+- add deterministic SOURCE_ERROR, PARSE_FAILURE, SOURCE_EMPTY, EXPECTED_ABSENCE and UNEXPECTED_MISSING evidence paths;
+- derive fresh/stale/unresolved source-health metrics from actual audit evidence, never hard-code stale=0;
+- make reconciliation end-to-end evidence explicit for values, differences, timestamps and provenance;
+- add regression tests for each blocking invariant and deterministic double-run/manifest output;
+- run and expose GitHub Actions CI for the repair HEAD, including full pytest, P13-M/P13-U protection and P14-C tests;
+- preserve P13-U virgin boundary and do not introduce P13-T, factor, policy, calibration, recommendation, or production-alpha changes.
+
+P14-D remains blocked until P14-C is independently re-accepted.
