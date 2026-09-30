@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C — Data Quality / Reconciliation / Source Health — IN PROGRESS / NEXT**
+**P14-C — Data Quality / Reconciliation / Source Health — implementation complete; awaiting independent acceptance**
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -385,3 +385,8 @@ Required next repair:
 - preserve P13-U virgin protection and keep P13-T STOPPED;
 - no factor, policy, calibration, recommendation, or production-alpha changes;
 - after repair, stop and await independent acceptance. Do not mark PASS or start P14-D.
+
+
+## P14-C-R2 Repair — 2026-09-30
+
+R2 repair implemented: real completeness (expected/actual entities+dates with coverage_ratio), SOURCE_ERROR/PARSE_FAILURE/SOURCE_EMPTY evidence chain through audit_event→quality→health, freshness computed from P14-A policies (no hardcoded stale), reconciliation groups carry full provenance+timestamps, quality_report.json restructured into 9 dimensions with status/reasons/metrics/evidence.
