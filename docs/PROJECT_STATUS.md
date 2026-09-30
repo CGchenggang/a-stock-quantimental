@@ -454,3 +454,40 @@ Independently audited the latest P14-C implementation HEAD `868b729ae862b750fb8c
 - Stop after repair and await independent acceptance. Do not start P14-D.
 
 P14-D remains blocked.
+
+
+## P14-C-R4 Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-D.**
+
+Latest HEAD: `0ecfdac372ddfca2d8ab59a301c74af1b9fa1f2a`.
+Accepted P14-B baseline: `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Positive findings
+
+- The two R3 runtime errors were addressed: expected-absence counts are initialized and freshness constants are imported from the P14-A layer.
+- An explicit module-level EXPECTED_CONTRACT is now used by completeness.
+- R4 adds an end-to-end audit test that reads final JSON artifacts from disk and checks reconciliation provenance/timestamps, durable SOURCE_ERROR/REJECTED/ACCEPTED outcomes, stale evidence, deterministic manifest, and P13-U/P13-Q/P13-R guards.
+- No P13-T/factor/calibration/recommendation promotion was observed.
+
+### Blocking findings
+
+1. **No independently verifiable CI run for the final HEAD.** GitHub Actions lookup for `0ecfdac372ddfca2d8ab59a301c74af1b9fa1f2a` returns `workflow_runs: []`. Therefore the required final pytest/P13-M/full-suite evidence is absent. This alone blocks acceptance.
+2. **SOURCE_EMPTY is not actually locked end-to-end by the new R4 test.** The durable-audit test asserts SOURCE_ERROR, REJECTED and ACCEPTED, but does not assert a SOURCE_EMPTY outcome/artifact. The `broken_source` fixture is simultaneously wired to BrokenSourceAdapter (which raises SOURCE_ERROR) while EXPECTED_CONTRACT marks it expected_absence=True; this conflates failure/empty/expected-absence semantics rather than independently proving all required paths.
+3. **EXPECTED_ABSENCE / SOURCE_EMPTY / SOURCE_ERROR are not cleanly separated in the completeness contract.** The expected_absence branch unconditionally emits EXPECTED_ABSENCE, even when the same source's actual adapter path is a fetch error. A single source should not be used to stand in for multiple distinct anomaly classes in the final evidence contract.
+4. **The R4 test for independent expected contract does not actually simulate a missing payload and assert the resulting missing date/coverage.** It only checks that the constant contains two dates. The key invariant should be exercised by removing one actual payload or injecting an adapter failure against an expected entity/date while leaving EXPECTED_CONTRACT unchanged, then asserting missing_dates and coverage_ratio < 1.
+5. **The R4 acceptance document remains stale/inaccurate.** It still says `git diff 84021d6..HEAD -- src/astock_v2 = 空`, but the actual compare shows src/astock_v2/information/__init__.py and raw_store.py modifications. The latter includes P14-C freshness-policy propagation, which may be legitimate, but the documentation must accurately state and justify the boundary rather than claim an empty diff.
+
+### Required R5 repair
+
+- Keep R5 narrowly focused; do not add new P14-C functionality.
+- Obtain an actual GitHub Actions run for the final HEAD and independently inspect workflow → job → step evidence for pytest, P13-M and full pytest.
+- Separate deterministic fixtures/contracts for SOURCE_ERROR, PARSE_FAILURE, SOURCE_EMPTY, EXPECTED_ABSENCE and UNEXPECTED_MISSING. Do not make one source simultaneously represent incompatible anomaly classes.
+- Add a real missing entity/date regression: mutate/remove actual fixture ingestion while leaving EXPECTED_CONTRACT unchanged, then assert missing entity/date and coverage ratio < 1.
+- Add final-artifact assertions for SOURCE_EMPTY and the distinct missingness classes, including durable evidence where applicable.
+- Update docs/P14C_ACCEPTANCE.md to exactly match the current implementation and actual 84021d6..HEAD diff; explicitly justify any P14-B source change required by P14-C.
+- Run clean-directory audit twice and compare deterministic artifacts byte-for-byte; run python -m pytest -q -ra locally.
+- Keep P13-U boundary research_end=2026-09-22, virgin_start=2026-09-23; keep P13-T STOPPED/NOT EXECUTED; no factor/policy/calibration/recommendation/production-alpha changes.
+- Stop after repair and await independent acceptance. Do not start P14-D.
+
+P14-D remains blocked.
