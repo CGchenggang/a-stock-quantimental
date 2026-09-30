@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C — Data Quality / Reconciliation / Source Health — implementation complete; awaiting independent acceptance**
+**P14-C Contract Reset — FAIL / REPAIR REQUIRED; Contract not frozen**
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -42,9 +42,9 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 
 ## Current Commit
 
-`84021d6c9039582cfa831e1e3a85f1141fb87efd`
+`a3f22a894e7de3c7b8c520bd65de28cba5034b05`
 
-Latest accepted commit message: `fix: persist every ingestion attempt in a durable audit log (P14-B-R1)`.
+Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd`; `a3f22a8` is the current Contract Reset submission and is **not accepted**.
 
 Current HEAD was independently checked on 2026-09-30.
 
@@ -518,5 +518,41 @@ Independently audited the latest P14-C-R5 implementation HEAD `f7bd995129721d554
 - Run `python -m pytest -q -ra`, clean-directory double-run determinism, and remove generated artifacts.
 - Preserve P13-U/P13-T boundaries and make no factor/policy/calibration/recommendation/production-alpha changes.
 - Stop after repair and await independent acceptance. Do not start P14-D.
+
+P14-D remains blocked.
+
+## P14-C Contract Reset Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Contract is NOT frozen. Do not start Golden Tests and do not advance to implementation or P14-D.**
+
+Independently reviewed current HEAD `a3f22a894e7de3c7b8c520bd65de28cba5034b05` and the four Contract Reset documents against the accepted P14-B boundary `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Positive findings
+- The reset correctly identifies the major R1-R5 root causes and explicitly separates Design Contract, semantic, E2E, CI, documentation and hygiene problems.
+- The expected entity/date contract is explicitly intended to be independent of actual payloads.
+- The missingness taxonomy explicitly distinguishes SOURCE_ERROR, PARSE_FAILURE, SOURCE_EMPTY, EXPECTED_ABSENCE and UNEXPECTED_MISSING.
+- P14-A is retained as the sole PIT/freshness authority, and the P13-U/P13-T research boundary is preserved.
+- The Acceptance Matrix correctly postpones Golden Test implementation until after independent Contract review.
+
+### Blocking findings
+1. **Evidence Contract is internally contradictory.** INV-EVID-001 says every ingestion attempt must have a durable event in the durable audit file, while SOURCE_EMPTY is defined as only an `IngestionReport(status=EMPTY_SUCCESS)`. INV-EVID-003 also requires SOURCE_EMPTY evidence not to exist only in memory, but the contract never defines the durable persistence location and restart semantics for that report.
+2. **`expected_empty` is a fixture/test concern incorrectly embedded in EXPECTED_CONTRACT.** The expected contract is supposed to be the production authority for what should exist; `expected_empty=True = deliberate SOURCE_EMPTY fixture` mixes test construction with domain expectation and risks recreating the semantic conflation that R4/R5 exposed.
+3. **Revision integrity is missing as a formal Design Contract section.** Scope mentions revision gap / duplicate revision / payload mutation / available_time regression, and the Acceptance Matrix invents P14C-REV-001..003, but the Design Contract contains no corresponding revision invariants.
+4. **The nine quality dimensions are not frozen.** The Acceptance Matrix requires a `nine_dimensions` fixture, while the Design Contract never enumerates the nine dimensions, their names, status domain, metrics/evidence schema, or required output structure.
+5. **Provenance Contract is over-broad and conflicts with non-record anomaly cases.** It says every final quality judgment must trace to raw_payload/raw_payload_hash/ingestion_id/available_time/ingested_at, but EXPECTED_ABSENCE, SOURCE_EMPTY and UNEXPECTED_MISSING can legitimately have no canonical record/raw payload. The contract needs an explicit distinction between record provenance and source-observation/completeness provenance.
+6. **Completeness semantics for EXPECTED_ABSENCE are underspecified.** The contract simultaneously defines `expected_pairs` from entity×date and says `expected_absence=True` means expected=0/coverage=1.0, but does not define how a source containing both required pairs and explicitly absent pairs is represented or excluded from the denominator.
+7. **Acceptance Matrix contains mappings without corresponding frozen Contract IDs.** Missingness and revision rows use P14C-MISS-* and P14C-REV-* IDs, but those IDs are not defined as invariants in the Design Contract. This is a contract-to-test traceability gap.
+
+### Required Contract Reset repair
+- Repair the Design Contract only; do not modify `src/`, implementation tests, production logic, P13-T, P13-U, factors, policy, calibration or recommendation logic.
+- Define one authoritative durable evidence model for SOURCE_EMPTY, including the exact persisted event/observation type, storage location, reload semantics and E2E evidence chain.
+- Remove fixture-specific `expected_empty` from the domain expected contract, or explicitly prove a domain-level meaning independent of testing; preferred design is to keep expected contract about expected coverage and source observation about what actually happened.
+- Add a formal Revision Integrity Contract with invariant IDs matching the Acceptance Matrix and define payload mutation versus P14-B immutable raw-store mutation semantics.
+- Freeze the nine quality dimensions and their exact schema/allowed statuses/reasons/metrics/evidence fields, or remove the nine-dimension requirement from the matrix until the schema is explicitly frozen.
+- Split record provenance from source-observation/completeness provenance so anomaly cases without records remain fully auditable.
+- Define how EXPECTED_ABSENCE interacts with expected_pairs, expected_count, actual_pairs and coverage when a source has a mixture of required and intentionally absent entity/date pairs.
+- Ensure every Acceptance Matrix Contract ID maps to an explicit invariant in the Design Contract, and every Design Contract invariant has at least one matrix row.
+- Keep the research boundary `research_end=2026-09-22`, `virgin_start=2026-09-23`; keep P13-T STOPPED / NOT EXECUTED.
+- Stop after the documentation-only repair and await independent Contract review. Do not write Golden Tests yet.
 
 P14-D remains blocked.
