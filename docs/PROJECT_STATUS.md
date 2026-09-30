@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Golden Tests / Fixtures Design & Freeze — FAIL / REPAIR REQUIRED** (independent acceptance 2026-10-01; do not advance to P14-C Production Implementation)
+**P14-C Contract Repair — EXPECTED_ABSENCE representation frozen — implementation complete — awaiting independent acceptance** (previous stage: Golden Tests Freeze FAIL / REPAIR REQUIRED, 6489fad)
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -923,5 +923,46 @@ Repair sequence:
 3. Re-freeze the Golden fixtures against the repaired contract.
 4. Replace G-061's actual virgin date with a synthetic post-boundary date.
 5. Re-run exact-HEAD CI, Golden tests, full pytest, P13-M regression and deterministic double-run.
+
+P14-D remains blocked.
+
+## P14-C Contract Repair — EXPECTED_ABSENCE Freeze — 2026-10-01
+
+Response to the Golden Tests Freeze verdict (`6489fad`). Contract-only repair; no production code, no Golden/Harness test edits, no data changes.
+
+### Root cause addressed (verdict blocking finding 1)
+
+The frozen Contract defined the EXPECTED_ABSENCE semantics (MISS-004, COMP-005) but no legal field to declare it, forcing the Golden layer to invent `intentional_absence_pairs`. This repair freezes the missing semantics in `docs/contracts/P14-C-DESIGN-CONTRACT.md` (v4):
+
+- **Representation (§8.2 + new §8.3)**: `expected_absence_pairs` inside each `EXPECTED_CONTRACT[source]` entry (optional, default `[]`) is the **sole authoritative declaration channel** for EXPECTED_ABSENCE. Boolean switches (`expected_absence=True`), `expected_empty`, `broken_source`, `force_source_error`, `fixture_mode`, and any actual-derived representation are explicitly declared invalid.
+- **Five-class mutual-exclusion chain (§7.2)**: `EXPECTED_ABSENCE ≠ SOURCE_EMPTY ≠ SOURCE_ERROR ≠ PARSE_FAILURE`, `EXPECTED_ABSENCE ≠ UNEXPECTED_MISSING`, each with a one-line definition.
+- **MISS-004 strengthened (same ID)**: EXPECTED_ABSENCE cannot be derived from actual-missing data, SOURCE_EMPTY, SOURCE_ERROR, or PARSE_FAILURE — only declared via §8.3. No new invariant IDs were introduced (existing MISS-004 / EXP-001 / EXP-002 / COMP-001 / COMP-005 / EVID-004 naturally carry the semantics, per the repair mandate's preference against ID inflation).
+- **Completeness arithmetic (§9.1/§9.2)**: `X = declared absence pairs (X ⊆ P, out-of-scope declaration fails fast)`, `R = P − X`, `expected_count = |R|`, `actual_count = |A_pair ∩ R|`, coverage unchanged otherwise; X never increases actual_count, never counts as missing, is never silently dropped, and is reported separately as EXPECTED_ABSENCE evidence.
+- **Provenance (new §16.4, Type C Contract Declaration Provenance)**: absence declarations are contract facts, not ingestion observations. Required: `source_id`, `expected_contract_id`, `entity_date_pair_scope`, `declaration_reference`. Forbidden (forgery = violation): `observation_type`, `observed_at`, `adapter_version`, `ingestion_id`, `available_time`, `ingested_at`, `raw_payload_hash`.
+
+### Verification results
+
+- Acceptance Harness (`python scripts/audit_p14c_contract.py`): **PASS, 0 hard + 0 soft**; closure preserved — `contract_unique_ids = matrix_unique_ids = 61`, `matrix_rows = 61`, orphans/duplicates 0 (Matrix file unchanged: sha256 `fc99637a…636`).
+- `tests/contracts/p14c/` pytest: 88 passed, 2 failed — both failures are the Golden layer's **contract-bytes hash pin** (`test_anticheat_contract_pinned` + aggregator `test_all_checks_green`) refusing the edited contract. This is the Check-D anti-cheat gate working as designed: the golden layer may not silently track a moving contract. Golden files were NOT touched this round.
+- Full pytest: 435 passed, 2 failed (same two pin tests), 0 other failures. P13-M regression: 3 passed.
+- New pinned hashes for the Golden re-freeze: `P14-C-DESIGN-CONTRACT.md` sha256 `c217f6b984a27cfb6e54322e731f1fe6a381a868e319755191a68290c922167b`.
+
+### GOLDEN_REFREEZE_REQUIRED (next gated stage, after this repair is independently accepted)
+
+1. Re-pin `PINNED_CONTRACT_SHA` in `tests/contracts/p14c/golden/core.py` to `c217f6b9…167b` (Matrix pin unchanged).
+2. Rename the declared-absence field in fixtures G-007, G-009, G-020 from `intentional_absence_pairs` to the canonical `expected_absence_pairs`; update `golden/core.py` completeness arithmetic to read `X` from the canonical field (formulas already match §9.1/§9.2).
+3. Update `BANNED_FIXTURE_TOKENS` to ban the boolean/control styles (`expected_absence=True`, bare `expected_absence` key, `expected_empty`, `broken_source`, `force_source_error`, `fixture_mode`) while permitting the canonical `expected_absence_pairs` declaration field; keep the import-scan as is.
+4. Regenerate `docs/contracts/P14-C-GOLDEN-TESTS.md` interpretation notes (absence representation is now canonical, not an interpretation).
+5. Deterministic double-run + exact-HEAD CI.
+
+### GOLDEN_FIX_REQUIRED (verdict blocking finding 2)
+
+Replace G-061's `violating_decision_date = 2026-09-24` (an actual protected virgin date) with a synthetic post-boundary date (e.g. `2027-01-01T09:00:00+08:00`); the guard-raises assertion is unchanged. During the same re-freeze.
+
+### Boundaries
+
+`research_end = 2026-09-22`, `virgin_start = 2026-09-23` unchanged; P13-T STOPPED / NOT EXECUTED; P13-U intact. No factor/calibration/policy/recommendation changes; no P14-C production implementation started.
+
+Stopping here; awaiting independent acceptance.
 
 P14-D remains blocked.

@@ -12,6 +12,10 @@
 > v3: R4 修复（54d6b6e 验收意见）——Boundary 节编号入序、Source Health
 >     不变量规范化为列表格式、Reconciliation 不变量改为 reconciliation 语义
 >     （winner/平均/静默 resolution 禁令由 P14C-DUP-001..004 统一承载）
+> v4: R5 修复（6489fad 验收意见 CONTRACT_BLOCKER #1）——正式冻结
+>     EXPECTED_ABSENCE 的权威声明字段 expected_absence_pairs（§8.3）、
+>     五类互斥链（§7.2）、required-set completeness 算术（§9）、
+>     Contract Declaration Provenance Type C（§16.4）
 
 ---
 
@@ -174,12 +178,27 @@ SOURCE_EMPTY
 
 **这两个概念完全分离。**
 
+五类互斥链（机器可验证，任何 classification 输出只能命中其一）：
+
+```text
+EXPECTED_ABSENCE ≠ SOURCE_EMPTY ≠ SOURCE_ERROR ≠ PARSE_FAILURE
+EXPECTED_ABSENCE ≠ UNEXPECTED_MISSING
+
+EXPECTED_ABSENCE    = contract 事先声明：这个 pair 不要求存在
+SOURCE_EMPTY        = source 访问成功且返回零结果（fetch() -> []）
+SOURCE_ERROR        = source 请求/获取失败
+PARSE_FAILURE       = source 成功返回数据，但解析失败
+UNEXPECTED_MISSING  = contract 要求该 pair 存在，但实际没有
+```
+
 ### 7.3 不变量
 
 - **P14C-MISS-001**: 六类互斥，任何 observation 只能属于一类。
 - **P14C-MISS-002**: SOURCE_EMPTY 不能被重新解释为 EXPECTED_ABSENCE。
 - **P14C-MISS-003**: PARSE_FAILURE 不能被重新解释为 SOURCE_ERROR。
-- **P14C-MISS-004**: EXPECTED_ABSENCE 不能由"实际没数据"自动推导。
+- **P14C-MISS-004**: EXPECTED_ABSENCE 不能由实际没数据、SOURCE_EMPTY、
+  SOURCE_ERROR 或 PARSE_FAILURE 自动推导；只能由 EXPECTED_CONTRACT
+  显式声明（§8.3）。
 - **P14C-MISS-005**: UNEXPECTED_MISSING 要求 contract 期望 entity/date 存在但 actual 为空（不是 SOURCE_EMPTY）。
 - **P14C-MISS-006**: UNRESOLVED_AVAILABILITY 当 available_time 为 None 或格式错误。
 
@@ -204,11 +223,42 @@ EXPECTED_CONTRACT = {
     source_id: {
         "expected_entities": [str, ...],
         "expected_dates": [str, ...],
+        "expected_absence_pairs": [[entity_id, date], ...],
     }
 }
 ```
 
-### 8.3 不变量
+`expected_absence_pairs` 可选，缺省为空列表。它是 EXPECTED_ABSENCE 的
+唯一权威声明字段，语义冻结见 §8.3。
+
+### 8.3 Expected Absence Declaration（冻结）
+
+```text
+EXPECTED_ABSENCE
+  = 由 EXPECTED_CONTRACT[source].expected_absence_pairs 在 audit 运行前
+    正式声明的 entity/date pair；domain expectation 明确该 pair
+    不要求存在 observation。
+```
+
+冻结规则：
+
+1. `expected_absence_pairs` 是 EXPECTED_ABSENCE 的**唯一**权威声明通道。
+   布尔开关（expected_absence=True）、expected_empty、broken_source、
+   force_source_error、fixture_mode、以及任何由 actual 结果推导的表示
+   均不构成有效声明。
+2. 声明在 EXPECTED_CONTRACT 冻结时确定（P14C-EXP-001）；ingestion 成功
+   或失败都不改变声明（P14C-EXP-002）。
+3. 每个声明 pair 必须属于该 source 的 E × D（§9.1）；越界声明是
+   contract 结构错误，audit 必须 fail-fast。
+4. EXPECTED_ABSENCE 不能由实际缺失、SOURCE_EMPTY、SOURCE_ERROR 或
+   PARSE_FAILURE 推导（P14C-MISS-004）。
+5. SOURCE_EMPTY 不能被重新解释为 EXPECTED_ABSENCE（P14C-MISS-002）。
+6. 声明 pair 从 required expected denominator 中排除，并单独报告为
+   EXPECTED_ABSENCE evidence（P14C-COMP-005；算术见 §9.2）。
+7. 声明的 provenance 属于 Contract Declaration Provenance（Type C，
+   §16.4）；observation-only 字段不得伪造（P14C-PROV-B-001 同理）。
+
+### 8.4 不变量
 
 - **P14C-EXP-001**: EXPECTED_CONTRACT 在 audit 运行前定义。
 - **P14C-EXP-002**: ingestion 失败不改变 EXPECTED_CONTRACT。
@@ -226,6 +276,10 @@ EXPECTED_CONTRACT = {
 E  = expected entity set         ← EXPECTED_CONTRACT[source].expected_entities
 D  = expected date set           ← EXPECTED_CONTRACT[source].expected_dates
 P  = expected pair set           ← {(e, d) for e in E for d in D}
+X  = declared absence pair set   ← {(e, d) for (e, d) in
+                                    EXPECTED_CONTRACT[source].expected_absence_pairs}
+                                    (X ⊆ P，越界声明 fail-fast，见 §8.3)
+R  = required expected pair set  ← P − X
 A_entity = actual entity set     ← from successfully ingested records
 A_date   = actual date set       ← from successfully ingested records
 A_pair   = actual pair set       ← from successfully ingested records
@@ -236,13 +290,18 @@ A_pair   = actual pair set       ← from successfully ingested records
 ```text
 missing_entities = E − A_entity
 missing_dates    = D − A_date
-missing_pairs    = P − A_pair
+missing_pairs    = R − A_pair
 
-expected_count   = |P|
-actual_count     = |P| − |missing_pairs|
+expected_count   = |R|
+actual_count     = |A_pair ∩ R|
 coverage_ratio   = actual_count / expected_count
                    (1.0 if expected_count == 0)
 ```
+
+EXPECTED_ABSENCE（X）不进入以上任何集合的补集：它不增加
+actual_count，不计入 missing_*，不被当作 SOURCE_EMPTY 或
+UNEXPECTED_MISSING，也不被静默删除——每个声明 pair 单独报告为
+EXPECTED_ABSENCE evidence（P14C-COMP-005，provenance 见 §16.4）。
 
 ### 9.3 状态定义
 
@@ -255,7 +314,8 @@ coverage_ratio   = actual_count / expected_count
 **注意**：EXPECTED_ABSENCE（domain 声明的合法缺失）不是 completeness 的一个状态。
 它是 missingness 分类的一个输入条件：声明为 expected_absence 的 entity/date pair
 从 coverage denominator 中排除，从而不影响 coverage_ratio 的计算。
-completeness 只报告 **required** expected pairs 的 coverage。
+completeness 只报告 **required** expected pairs（R = P − X，§9.1）的 coverage。
+声明的合法表示与冻结规则见 §8.3。
 
 ### 9.4 不变量
 
@@ -477,6 +537,30 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 - **P14C-PROV-A-001**: Record provenance 必须包含 raw_payload_hash。
 - **P14C-PROV-B-001**: Observation provenance 不得包含 raw_payload_hash
   （该字段对 observation 无意义）。
+
+### 16.4 Contract Declaration Provenance（Type C）
+
+适用于：EXPECTED_ABSENCE 声明 evidence（§8.3），以及其他 pure contract
+declarations。声明是 contract 事实，**不是** ingestion observation，
+因此既不属于 Type A 也不属于 Type B。
+
+必须保留：
+
+```text
+source_id, expected_contract_id, entity_date_pair_scope,
+declaration_reference
+```
+
+`declaration_reference` 指向 EXPECTED_CONTRACT 中的声明位置及其冻结版本
+（例如 `EXPECTED_CONTRACT[source].expected_absence_pairs[i]` +
+contract freeze 引用）。
+
+**禁止伪造**（对声明而言这些字段不存在对应事实，伪造即违规）：
+
+```text
+observation_type, observed_at, adapter_version,
+ingestion_id, available_time, ingested_at, raw_payload_hash
+```
 
 ---
 
