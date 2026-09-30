@@ -1,0 +1,37 @@
+{
+ "golden_id": "P14D-G-009",
+ "title": "boundary timestamp: available_time == as_of is visible",
+ "contract_ids": [
+  "P14D-001"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-03T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-edge",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-03T15:00:00+08:00",
+    "available_time": "2026-03-03T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-03T16:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {}
+   }
+  ]
+ },
+ "expected": {
+  "visible_source_ids": [
+   "q-edge"
+  ],
+  "excluded": []
+ }
+}

@@ -1,0 +1,60 @@
+{
+ "golden_id": "P14D-G-008",
+ "title": "empty result: scope miss and future record both excluded",
+ "contract_ids": [
+  "P14D-008",
+  "P14D-002"
+ ],
+ "input": {
+  "query": {
+   "entity": "600999",
+   "information_type": "stock",
+   "as_of": "2026-03-04T15:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {}
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-2",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600999",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-06T09:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-06T09:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {}
+   }
+  ]
+ },
+ "expected": {
+  "visible_source_ids": [],
+  "excluded": [
+   {
+    "source_id": "q-1",
+    "reason": "OUTSIDE_AS_OF"
+   },
+   {
+    "source_id": "q-2",
+    "reason": "NOT_YET_AVAILABLE"
+   }
+  ]
+ }
+}

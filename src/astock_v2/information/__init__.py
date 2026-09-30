@@ -65,6 +65,11 @@ from .reconciliation import (
 from .expected_contract import (
     ExpectedContract, build_expected_contracts,
 )
+from .research_query import (
+    EXCLUSION_NOT_YET_AVAILABLE, EXCLUSION_OUTSIDE_AS_OF,
+    EXCLUSION_UNRESOLVED_AVAILABILITY, PROVENANCE_FIELDS,
+    ResearchQuery, run_query,
+)
 from .source_health import source_health
 from .research_boundary_guard import select_asof
 
@@ -81,6 +86,9 @@ __all__ = [
     "freshness_status", "freshness_summary", "has_valid_provenance",
     "is_admissible", "is_registered", "normalize", "parse_boundary",
     "ExpectedContract", "build_expected_contracts",
+    "ResearchQuery", "run_query", "PROVENANCE_FIELDS",
+    "EXCLUSION_NOT_YET_AVAILABLE", "EXCLUSION_OUTSIDE_AS_OF",
+    "EXCLUSION_UNRESOLVED_AVAILABILITY",
     "provenance_issues", "provenance_summary", "select_asof",
     "spec_for", "to_research_record", "visible_revisions",
 ]

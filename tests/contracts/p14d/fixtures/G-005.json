@@ -1,0 +1,61 @@
+{
+ "golden_id": "P14D-G-005",
+ "title": "restatement invisible before its availability",
+ "contract_ids": [
+  "P14D-005",
+  "P14D-004"
+ ],
+ "input": {
+  "query": {
+   "entity": "CN",
+   "information_type": "macro",
+   "as_of": "2026-03-03T15:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "pmi-m01",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "CN",
+    "entity_type": "macro",
+    "event_time": "2026-02-28T09:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {}
+   },
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "pmi-m01",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "CN",
+    "entity_type": "macro",
+    "event_time": "2026-02-28T09:00:00+08:00",
+    "available_time": "2026-03-05T09:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-05T09:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {}
+   }
+  ]
+ },
+ "expected": {
+  "visible_source_ids": [
+   "pmi-m01"
+  ],
+  "revisions": {
+   "pmi-m01": 0
+  },
+  "excluded": [
+   {
+    "source_id": "pmi-m01",
+    "reason": "NOT_YET_AVAILABLE"
+   }
+  ]
+ }
+}

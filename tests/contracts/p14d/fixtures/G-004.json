@@ -1,0 +1,71 @@
+{
+ "golden_id": "P14D-G-004",
+ "title": "multiple admissible revisions of one lineage: latest wins",
+ "contract_ids": [
+  "P14D-004"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T15:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "q-100",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {}
+   },
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "q-100",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-03T15:00:00+08:00",
+    "available_time": "2026-03-03T16:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-03T16:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {}
+   },
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "q-200",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {}
+   }
+  ]
+ },
+ "expected": {
+  "visible_source_ids": [
+   "q-100",
+   "q-200"
+  ],
+  "revisions": {
+   "q-100": 1,
+   "q-200": 0
+  }
+ }
+}

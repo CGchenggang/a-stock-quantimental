@@ -1288,3 +1288,38 @@ The production implementation now conforms to the frozen Contract, Harness and G
 ### Next gate
 
 P14-D is now the next authorized implementation stage. It must remain infrastructure/research-only, preserve the P13-T/P13-U boundary, and introduce no production alpha/policy/calibration/recommendation promotion.
+
+## P14-D — PIT-safe Research Information Query Layer — 2026-10-01
+
+Built on the independently accepted P14-C production implementation (`0625072`, accepted `ad032a0`). Frozen baselines untouched: P14-C Contract `c217f6b9…167b`, Matrix `fc99637a…636`, golden report `09cca5b0…`; boundary `research_end=2026-09-22` / `virgin_start=2026-09-23`; P13-T STOPPED; P13-U protected.
+
+### Contract layer
+
+- `docs/contracts/P14-D-DESIGN-CONTRACT.md` (v1, DRAFT): query model (`ResearchQuery`: entity + information_type + as_of, optional source scope), PIT core (`visible <=> available_time <= as_of`, inclusive; event_time NEVER grants visibility), exclusion taxonomy (NOT_YET_AVAILABLE / OUTSIDE_AS_OF / UNRESOLVED_AVAILABILITY — the last reused verbatim from P14-C, no second vocabulary), version selection & restatement (per `(source, source_id)` lineage, latest admissible revision via P14-A `visible_revisions` authority; `as_of < T2` never sees the restated version), result contract (query echo + records with 11-field provenance + exclusions + counts + `result_id` sha256), boundary guard (`as_of >= VIRGIN_START` raises), anti-cheat, invariant registry P14D-001..010.
+- `docs/contracts/P14-D-ACCEPTANCE-MATRIX.md`: bidirectional closure 10 contract IDs ↔ 10 golden fixtures ↔ 10 harness tests.
+- `scripts/audit_p14d_contract.py`: mechanical audit — PASS 0 findings (canonical IDs, closure 10/10/10, boundary constants, DRAFT status, forbidden control tokens, golden/harness coverage).
+
+### Production layer
+
+- `src/astock_v2/information/research_query.py`: `ResearchQuery` (fails fast on empty fields, timezone-less as_of, and virgin-zone as_of via P13-U `assert_research_zone`), `run_query` (scope filter → OUTSIDE_AS_OF; parseable availability vs as_of → NOT_YET_AVAILABLE; unparseable → UNRESOLVED_AVAILABILITY; version selection by P14-A `visible_revisions`; canonical ordering `(source, source_record_id, available_time, revision, canonical_json)`; `result_id` sha256 of the canonical serialization). Information retrieval only — no scoring/ranking/recommendation/trading surface (mechanically asserted).
+
+### Test layer (tests/contracts/p14d/)
+
+- `test_p14d_contract_harness.py`: document audit PASS, fixture ID density, no real virgin dates in any fixture input (anything ≥ 2026-09-23 must be ≥ 2028 synthetic), production module anti-cheat scan, infrastructure-only API scan.
+- `test_p14d_harness.py`: behavioral P14D-001..010 on the production path (normal PIT, future hidden, event_time never grants visibility, deterministic version selection, restatement invisible before T2 and visible at/after T2, byte-identical double-run, provenance completeness, scope leak-proofing, virgin guard with synthetic 2099, infrastructure-only result schema) + inclusive boundary timestamp + unresolved availability (P14-A model rejection proven; run_query defensive branch via a minimal stub) + query validation.
+- `test_p14d_golden.py`: 10 frozen fixtures (G-001..G-010) with hand-written expected answers exercised through the production `run_query`; determinism double-run per fixture (records reversed between runs).
+
+### Validation (all executed)
+
+- `python scripts/audit_p14d_contract.py` → PASS, 0 findings, 10/10/10
+- `python -m pytest -q -ra tests/contracts/p14d/` → **29 passed** ×2 (deterministic)
+- `python scripts/audit_p14c_contract.py` → PASS 0/0, 61/61/61; P14-C SHAs unchanged
+- `python -m pytest -q -ra tests/contracts/p14c/` → 90 passed (P14-C regression intact)
+- `python -m pytest -q -ra tests/test_industry_relative.py` → 3 passed
+- `python -m pytest -q -ra` → **492 passed / 0 failed**, 2 warnings
+
+Workflow: added "Contract Harness audit (P14-D)" step. No P13-T/U, factor, calibration, policy, recommendation, or alpha changes. No real virgin-zone data used anywhere (synthetic 2099 only).
+
+Stopping here; awaiting independent acceptance.
+
+P14-D remains P14-D — do not proceed to P14-E until independent acceptance is granted.

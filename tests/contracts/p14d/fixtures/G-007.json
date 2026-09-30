@@ -1,0 +1,60 @@
+{
+ "golden_id": "P14D-G-007",
+ "title": "provenance is complete and traceable",
+ "contract_ids": [
+  "P14D-007"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T15:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "company_announcement",
+    "source_id": "ann-7",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily",
+    "metadata": {
+     "adapter_version": "ann-adapter@1",
+     "raw_payload_hash": "hash-ann-7",
+     "ingestion_id": "ing-ann-7"
+    }
+   }
+  ]
+ },
+ "expected": {
+  "visible_source_ids": [
+   "ann-7"
+  ],
+  "provenance_fields": [
+   "source",
+   "source_record_id",
+   "entity_id",
+   "information_type",
+   "event_time",
+   "available_time",
+   "revision",
+   "ingested_at",
+   "adapter_version",
+   "raw_payload_hash",
+   "ingestion_id"
+  ],
+  "provenance_values": {
+   "source": "company_announcement",
+   "source_record_id": "ann-7",
+   "adapter_version": "ann-adapter@1",
+   "raw_payload_hash": "hash-ann-7",
+   "ingestion_id": "ing-ann-7"
+  }
+ }
+}
