@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Acceptance Harness Reset — FAIL / REPAIR REQUIRED; Contract not frozen**
+**P14-C Acceptance Harness Reset — FAIL / REPAIR REQUIRED (independent verdict 2026-10-01, `e881b09`); CI Gate Repair delivered — awaiting independent acceptance; Contract not frozen**
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -44,9 +44,9 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 
 `3144a6951d33281af38e8663d394115148bb00d1`
 
-Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd`; current HEAD `3144a695` is **not accepted** pending independent Acceptance Harness/CI verification.
+Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd` (P14-B baseline); `3144a695` is the current **P14-C Acceptance Harness + R4 documentation-only contract repair** submission and is **not accepted** pending independent Acceptance Harness/CI verification. Commits after `3144a69` in this round are PROJECT_STATUS CI-gate documentation sync only (no code, test, contract, or data changes).
 
-Current HEAD was independently checked on 2026-09-30.
+Independent review state: the latest independent verdict on the P14-C contract line is **Acceptance Harness Reset FAIL / REPAIR REQUIRED** (2026-10-01, `e881b09`, see its section at the end of this file); the CI/documentation repair it requires is delivered in this round and **awaits independent acceptance**.
 
 Current accepted-head CI:
 - workflow: `tests`
@@ -58,6 +58,28 @@ Current accepted-head CI:
 - Full pytest step executed `python -m pytest -q -ra`
 - P13-M regression step: success
 - P14-A/P14-B tests are included in the full suite.
+
+Current submission-head CI (P14-C Acceptance Harness + R4 repair, `3144a6951d33281af38e8663d394115148bb00d1`, awaiting independent acceptance):
+
+- workflow: `tests`
+- run: `36739506965` (event: push, completed / success, started 2026-09-30T15:48:16Z)
+  - https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36739506965
+- pytest job (id `109969874122`): success — all steps green, including
+  "Environment diagnostics" (`pytest --collect-only -q -ra`), "Full pytest suite"
+  (`python -m pytest -q -ra`), and "P13-M pooled industry regression"
+- p13m job (id `109969874447`): success — "P13-M pooled industry regression" step green
+- Full pytest on the identical tree locally: **361 passed, 2 warnings, 0 failed**
+  (includes the 14 harness meta-tests in `tests/contracts/p14c/`); the CI step's
+  success conclusion is the machine-verifiable result for the same command on the
+  same commit (job-log download requires admin rights and is not part of this record)
+- Contract Harness executed via the pytest suite (characterization test
+  `test_real_docs_characterization` runs `scripts/audit_p14c_contract.py::run_harness`
+  against the real contract/matrix and asserts the counts below); direct script run
+  on the same tree: `python scripts/audit_p14c_contract.py` → exit 0, status PASS
+  - `contract_unique_ids = 61`, `matrix_unique_ids = 61`, `matrix_rows = 61`
+  - `orphan_contract_invariants = 0`, `orphan_matrix_rows = 0`
+  - `duplicate_contract_ids = 0`, `duplicate_matrix_ids = 0`, `undefined_matrix_ids = 0`
+  - `hard_findings = 0`, `soft_findings = 0`
 
 The immediately preceding documentation commit CI `36641360624` failed because a P14-A production-snapshot test incorrectly depended on a gitignored local calibration artifact. ZCODE fixed that test in the next commit; the current-head run `36642731938` is green. This failure/fix is retained as audit history rather than hidden.
 
@@ -758,5 +780,36 @@ Independently inspected current HEAD `3144a6951d33281af38e8663d394115148bb00d1` 
 - Do not weaken or rewrite the clean-state characterization snapshot merely to obtain PASS.
 - Keep P13-T STOPPED / NOT EXECUTED, preserve P13-U virgin protection, and do not add P14-D or production factor/policy/calibration/recommendation logic.
 - Stop after the CI/documentation repair and await independent acceptance.
+
+P14-D remains blocked.
+
+## P14-C Acceptance Harness CI Gate Repair — 2026-10-01
+
+Response to the Acceptance Harness Reset verdict (`e881b09`). Documentation-only; no code, tests, contract, workflow, or data changes.
+
+### Blocking finding 1 — CI run for `3144a695` (addressed: run exists and is now recorded)
+
+A real GitHub Actions run for exact HEAD `3144a6951d33281af38e8663d394115148bb00d1` **exists** and is recorded in the Current Commit section above:
+
+- workflow `tests`, run `36739506965` (event: push, completed / **success**, started 2026-09-30T15:48:16Z)
+- pytest job `109969874122`: every step success, including "Environment diagnostics" (`pytest --collect-only -q -ra`), "Full pytest suite" (`python -m pytest -q -ra`), "P13-M pooled industry regression"
+- p13m job `109969874447`: "P13-M pooled industry regression" success
+- Note for re-verification: the Actions run appears under **check-runs** (`/commits/{sha}/check-runs`) and workflow-run lookup (`/actions/runs?head_sha={sha}`), not under the legacy combined-status endpoint; the original lookup may also have hit the 2026-09-30 GitHub connectivity outage window.
+
+### Blocking finding 2 — stale PROJECT_STATUS (addressed in this commit)
+
+Current Phase and Current Commit now reflect the actual submission (`3144a695`) and the latest independent verdict (`e881b09`).
+
+### Blocking finding 3 — snapshot vs independent execution (unchanged by design)
+
+The clean-state characterization snapshot is not weakened or rewritten. The CI "Full pytest suite" step on `3144a695` exited success; on the identical tree the suite is 361 passed / 0 failed, including the 14 harness meta-tests, one of which executes `run_harness` against the real documents and asserts `contract_unique_ids = matrix_unique_ids = 61`, `matrix_rows = 61`, zero orphans/duplicates, zero hard/soft findings.
+
+### Blocking finding 4 — local numbers as ZCODE evidence (CI conclusions now primary)
+
+The run/job/step conclusions above are the machine-verifiable result; local direct runs (`python scripts/audit_p14c_contract.py` → exit 0, PASS, 0 hard + 0 soft) are corroborating ZCODE evidence only.
+
+P13 boundaries unchanged: `research_end = 2026-09-22`, `virgin_start = 2026-09-23`, P13-T STOPPED / NOT EXECUTED, P13-U protection intact. No Golden Tests, no P14-D, no production factor/policy/calibration/recommendation changes.
+
+Stopping here; awaiting independent acceptance.
 
 P14-D remains blocked.
