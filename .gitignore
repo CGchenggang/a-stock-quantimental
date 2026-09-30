@@ -10,3 +10,6 @@ data/raw/
 workspace/
 ZCODE_AStock_Quantimental_Handoff_20260928/
 src/a_stock_quantimental_v2.egg-info/
+tests/_p13s_immunity_tmp/
+tests/_p13u_store_metrics_tmp/
+tests/_p13u_store_tmp/
