@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-B — Source Adapters & Immutable Raw Information Store**
+**P14-B — Source Adapters & Immutable Raw Information Store — FAIL / REPAIR REQUIRED**
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -36,7 +36,7 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 | P13-T | STOPPED / NOT EXECUTED | No true evaluable virgin holdout was available |
 | P13-U | PASS | Independently accepted virgin-holdout integrity gate; currently ACCUMULATING |
 | P14-A | PASS | Information contract, provenance, PIT, freshness, revision, dedup/conflict infrastructure |
-| P14-B | IN PROGRESS | Source adapters + immutable raw information storage; research-only |
+| P14-B | FAIL / REPAIR REQUIRED | Independent audit found non-durable ingestion outcome evidence; do not advance to P14-C |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
@@ -284,6 +284,20 @@ P14-B may be accepted only after independent verification of:
 14. workflow job/step logs are independently inspected;
 15. deterministic repeated ingestion produces byte-identical normalized results;
 16. acceptance documents match actual code and CI.
+
+## P14-B Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-C.**
+
+Independently verified against HEAD `98bfe54bc76e0511e66feb57768b6456c9bf612a`:
+- P14-B implementation, tests, research plan, raw-store audit and acceptance report inspected.
+- GitHub Actions run `36647967677` is green: pytest and p13m jobs both succeeded; full pytest reported **302 passed / 2 warnings / 0 failed** and the P14-B 21-test block passed.
+- Production diff from P14-A baseline `89349da` contains only P14-B information-ingestion infrastructure/tests/docs; no factor/policy/calibration/recommendation promotion was observed.
+- P13-U virgin protection remains wired through the shared boundary and the dedicated P14-B virgin-zone test passes.
+
+**Blocking finding:** P14-B documentation/research plan states that a same-key/different-payload mutation is recorded as a rejected ingestion attempt and that ingestion outcomes are auditable. In `RawStore.put()`, however, `DUPLICATE` and `RAW_MUTATION_DETECTED` outcomes are appended only to the in-memory `_outcomes` list; only accepted records are persisted to the JSONL file. After process restart/reload, the rejected mutation/duplicate attempt evidence is therefore not durable. This is inconsistent with the claimed immutable/auditable raw-ingestion boundary and is not merely a documentation issue.
+
+**Required repair before re-acceptance:** persist ingestion-attempt audit events (including at minimum DUPLICATE and RAW_MUTATION_DETECTED, with source/source_id/revision, incoming payload hash, stored hash when applicable, ingestion_id, adapter_version, outcome, and deterministic audit metadata) in an append-only durable audit representation; reload must reconstruct the audit history; add restart/reload tests proving the evidence survives process boundaries; preserve byte-identical deterministic replay; keep accepted raw records immutable; keep P13-U/P14-A boundaries unchanged; rerun full CI and provide updated P14B docs. Do not start P14-C until this repair is independently accepted.
 
 ## Operating Rule
 
