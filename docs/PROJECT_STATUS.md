@@ -390,3 +390,27 @@ Required next repair:
 ## P14-C-R2 Repair — 2026-09-30
 
 R2 repair implemented: real completeness (expected/actual entities+dates with coverage_ratio), SOURCE_ERROR/PARSE_FAILURE/SOURCE_EMPTY evidence chain through audit_event→quality→health, freshness computed from P14-A policies (no hardcoded stale), reconciliation groups carry full provenance+timestamps, quality_report.json restructured into 9 dimensions with status/reasons/metrics/evidence.
+
+
+## P14-C-R2 Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-D.**
+
+Independently re-audited current HEAD `63487fdc3bcd014bd98a86eea0545cf8d7415e09` against P14-B accepted baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+Blocking findings:
+1. The R2 script declares `EXPECTED_CONTRACT`, but `_compute_completeness()` derives expected entities/dates from the actual fixture payloads instead of consuming an explicit expected contract. Therefore the expected set is not independent of the observed data and cannot detect a missing entity/date caused by ingestion failure. The `broken_source` entry also has no actual adapter path in `_payload_adapters()`; it is not exercised by the ingestion/evidence chain.
+2. The required durable SOURCE_ERROR/PARSE_FAILURE evidence chain is not demonstrated by the inspected final audit path. The script comments claim a broken source and parse failure, but the adapter map only contains the four normal fixture adapters; the declared broken/empty fixture is not actually ingested through that map. This remains a fixture-coverage/evidence problem, not a vocabulary problem.
+3. Reconciliation implementation `src/astock_v2/information/reconciliation.py` itself only emits source, source_id, value, available_time; event_time/ingested_at/ingestion_id/raw hash/provenance are appended later by the audit script. This can be acceptable architecturally, but there is no independently visible end-to-end test in the inspected P14-C test set that asserts all required final artifact fields. The acceptance claim therefore remains insufficiently locked by regression tests.
+4. GitHub Actions evidence for the final R2 HEAD is absent from the workflow-run lookup (`workflow_runs: []`). Local/documentation claims cannot substitute for independently verifiable CI evidence.
+5. The P14-C diff still adds generated test artifacts under `tests/_p13s_immunity_tmp/` and `tests/_p13u_store*_tmp/`. These are runtime/generated artifacts and should not be part of a clean phase implementation diff. The earlier generated-data cleanup therefore did not fully restore repository hygiene.
+6. The repository status currently says “implementation complete; awaiting independent acceptance”, which is acceptable as a handoff state, but no PASS/phase advancement is authorized.
+
+Required R3 repair:
+- use an explicit immutable expected entity/date contract independent of actual payloads;
+- exercise real deterministic SOURCE_ERROR and PARSE_FAILURE ingestion attempts through the audit path and persist their evidence;
+- add end-to-end tests against the emitted reconciliation.json asserting source/value/difference/event_time/available_time/ingested_at/ingestion_id/raw hash/provenance/policy metadata;
+- obtain a GitHub Actions run on the final repair HEAD and make pytest/P13-M/P14-C results independently inspectable;
+- remove generated test artifacts from the repository and extend .gitignore as needed;
+- preserve P13-U/P13-T boundaries and make no factor/policy/calibration/recommendation/production-alpha changes;
+- stop after R3 and await independent acceptance. Do not start P14-D.
