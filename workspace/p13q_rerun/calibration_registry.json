@@ -1,0 +1,58 @@
+{
+ "generated_for": "P13-Q",
+ "methods": {
+  "isotonic": {
+   "brier": 0.24937693982290307,
+   "calibration_intercept": -0.022259995599146636,
+   "calibration_slope": 0.6053419119343532,
+   "delta_brier": -0.0013793992711607361,
+   "delta_ece": -0.015118517033167187,
+   "delta_logloss": -0.0032525655612861692,
+   "ece": 0.008942257384650645,
+   "evaluation_period": "validation OOS (decision_time >= 2025-01-01)",
+   "logloss": 0.6919141655085332,
+   "method": "isotonic",
+   "n_evaluation": 28965,
+   "n_training": 65795,
+   "role": "post_hoc_calibration_research",
+   "status": "research_only",
+   "training_period": "discovery OOS (decision_time < 2025-01-01)"
+  },
+  "platt": {
+   "brier": 0.249366070861165,
+   "calibration_intercept": 0.03717309461231003,
+   "calibration_slope": 1.0257769846289833,
+   "delta_brier": -0.0013902682328988114,
+   "delta_ece": -0.013283765382969383,
+   "delta_logloss": -0.0032868946413076028,
+   "ece": 0.01077700903484845,
+   "evaluation_period": "validation OOS (decision_time >= 2025-01-01)",
+   "logloss": 0.6918798364285118,
+   "method": "platt",
+   "n_evaluation": 28965,
+   "n_training": 65795,
+   "role": "post_hoc_calibration_research",
+   "status": "research_only",
+   "training_period": "discovery OOS (decision_time < 2025-01-01)"
+  },
+  "raw": {
+   "brier": 0.2507563390940638,
+   "calibration_intercept": -0.08452991398611837,
+   "calibration_slope": 0.16675210088577735,
+   "delta_brier": null,
+   "delta_ece": null,
+   "delta_logloss": null,
+   "ece": 0.024060774417817832,
+   "evaluation_period": "validation OOS (decision_time >= 2025-01-01)",
+   "logloss": 0.6951667310698194,
+   "method": "raw",
+   "n_evaluation": 28965,
+   "n_training": null,
+   "role": "production_baseline_probability",
+   "status": "research_only",
+   "training_period": "production walk-forward (protocol 252/20/20/1)"
+  }
+ },
+ "split_date": "2025-01-01",
+ "status_rule": "research_only by design: P13-O consumed the full history, so the calibration evaluation window is not a virgin holdout; statuses may be revisited only on genuinely future data"
+}

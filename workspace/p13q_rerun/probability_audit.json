@@ -1,0 +1,149 @@
+{
+ "split_date": "2025-01-01",
+ "windows": {
+  "all": {
+   "brier": 0.250401355848492,
+   "calibration_intercept": -0.10716033267612336,
+   "calibration_slope": 0.17156837062725036,
+   "ece": 0.023107969680331752,
+   "log_loss": 0.6944630333966363,
+   "mean_label": 0.46767623469818487,
+   "mean_next_return": 0.00028819130236502064,
+   "mean_probability": 0.46807632927862247,
+   "n": 94760,
+   "positive_rate": 0.46767623469818487
+  },
+  "discovery": {
+   "brier": 0.250245081212,
+   "calibration_intercept": -0.1186447058396884,
+   "calibration_slope": 0.16256174917600802,
+   "ece": 0.024425860479837296,
+   "log_loss": 0.6941532438517811,
+   "mean_label": 0.46450338171593586,
+   "mean_next_return": 0.0002746288585638163,
+   "mean_probability": 0.46437351020665946,
+   "n": 65795,
+   "positive_rate": 0.46450338171593586
+  },
+  "first_third": {
+   "brier": 0.2506229932492008,
+   "calibration_intercept": -0.09132877591713268,
+   "calibration_slope": 0.185163829081489,
+   "ece": 0.024448167367298306,
+   "log_loss": 0.6951151186742527,
+   "mean_label": 0.4714424320827943,
+   "mean_next_return": 0.0002815680143214058,
+   "mean_probability": 0.46969894125518685,
+   "n": 30920,
+   "positive_rate": 0.4714424320827943
+  },
+  "last_third": {
+   "brier": 0.2504848090169554,
+   "calibration_intercept": -0.09321432625439986,
+   "calibration_slope": 0.19057725769319261,
+   "ece": 0.021831594660546353,
+   "log_loss": 0.694586159918581,
+   "mean_label": 0.4720642886637233,
+   "mean_next_return": 6.322244974047145e-05,
+   "mean_probability": 0.47600612600365444,
+   "n": 31483,
+   "positive_rate": 0.4720642886637233
+  },
+  "middle_third": {
+   "brier": 0.25010836253846164,
+   "calibration_intercept": -0.1443040200993416,
+   "calibration_slope": 0.10069378140464595,
+   "ece": 0.026866656084421865,
+   "log_loss": 0.6937201070105596,
+   "mean_label": 0.45980776957072655,
+   "mean_next_return": 0.0005134126286155152,
+   "mean_probability": 0.4588101750427677,
+   "n": 32357,
+   "positive_rate": 0.45980776957072655
+  },
+  "validation": {
+   "brier": 0.2507563390940638,
+   "calibration_intercept": -0.08452991398611837,
+   "calibration_slope": 0.16675210088577735,
+   "ece": 0.024060774417817832,
+   "log_loss": 0.6951667310698194,
+   "mean_label": 0.474883480062144,
+   "mean_next_return": 0.00031899886286563314,
+   "mean_probability": 0.4764874109578837,
+   "n": 28965,
+   "positive_rate": 0.474883480062144
+  },
+  "year_2021": {
+   "brier": 0.2506874286931557,
+   "calibration_intercept": -0.0886451160078324,
+   "calibration_slope": 0.19618360331230497,
+   "ece": 0.027396874614531334,
+   "log_loss": 0.6950841966623913,
+   "mean_label": 0.4710270046273914,
+   "mean_next_return": 0.0009401474102064829,
+   "mean_probability": 0.46593004333856247,
+   "n": 14479,
+   "positive_rate": 0.4710270046273914
+  },
+  "year_2022": {
+   "brier": 0.2506237123842171,
+   "calibration_intercept": -0.0875949633800016,
+   "calibration_slope": 0.1781342664909945,
+   "ece": 0.02482092851919536,
+   "log_loss": 0.6952475270648509,
+   "mean_label": 0.473209995194618,
+   "mean_next_return": -0.00023123438753471404,
+   "mean_probability": 0.47315361638898085,
+   "n": 16648,
+   "positive_rate": 0.473209995194618
+  },
+  "year_2023": {
+   "brier": 0.24856509559402942,
+   "calibration_intercept": -0.18427251562211802,
+   "calibration_slope": 0.22496320739642853,
+   "ece": 0.0256431411291147,
+   "log_loss": 0.690586348879396,
+   "mean_label": 0.4467160894243021,
+   "mean_next_return": -1.5320238390441812e-05,
+   "mean_probability": 0.4673419044454435,
+   "n": 17266,
+   "positive_rate": 0.4467160894243021
+  },
+  "year_2024": {
+   "brier": 0.2511816649808287,
+   "calibration_intercept": -0.11060805546977584,
+   "calibration_slope": 0.0816526366336908,
+   "ece": 0.027537820221535662,
+   "log_loss": 0.6958708117127848,
+   "mean_label": 0.4683944374209861,
+   "mean_next_return": 0.0004925250383032935,
+   "mean_probability": 0.4517335523933647,
+   "n": 17402,
+   "positive_rate": 0.4683944374209861
+  },
+  "year_2025": {
+   "brier": 0.2508131919896549,
+   "calibration_intercept": -0.06607535324377944,
+   "calibration_slope": 0.18645189895526926,
+   "ece": 0.025400589010217873,
+   "log_loss": 0.6949861311363085,
+   "mean_label": 0.4793672627235213,
+   "mean_next_return": 0.0007946801768140672,
+   "mean_probability": 0.4781883461998191,
+   "n": 17448,
+   "positive_rate": 0.4793672627235213
+  },
+  "year_2026": {
+   "brier": 0.2506702082160336,
+   "calibration_intercept": -0.1131610174657239,
+   "calibration_slope": 0.1361894509103487,
+   "ece": 0.02203493414910883,
+   "log_loss": 0.6954403359703923,
+   "mean_label": 0.4680906486064079,
+   "mean_next_return": -0.00040164779561941333,
+   "mean_probability": 0.47391053172706943,
+   "n": 11517,
+   "positive_rate": 0.4680906486064079
+  }
+ }
+}

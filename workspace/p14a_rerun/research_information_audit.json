@@ -1,0 +1,232 @@
+{
+ "conflicts": {
+  "CN|ECONOMY|2026-01-31T09:00:00+08:00|index|None": {
+   "macro_cpi_cn": [
+    "6ffdf03e1ff72fdf9e354ed4689710437dffcdd439e49a92faaa657b8be92758"
+   ],
+   "macro_pmi_cn": [
+    "3f4572a4f8d85061cfcd7a46f6caf3beba0f62967781e60df1745a7073a96c06",
+    "b0d1dfe1426f5ef17487f2079b614383f8d257c57cf3e96a2dffdf5ef43d5d29"
+   ]
+  }
+ },
+ "freshness": [
+  {
+   "freshness_policy_id": "macro_release_35d",
+   "record_id": "65614921d5b91bec160d815ab7e9735ea79aad658fe87b976003741d01e7d2a3",
+   "status": "stale"
+  },
+  {
+   "freshness_policy_id": "macro_release_35d",
+   "record_id": "2ab2d9fd7e3aedd20da0aa8d20244713cf47d3a488e3fa65ec4bec25336c9c69",
+   "status": "stale"
+  },
+  {
+   "freshness_policy_id": "macro_release_35d",
+   "record_id": "35dfc4f1573fc546551767d8721f49c32c91302483ceb2b45b56707d1e03c87d",
+   "status": "fresh"
+  },
+  {
+   "freshness_policy_id": "overseas_daily",
+   "record_id": "8bfe6723906fe20c85d408dc32483c1e398c715723820fa02392f7b8b4da8301",
+   "status": "stale"
+  },
+  {
+   "freshness_policy_id": "market_daily",
+   "record_id": "5ccc69320221e894a01320b50eafb2242c619ac05bbb7811151836a8bd768c24",
+   "status": "stale"
+  },
+  {
+   "freshness_policy_id": "announcement_72h",
+   "record_id": "a5839dbb04e57fb4198a95149e98067eddc0e8ff012b82f10954c9f6ff4ef5d9",
+   "status": "stale"
+  }
+ ],
+ "records": [
+  {
+   "available_time": "2026-02-01T09:30:00+08:00",
+   "conflict_status": "CONFLICT",
+   "content": null,
+   "currency": null,
+   "entity_id": "CN",
+   "entity_type": "ECONOMY",
+   "event_time": "2026-01-31T09:00:00+08:00",
+   "freshness_policy_id": "macro_release_35d",
+   "ingested_at": "2026-02-01T10:00:00+08:00",
+   "language": null,
+   "metadata": {},
+   "quality_status": "OK",
+   "raw_record_id": "3f4572a4f8d85061cfcd7a46f6caf3beba0f62967781e60df1745a7073a96c06",
+   "record_id": "65614921d5b91bec160d815ab7e9735ea79aad658fe87b976003741d01e7d2a3",
+   "research_only": true,
+   "revision": 0,
+   "source": "macro_pmi_cn",
+   "source_category": "MACRO",
+   "source_id": "PMI_CN_2026M01",
+   "symbol": null,
+   "unit": "index",
+   "value": 50.1
+  },
+  {
+   "available_time": "2026-02-01T10:05:00+08:00",
+   "conflict_status": "CONFLICT",
+   "content": null,
+   "currency": null,
+   "entity_id": "CN",
+   "entity_type": "ECONOMY",
+   "event_time": "2026-01-31T09:00:00+08:00",
+   "freshness_policy_id": "macro_release_35d",
+   "ingested_at": "2026-02-01T10:10:00+08:00",
+   "language": null,
+   "metadata": {},
+   "quality_status": "OK",
+   "raw_record_id": "6ffdf03e1ff72fdf9e354ed4689710437dffcdd439e49a92faaa657b8be92758",
+   "record_id": "2ab2d9fd7e3aedd20da0aa8d20244713cf47d3a488e3fa65ec4bec25336c9c69",
+   "research_only": true,
+   "revision": 0,
+   "source": "macro_cpi_cn",
+   "source_category": "MACRO",
+   "source_id": "PMI_ALT_2026M01",
+   "symbol": null,
+   "unit": "index",
+   "value": 50.4
+  },
+  {
+   "available_time": "2026-02-15T09:30:00+08:00",
+   "conflict_status": "CONFLICT",
+   "content": null,
+   "currency": null,
+   "entity_id": "CN",
+   "entity_type": "ECONOMY",
+   "event_time": "2026-01-31T09:00:00+08:00",
+   "freshness_policy_id": "macro_release_35d",
+   "ingested_at": "2026-02-15T10:00:00+08:00",
+   "language": null,
+   "metadata": {},
+   "quality_status": "OK",
+   "raw_record_id": "b0d1dfe1426f5ef17487f2079b614383f8d257c57cf3e96a2dffdf5ef43d5d29",
+   "record_id": "35dfc4f1573fc546551767d8721f49c32c91302483ceb2b45b56707d1e03c87d",
+   "research_only": true,
+   "revision": 1,
+   "source": "macro_pmi_cn",
+   "source_category": "MACRO",
+   "source_id": "PMI_CN_2026M01",
+   "symbol": null,
+   "unit": "index",
+   "value": 50.3
+  },
+  {
+   "available_time": "2026-03-02T06:00:00+08:00",
+   "conflict_status": null,
+   "content": null,
+   "currency": null,
+   "entity_id": "SPX",
+   "entity_type": "INDEX",
+   "event_time": "2026-03-02T05:00:00+08:00",
+   "freshness_policy_id": "overseas_daily",
+   "ingested_at": "2026-03-02T06:10:00+08:00",
+   "language": null,
+   "metadata": {},
+   "quality_status": "OK",
+   "raw_record_id": "798baa03125ce43d85abae43319671c8205c2889c5b2db1b162cd471f1173ce3",
+   "record_id": "8bfe6723906fe20c85d408dc32483c1e398c715723820fa02392f7b8b4da8301",
+   "research_only": true,
+   "revision": 0,
+   "source": "us_index_daily",
+   "source_category": "OVERSEAS_MARKET",
+   "source_id": "SPX_2026-03-02",
+   "symbol": null,
+   "unit": "points",
+   "value": 5432.1
+  },
+  {
+   "available_time": "2026-03-02T16:00:00+08:00",
+   "conflict_status": null,
+   "content": null,
+   "currency": null,
+   "entity_id": "CSI300",
+   "entity_type": "INDEX",
+   "event_time": "2026-03-02T15:00:00+08:00",
+   "freshness_policy_id": "market_daily",
+   "ingested_at": "2026-03-02T16:05:00+08:00",
+   "language": null,
+   "metadata": {},
+   "quality_status": "OK",
+   "raw_record_id": "29155edb11e1c858a9fa70b26e46fe0f7ea90e3f4b17373218e4b025691e190d",
+   "record_id": "5ccc69320221e894a01320b50eafb2242c619ac05bbb7811151836a8bd768c24",
+   "research_only": true,
+   "revision": 0,
+   "source": "cn_index_daily",
+   "source_category": "A_SHARE_MARKET",
+   "source_id": "CSI300_2026-03-02",
+   "symbol": "000300",
+   "unit": "points",
+   "value": 4123.45
+  },
+  {
+   "available_time": "2026-03-03T19:00:00+08:00",
+   "conflict_status": null,
+   "content": "Board approves the 2026 annual business plan (research fixture text).",
+   "currency": null,
+   "entity_id": "000001",
+   "entity_type": "LISTED_COMPANY",
+   "event_time": "2026-03-03T17:30:00+08:00",
+   "freshness_policy_id": "announcement_72h",
+   "ingested_at": "2026-03-03T19:10:00+08:00",
+   "language": "zh",
+   "metadata": {},
+   "quality_status": "OK",
+   "raw_record_id": "5c959dd4d638d4fa09509c10bddde1919110a1791d104cb110f7051d7e353af1",
+   "record_id": "a5839dbb04e57fb4198a95149e98067eddc0e8ff012b82f10954c9f6ff4ef5d9",
+   "research_only": true,
+   "revision": 0,
+   "source": "company_announcement",
+   "source_category": "COMPANY",
+   "source_id": "ANN_000001_2026-03-03",
+   "symbol": "000001",
+   "unit": null,
+   "value": null
+  }
+ ],
+ "schema_version": "p14a-info-audit-1",
+ "summary": {
+  "conflict_groups": 1,
+  "decision_time": "2026-03-10T16:00:00+08:00",
+  "fixture_records": 7,
+  "freshness_policies": [
+   "announcement_72h",
+   "event_7d",
+   "industry_quarterly",
+   "macro_release_35d",
+   "market_daily",
+   "overseas_daily"
+  ],
+  "provenance": {
+   "n": 7,
+   "n_rejected": 0,
+   "rejected_ids": [],
+   "sources": [
+    "cn_index_daily",
+    "company_announcement",
+    "macro_cpi_cn",
+    "macro_pmi_cn",
+    "us_index_daily"
+   ]
+  },
+  "raw_records": 7,
+  "registered_sources": [
+   "cn_index_daily",
+   "cn_stock_quote",
+   "company_announcement",
+   "industry_classification",
+   "macro_cpi_cn",
+   "macro_pmi_cn",
+   "market_state_feed",
+   "public_event_feed",
+   "us_index_daily"
+  ],
+  "research_records": 6,
+  "schema_version": "p14a-info-audit-1",
+  "visible_at_decision_time": 6
+ }
+}

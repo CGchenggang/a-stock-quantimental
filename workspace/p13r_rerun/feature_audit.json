@@ -1,0 +1,13 @@
+{
+ "pit_rule": "features use only rows whose decision_time date is before the candidate's decision date",
+ "rows": 28965,
+ "sample_feature": {
+  "000001|2020-02-07T16:00:00+08:00": {
+   "downside": -0.01820643426649598,
+   "downside_deviation": 0.015976004849288065,
+   "max_drawdown": 0.0,
+   "upside": 0.020669982633871632,
+   "volatility": 0.02681569905636977
+  }
+ }
+}

@@ -1,0 +1,145 @@
+{
+ "policies": [
+  {
+   "calibration_method": "none",
+   "cost_model": "zero/low/medium",
+   "expected_return_threshold": null,
+   "family": "baseline",
+   "industry_concentration_limit": 2,
+   "policy_id": "hold_all",
+   "probability_threshold": null,
+   "regime_filter": null,
+   "risk_constraints": {
+    "max_per_industry": 2
+   },
+   "selection_method": "hold_all",
+   "selection_rule": "hold_all",
+   "top_k": null,
+   "turnover_limit": null
+  },
+  {
+   "calibration_method": "raw",
+   "cost_model": "zero/low/medium",
+   "expected_return_threshold": null,
+   "family": "threshold",
+   "industry_concentration_limit": 2,
+   "policy_id": "threshold_raw_p50",
+   "probability_threshold": 0.5,
+   "regime_filter": null,
+   "risk_constraints": {
+    "max_per_industry": 2
+   },
+   "selection_method": "probability_threshold",
+   "selection_rule": "threshold",
+   "top_k": null,
+   "turnover_limit": null
+  },
+  {
+   "calibration_method": "platt",
+   "cost_model": "zero/low/medium",
+   "expected_return_threshold": null,
+   "family": "threshold",
+   "industry_concentration_limit": 2,
+   "policy_id": "threshold_platt_p50",
+   "probability_threshold": 0.5,
+   "regime_filter": null,
+   "risk_constraints": {
+    "max_per_industry": 2
+   },
+   "selection_method": "probability_threshold",
+   "selection_rule": "threshold",
+   "top_k": null,
+   "turnover_limit": null
+  },
+  {
+   "calibration_method": "isotonic",
+   "cost_model": "zero/low/medium",
+   "expected_return_threshold": null,
+   "family": "threshold",
+   "industry_concentration_limit": 2,
+   "policy_id": "threshold_iso_p50",
+   "probability_threshold": 0.5,
+   "regime_filter": null,
+   "risk_constraints": {
+    "max_per_industry": 2
+   },
+   "selection_method": "probability_threshold",
+   "selection_rule": "threshold",
+   "top_k": null,
+   "turnover_limit": null
+  },
+  {
+   "calibration_method": "platt",
+   "cost_model": "zero/low/medium",
+   "expected_return_threshold": null,
+   "family": "top-k",
+   "industry_concentration_limit": 2,
+   "policy_id": "topk_platt_k3",
+   "probability_threshold": null,
+   "regime_filter": null,
+   "risk_constraints": {
+    "max_per_industry": 2
+   },
+   "selection_method": "top_k",
+   "selection_rule": "top_k",
+   "top_k": 3,
+   "turnover_limit": null
+  },
+  {
+   "calibration_method": "platt",
+   "cost_model": "zero/low/medium",
+   "expected_return_threshold": null,
+   "family": "percentile",
+   "industry_concentration_limit": 2,
+   "percentile": 0.8,
+   "policy_id": "percentile_platt_p80",
+   "probability_threshold": null,
+   "regime_filter": null,
+   "risk_constraints": {
+    "max_per_industry": 2
+   },
+   "selection_method": "cross_sectional_percentile",
+   "selection_rule": "percentile",
+   "top_k": null,
+   "turnover_limit": null
+  },
+  {
+   "calibration_method": "platt",
+   "cost_model": "zero/low/medium",
+   "expected_return_threshold": 0.0,
+   "family": "expected-return",
+   "industry_concentration_limit": 2,
+   "policy_id": "er_platt_0",
+   "probability_threshold": null,
+   "regime_filter": null,
+   "risk_constraints": {
+    "max_per_industry": 2
+   },
+   "selection_method": "expected_return_threshold",
+   "selection_rule": "expected_return",
+   "top_k": null,
+   "turnover_limit": null
+  },
+  {
+   "calibration_method": "platt",
+   "cost_model": "zero/low/medium",
+   "expected_return_threshold": 0.0,
+   "family": "expected-return",
+   "industry_concentration_limit": 2,
+   "policy_id": "er_platt_pos_risk",
+   "probability_threshold": null,
+   "regime_filter": null,
+   "risk_constraints": {
+    "max_per_industry": 2,
+    "volatility_max": "universe_median"
+   },
+   "risk_filter": 0.021203709320900002,
+   "selection_method": "expected_return_plus_risk_filter",
+   "selection_rule": "expected_return",
+   "top_k": null,
+   "turnover_limit": null
+  }
+ ],
+ "split_date": "2025-01-01",
+ "status": "research_only (no virgin holdout; see plan)"
+}

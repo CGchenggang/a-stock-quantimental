@@ -1,0 +1,90 @@
+{
+ "bootstrap": {
+  "isotonic:delta_brier": {
+   "ci95_high": -0.000986480483069739,
+   "ci95_low": -0.0017221158055448348,
+   "point": -0.0013793992711607361
+  },
+  "isotonic:delta_ece": {
+   "ci95_high": -0.010119120118879672,
+   "ci95_low": -0.02046271748420246,
+   "point": -0.015118517033167187
+  },
+  "isotonic:delta_log_loss": {
+   "ci95_high": -0.0022722145874502914,
+   "ci95_low": -0.00423066743144182,
+   "point": -0.0032525655612861692
+  },
+  "platt:delta_brier": {
+   "ci95_high": -0.0009719225818572292,
+   "ci95_low": -0.0017674225175835494,
+   "point": -0.0013902682328988114
+  },
+  "platt:delta_ece": {
+   "ci95_high": -0.008436110351814474,
+   "ci95_low": -0.019110059286798115,
+   "point": -0.013283765382969383
+  },
+  "platt:delta_log_loss": {
+   "ci95_high": -0.0022177566342179602,
+   "ci95_low": -0.004353015882080655,
+   "point": -0.0032868946413076028
+  }
+ },
+ "evaluation_n": 28965,
+ "evaluation_period": "validation OOS (decision_time >= 2025-01-01)",
+ "fitted_parameters": {
+  "isotonic": {
+   "train_max": 0.8930669946280902,
+   "train_min": 0.00016672781268709352
+  },
+  "platt": {
+   "intercept": -0.11864470583968838,
+   "slope": 0.16256174917600796
+  }
+ },
+ "methods": {
+  "isotonic": {
+   "brier": 0.24937693982290307,
+   "calibration_intercept": -0.022259995599146636,
+   "calibration_slope": 0.6053419119343532,
+   "delta_brier": -0.0013793992711607361,
+   "delta_ece": -0.015118517033167187,
+   "delta_log_loss": -0.0032525655612861692,
+   "ece": 0.008942257384650645,
+   "log_loss": 0.6919141655085332,
+   "mean_label": 0.474883480062144,
+   "mean_probability": 0.4677282585265414,
+   "n": 28965,
+   "positive_rate": 0.474883480062144
+  },
+  "platt": {
+   "brier": 0.249366070861165,
+   "calibration_intercept": 0.03717309461231003,
+   "calibration_slope": 1.0257769846289833,
+   "delta_brier": -0.0013902682328988114,
+   "delta_ece": -0.013283765382969383,
+   "delta_log_loss": -0.0032868946413076028,
+   "ece": 0.01077700903484845,
+   "log_loss": 0.6918798364285118,
+   "mean_label": 0.474883480062144,
+   "mean_probability": 0.4664866406210005,
+   "n": 28965,
+   "positive_rate": 0.474883480062144
+  },
+  "raw": {
+   "brier": 0.2507563390940638,
+   "calibration_intercept": -0.08452991398611837,
+   "calibration_slope": 0.16675210088577735,
+   "ece": 0.024060774417817832,
+   "log_loss": 0.6951667310698194,
+   "mean_label": 0.474883480062144,
+   "mean_probability": 0.4764874109578837,
+   "n": 28965,
+   "positive_rate": 0.474883480062144
+  }
+ },
+ "rows_aligned": true,
+ "training_n": 65795,
+ "training_period": "discovery OOS (decision_time < 2025-01-01)"
+}

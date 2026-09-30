@@ -1,0 +1,140 @@
+{
+ "results": {
+  "er_platt_0": {
+   "cost_scenario": "low",
+   "coverage_difference": {
+    "ci95_high": -0.23388299380437308,
+    "ci95_low": -0.4463815348059516,
+    "point": -0.34234007108549647
+   },
+   "hit_rate_difference": {
+    "ci95_high": 0.0020762301032910342,
+    "ci95_low": -0.015431198805479133,
+    "point": -0.006439315051215985
+   },
+   "net_return_difference": {
+    "ci95_high": 3.8347482923189506e-05,
+    "ci95_low": -0.0010984660590987018,
+    "point": -0.0005238876875398069
+   },
+   "vs": "hold_all"
+  },
+  "er_platt_pos_risk": {
+   "cost_scenario": "low",
+   "coverage_difference": {
+    "ci95_high": -0.40287753294842277,
+    "ci95_low": -0.6262716070008537,
+    "point": -0.5175481811955103
+   },
+   "hit_rate_difference": {
+    "ci95_high": 0.010405682403498042,
+    "ci95_low": -0.01934671315920316,
+    "point": -0.005001899359999319
+   },
+   "net_return_difference": {
+    "ci95_high": 0.0006158622426457038,
+    "ci95_low": -0.000651358787881245,
+    "point": -3.84576411061955e-05
+   },
+   "vs": "hold_all"
+  },
+  "percentile_platt_p80": {
+   "cost_scenario": "low",
+   "coverage_difference": {
+    "ci95_high": -0.3321944520632728,
+    "ci95_low": -0.5630183351645496,
+    "point": -0.45000675142808017
+   },
+   "hit_rate_difference": {
+    "ci95_high": 0.021115072559319874,
+    "ci95_low": -0.0029589955262870463,
+    "point": 0.008899259978926866
+   },
+   "net_return_difference": {
+    "ci95_high": 0.0002488460501100656,
+    "ci95_low": -0.0009011600531447949,
+    "point": -0.00034666135863788405
+   },
+   "vs": "hold_all"
+  },
+  "threshold_iso_p50": {
+   "cost_scenario": "low",
+   "coverage_difference": {
+    "ci95_high": -0.5310566472393866,
+    "ci95_low": -0.7550044158498418,
+    "point": -0.6454695783578601
+   },
+   "hit_rate_difference": {
+    "ci95_high": 0.5344359022725834,
+    "ci95_low": 0.5181951374753228,
+    "point": 0.52631651920487
+   },
+   "net_return_difference": {
+    "ci95_high": 0.10062372634205324,
+    "ci95_low": 0.09989145086052233,
+    "point": 0.1002403869479242
+   },
+   "vs": "hold_all"
+  },
+  "threshold_platt_p50": {
+   "cost_scenario": "low",
+   "coverage_difference": {
+    "ci95_high": -0.5321082902075946,
+    "ci95_low": -0.7514597684895958,
+    "point": -0.6424646849682354
+   },
+   "hit_rate_difference": {
+    "ci95_high": -0.06632085654287852,
+    "ci95_low": -0.47897909078699197,
+    "point": -0.29347525041718653
+   },
+   "net_return_difference": {
+    "ci95_high": 0.014279398641033895,
+    "ci95_low": -0.026226178701562748,
+    "point": -0.008117588086308372
+   },
+   "vs": "hold_all"
+  },
+  "threshold_raw_p50": {
+   "cost_scenario": "low",
+   "coverage_difference": {
+    "ci95_high": -0.2600382456677861,
+    "ci95_low": -0.48168725538130797,
+    "point": -0.37229121411923394
+   },
+   "hit_rate_difference": {
+    "ci95_high": 0.019319149773403366,
+    "ci95_low": -0.002224248584814353,
+    "point": 0.008296245956431863
+   },
+   "net_return_difference": {
+    "ci95_high": 0.0005485099169358294,
+    "ci95_low": -0.0004878778200422812,
+    "point": 5.243423005560457e-06
+   },
+   "vs": "hold_all"
+  },
+  "topk_platt_k3": {
+   "cost_scenario": "low",
+   "coverage_difference": {
+    "ci95_high": -0.4920631771163826,
+    "ci95_low": -0.7074475733272502,
+    "point": -0.5991426486098828
+   },
+   "hit_rate_difference": {
+    "ci95_high": 0.0273075510166583,
+    "ci95_low": -0.014996934512993807,
+    "point": 0.007107629114124022
+   },
+   "net_return_difference": {
+    "ci95_high": 0.00029048833307907863,
+    "ci95_low": -0.002917899717622856,
+    "point": -0.0012617817181443378
+   },
+   "vs": "hold_all"
+  }
+ },
+ "rounds": 1000,
+ "seed": 20260929,
+ "unit": "symbol"
+}

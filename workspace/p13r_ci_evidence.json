@@ -1,0 +1,17 @@
+{
+ "full_pytest_command": "python -m pytest -q -ra",
+ "full_pytest_suite_step": "success",
+ "jobs": {
+  "p13m": "success",
+  "pytest": "success"
+ },
+ "p13r_commit": "77594d9a5b4f142865f6a17885a846b2b13c6e8b",
+ "run_conclusion": "success",
+ "run_id": 36543819808,
+ "verification_urls": [
+  "https://api.github.com/repos/CGchenggang/a-stock-quantimental/actions/runs/36543819808",
+  "https://api.github.com/repos/CGchenggang/a-stock-quantimental/actions/runs/36543819808/jobs",
+  "https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36543819808"
+ ],
+ "workflow": "tests"
+}

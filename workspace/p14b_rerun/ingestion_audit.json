@@ -1,0 +1,53 @@
+{
+ "decision_time": "2026-03-10T16:00:00+08:00",
+ "normalized_records": 4,
+ "raw_records_stored": 4,
+ "schema_version": "p14b-ingestion-audit-1",
+ "sources": {
+  "cn_index_daily": {
+   "accepted": 1,
+   "adapter_version": "cn_index_daily_adapter@1",
+   "attempted": 1,
+   "duplicates": 0,
+   "errors": [],
+   "mutations": 0,
+   "rejected": 0,
+   "source": "cn_index_daily",
+   "status": "OK"
+  },
+  "company_announcement": {
+   "accepted": 1,
+   "adapter_version": "company_announcement_adapter@1",
+   "attempted": 1,
+   "duplicates": 0,
+   "errors": [],
+   "mutations": 0,
+   "rejected": 0,
+   "source": "company_announcement",
+   "status": "OK"
+  },
+  "macro_pmi_cn": {
+   "accepted": 1,
+   "adapter_version": "macro_pmi_cn_adapter@1",
+   "attempted": 1,
+   "duplicates": 0,
+   "errors": [],
+   "mutations": 0,
+   "rejected": 0,
+   "source": "macro_pmi_cn",
+   "status": "OK"
+  },
+  "us_index_daily": {
+   "accepted": 1,
+   "adapter_version": "us_index_daily_adapter@1",
+   "attempted": 1,
+   "duplicates": 0,
+   "errors": [],
+   "mutations": 0,
+   "rejected": 0,
+   "source": "us_index_daily",
+   "status": "OK"
+  }
+ },
+ "visible_at_decision_time": 4
+}
