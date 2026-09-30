@@ -232,15 +232,20 @@ def _compute_completeness(
 
 
 def _compute_freshness_per_record(
-    raw_records: list, decision_time: str
+    research_records: list, decision_time: str
 ) -> dict[str, dict[str, int]]:
-    """R1-3: freshness per source from real available_time + P14-A policy."""
+    """R1-3: freshness per source from real available_time + P14-A policy.
+
+    Computed on the P14-A research records (not raw ingest records), since
+    RawInformationRecord carries freshness_policy_id. Unresolved records
+    (available_time=None) are counted before the projection and merged here.
+    """
     per_source: dict[str, dict[str, int]] = {}
-    for record in raw_records:
+    for record in research_records:
         source = record.source
         if source not in per_source:
             per_source[source] = {"fresh": 0, "stale": 0, "unresolved": 0}
-        if record.available_time is None:
+        if record.freshness_policy_id is None:
             per_source[source]["unresolved"] += 1
             continue
         status = freshness_status(
@@ -409,7 +414,7 @@ def run_quality_audit(out_dir: Path) -> dict:
     completeness = _compute_completeness(FIXTURE_PAYLOADS, raw_records, audit_out)
 
     # R1-3: freshness per source from real records + P14-A policy
-    fresh_per_source = _compute_freshness_per_record(raw_records, RESEARCH_END_T)
+    fresh_per_source = _compute_freshness_per_record(research, RESEARCH_END_T)
 
     # source health using real fresh/stale/unresolved counts
     source_health_out = {}
@@ -468,8 +473,13 @@ def run_quality_audit(out_dir: Path) -> dict:
                 if r.source == src_entry["source"] and r.source_id == src_entry["source_id"]:
                     src_entry["event_time"] = r.event_time
                     src_entry["ingested_at"] = r.ingested_at
-                    src_entry["record_id"] = r.record_id()
+                    src_entry["ingestion_id"] = r.ingestion_id
                     src_entry["raw_payload_hash"] = r.raw_payload_hash
+                    src_entry["provenance"] = {
+                        "source": r.source, "source_id": r.source_id,
+                        "ingested_at": r.ingested_at,
+                        "adapter_version": r.adapter_version,
+                    }
                     break
     (out_dir / "reconciliation.json").write_text(
         json.dumps(recon, sort_keys=True, indent=1, ensure_ascii=False),
