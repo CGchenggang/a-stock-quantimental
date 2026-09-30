@@ -1020,3 +1020,61 @@ Required next step:
    - rerun exact-HEAD CI, Golden, full pytest, P13-M and deterministic double-run.
 
 P14-C Production Implementation remains blocked. P14-D remains blocked.
+
+## P14-C Contract Repair — CI Gate Repair — 2026-10-01
+
+Response to the Contract Repair verdict (`9c8c106`): contract semantics PASS, scope PASS, closure PASS; sole blocker = exact-HEAD CI evidence (CI_GATE_BLOCKER). This round is CI/status-synchronization only.
+
+### Exact-HEAD CI evidence for `38bbf82340fd22fd196ea97639ce014e2bf15033`
+
+A real GitHub Actions run for the exact Contract Repair HEAD **exists**:
+
+- workflow `tests`, run `36752429513` (event: push, completed)
+  - https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36752429513
+- pytest job `110014139560`: completed / failure — the ONLY failing step is
+  "Full pytest suite"; locally reproduced on the identical tree as
+  `435 passed, 2 failed`, the 2 failures being exactly the Golden
+  contract-hash pin pair (`test_anticheat_contract_pinned` +
+  `test_all_checks_green`), i.e. the documented expected anti-drift
+  behavior until the sanctioned Golden Re-freeze (per the verdict's own
+  non-blocking observation). No unexpected failures.
+- p13m job `110014139754`: completed / **success** ("P13-M pooled industry regression")
+- Re-verification endpoints that return this run:
+  - `GET /repos/CGchenggang/a-stock-quantimental/actions/runs?head_sha=38bbf82340fd22fd196ea97639ce014e2bf15033`
+  - `GET /repos/CGchenggang/a-stock-quantimental/commits/38bbf82340fd22fd196ea97639ce014e2bf15033/check-runs`
+  - Note: the legacy combined-status endpoint does not include Actions
+    check runs; a transient GitHub connectivity outage window also
+    coincided with the original query (pushes from this workspace failed
+    during the same window).
+
+### CI-only repair commit (this round)
+
+- `7d00b1c` (parent `9c8c106`, tree-descendant of `38bbf823`): adds one
+  explicit workflow step "Contract Harness audit (P14-C)" running
+  `python scripts/audit_p14c_contract.py` (exit-code gated, JSON in job
+  log), so every run exposes an individually inspectable harness result
+  instead of an implicit one inside the full suite. No test was removed,
+  deselected, weakened, or replaced by print-only.
+- Its run: workflow `tests`, run `36782824995`
+  (https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36782824995)
+  - pytest job `110117027438`: "Contract Harness audit (P14-C)" →
+    **success** (harness PASS 0 hard / 0 soft, 61/61/61 closure);
+    "P13-M pooled industry regression" step → success;
+    "Full pytest suite" → failure (same two expected Golden pin tests, nothing else)
+  - p13m job `110117027669`: success
+
+### Local verification on this HEAD (corroborating only)
+
+- `python scripts/audit_p14c_contract.py` → exit 0, PASS, 0 hard + 0 soft, 61/61/61
+- `python -m pytest -q -ra tests/contracts/p14c/` → 88 passed, 2 failed (the pin pair only)
+- `python -m pytest -q -ra` → 435 passed, 2 failed (same pair), 2 warnings
+- `python -m pytest -q -ra tests/test_industry_relative.py` → 3 passed
+- `python -m pytest -q -ra tests/test_industry.py tests/test_import_cninfo_industry_membership.py` → 11 passed
+
+### Gates
+
+Diff `38bbf823..HEAD`: only `.github/workflows/tests.yml` + `docs/PROJECT_STATUS.md`. Contract (`c217f6b9…167b`), Matrix (`fc99637a…636`), Golden, Harness script/tests, src, data all unchanged. P13-T STOPPED / NOT EXECUTED; P13-U intact; `research_end = 2026-09-22`, `virgin_start = 2026-09-23` unchanged. Golden Re-freeze NOT started (next gated stage after independent acceptance).
+
+Stopping here; awaiting independent acceptance.
+
+P14-D remains blocked.
