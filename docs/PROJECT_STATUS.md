@@ -98,7 +98,6 @@ P13-T may only execute against a genuine virgin temporal holdout after the bound
 P14-A used deterministic fixtures only. No production alpha factor or policy was changed.
 
 **Reproducibility note:** `data/industry/` is intentionally ignored by `.gitignore`, so generated P13/P14 local data artifacts are not part of the GitHub commit. Acceptance therefore distinguishes source/CI verification from local data-state evidence.
-
 ## Frozen Parameters
 
 - `RESEARCH_END = 2026-09-22`
@@ -198,7 +197,6 @@ Information-to-research integration:
 - no policy/calibration mutation.
 
 ### P14-G — planned
-
 Agent-facing information interface:
 - auditable retrieval;
 - provenance citations;
@@ -299,7 +297,6 @@ Independently verified against HEAD `98bfe54bc76e0511e66feb57768b6456c9bf612a`:
 
 **Required repair before re-acceptance:** persist ingestion-attempt audit events (including at minimum DUPLICATE and RAW_MUTATION_DETECTED, with source/source_id/revision, incoming payload hash, stored hash when applicable, ingestion_id, adapter_version, outcome, and deterministic audit metadata) in an append-only durable audit representation; reload must reconstruct the audit history; add restart/reload tests proving the evidence survives process boundaries; preserve byte-identical deterministic replay; keep accepted raw records immutable; keep P13-U/P14-A boundaries unchanged; rerun full CI and provide updated P14B docs. Do not start P14-C until this repair is independently accepted.
 
-
 ## P14-B Independent Re-acceptance — 2026-09-30
 
 **Decision: PASS.**
@@ -397,7 +394,6 @@ R2 repair implemented: real completeness (expected/actual entities+dates with co
 **Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-D.**
 
 Independently re-audited current HEAD `63487fdc3bcd014bd98a86eea0545cf8d7415e09` against P14-B accepted baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
-
 Blocking findings:
 1. The R2 script declares `EXPECTED_CONTRACT`, but `_compute_completeness()` derives expected entities/dates from the actual fixture payloads instead of consuming an explicit expected contract. Therefore the expected set is not independent of the observed data and cannot detect a missing entity/date caused by ingestion failure. The `broken_source` entry also has no actual adapter path in `_payload_adapters()`; it is not exercised by the ingestion/evidence chain.
 2. The required durable SOURCE_ERROR/PARSE_FAILURE evidence chain is not demonstrated by the inspected final audit path. The script comments claim a broken source and parse failure, but the adapter map only contains the four normal fixture adapters; the declared broken/empty fixture is not actually ingested through that map. This remains a fixture-coverage/evidence problem, not a vocabulary problem.
@@ -488,6 +484,39 @@ Accepted P14-B baseline: `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
 - Update docs/P14C_ACCEPTANCE.md to exactly match the current implementation and actual 84021d6..HEAD diff; explicitly justify any P14-B source change required by P14-C.
 - Run clean-directory audit twice and compare deterministic artifacts byte-for-byte; run python -m pytest -q -ra locally.
 - Keep P13-U boundary research_end=2026-09-22, virgin_start=2026-09-23; keep P13-T STOPPED/NOT EXECUTED; no factor/policy/calibration/recommendation/production-alpha changes.
+- Stop after repair and await independent acceptance. Do not start P14-D.
+
+P14-D remains blocked.
+
+## P14-C-R5 Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-D.**
+
+Independently audited the latest P14-C-R5 implementation HEAD `f7bd995129721d5547dcd4e63b0377dc0d3bb012` against the accepted P14-B baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Positive findings
+
+- R5 does introduce dedicated fixture paths for SOURCE_ERROR, PARSE_FAILURE, SOURCE_EMPTY and an explicit expected entity/date contract.
+- A real missing-date regression now asserts that the fixed contract remains unchanged, `2026-03-04` is reported as missing, and coverage is below 1.0.
+- Final-artifact tests cover reconciliation provenance/timestamps, stale evidence and deterministic manifests.
+- P13-U boundary remains `research_end=2026-09-22`, `virgin_start=2026-09-23`; no P13-T execution or factor/policy/calibration/recommendation promotion was observed.
+
+### Blocking findings
+
+1. **No independently verifiable GitHub Actions result for the final R5 HEAD.** `fetch_commit_workflow_runs` returns `workflow_runs: []`, and combined commit status is empty for `f7bd995...`. Therefore the required final CI evidence cannot be accepted. The workflow definition does contain full pytest and P13-M jobs, but there is no run/job/step evidence for this commit.
+2. **EXPECTED_ABSENCE is still conflated with SOURCE_ERROR on the same fixture/source.** `broken_source` is a BrokenSourceAdapter that raises SOURCE_ERROR, while its EXPECTED_CONTRACT entry also sets `expected_absence=True`. The R5 test explicitly asserts both properties. This violates the R5 requirement that incompatible anomaly semantics be represented by separate deterministic fixtures/contracts. The classifier priority merely hides the semantic collision; it does not make the evidence contract clean.
+3. **SOURCE_EMPTY is not represented by a durable ingestion evidence event.** The R5 test accepts the absence of any raw audit event for `source_empty_source` and infers SOURCE_EMPTY from the adapter report/completeness artifact. That can be a valid source-level observation, but it does not satisfy the stronger end-to-end evidence-chain standard previously required for failure/empty anomalies unless the adapter-level EMPTY_SUCCESS observation itself is explicitly persisted/audited. At minimum, the final contract should state and test whether SOURCE_EMPTY is an adapter observation or a durable ingestion event, rather than silently treating “no audit events” as proof.
+4. **Acceptance documentation is still stale relative to the final implementation.** `docs/P14C_ACCEPTANCE.md` describes “10 deterministic fixtures” and still states `git diff 84021d6..HEAD -- src/astock_v2 = 空`, while the actual compare from the accepted P14-B baseline contains `src/astock_v2/information/__init__.py` and `raw_store.py` changes in addition to the new P14-C modules/tests. The raw-store freshness-policy propagation may be legitimate, but the acceptance document must describe and justify it accurately.
+
+### Required R6 repair
+
+- Do not add P14-D or new P14-C functionality.
+- Push a final commit and obtain a real GitHub Actions run for that exact HEAD; independently inspect workflow → job → step evidence for the pytest job, P13-M regression and Full pytest suite.
+- Split EXPECTED_ABSENCE onto its own dedicated deterministic source/fixture. `broken_source` must represent SOURCE_ERROR only; no source may carry both SOURCE_ERROR and EXPECTED_ABSENCE semantics.
+- Decide and document the SOURCE_EMPTY evidence contract. Prefer an explicit durable adapter/source-observation event (for example EMPTY_SUCCESS) in the audit artifact, and add an E2E assertion for that event; do not use “no raw events exist” as the sole proof of SOURCE_EMPTY.
+- Update `docs/P14C_ACCEPTANCE.md` to match the exact R5/R6 implementation and actual `84021d6..HEAD` diff, including justification for any `raw_store.py` change.
+- Run `python -m pytest -q -ra`, clean-directory double-run determinism, and remove generated artifacts.
+- Preserve P13-U/P13-T boundaries and make no factor/policy/calibration/recommendation/production-alpha changes.
 - Stop after repair and await independent acceptance. Do not start P14-D.
 
 P14-D remains blocked.
