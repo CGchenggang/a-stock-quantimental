@@ -556,3 +556,31 @@ Independently reviewed current HEAD `a3f22a894e7de3c7b8c520bd65de28cba5034b05` a
 - Stop after the documentation-only repair and await independent Contract review. Do not write Golden Tests yet.
 
 P14-D remains blocked.
+## P14-C Contract Repair Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Contract is NOT frozen. Do not start Golden Tests.**
+
+Independently reviewed Repair HEAD `9a5d399750eba4fbbd472f55e6a5f9a15fc43e7e` against accepted P14-B baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Positive findings
+- SOURCE_EMPTY now has an explicit durable evidence model in `raw_ingestion_audit.jsonl`, including restart/replay semantics and separation from canonical raw records.
+- Fixture-only `expected_empty` was removed from the EXPECTED_CONTRACT structure.
+- Revision Integrity, nine quality dimensions, and separate record-vs-observation provenance are now formally documented.
+- Completeness defines entity/date/pair sets and an explicit denominator rule.
+- Repair diff is documentation-only: the compare from `a3f22a8` to `9a5d399` changes only `docs/PROJECT_STATUS.md`, `docs/contracts/P14-C-DESIGN-CONTRACT.md`, and `docs/contracts/P14-C-ACCEPTANCE-MATRIX.md`.
+- P13-U/P13-T boundaries remain explicitly protected.
+
+### Remaining blocking findings
+
+1. **EXPECTED_ABSENCE remains internally contradictory.** Section 8.2 correctly removes `expected_absence` from EXPECTED_CONTRACT, but §9.3 still says EXPECTED_CONTRACT may declare `expected_absence = True`, and §9.4/INV-COMP-005 still refer to such declarations. The repaired contract therefore still has two incompatible schemas for the same authoritative object. Freeze one model only; the preferred model is to keep EXPECTED_CONTRACT as expected_entities/expected_dates and represent intentional absence through a separate explicit expected-absence pair/set, with exact denominator semantics.
+
+2. **Contract ID ↔ Acceptance Matrix traceability is still not bidirectionally closed.** The Matrix uses IDs such as `P14C-REV-001`, while the Design Contract defines revision invariants as `REV-001` through `REV-005`, not the same Contract IDs. More broadly, the Design Contract contains explicit invariants such as `INV-EVID-004/005`, `INV-COMP-005`, `INV-TS-001..004`, `INV-REV-004/005`, `INV-DUP-001..004`, and `INV-PROV-A/B-001` without corresponding Matrix rows. Conversely, every Matrix row must map to an explicitly named invariant in the Design Contract. The stated bidirectional traceability invariant is therefore not yet satisfied.
+
+### Required Contract Repair R2
+- Resolve EXPECTED_ABSENCE into one authoritative, internally consistent representation; remove every stale reference to `expected_absence` as a field of EXPECTED_CONTRACT unless that field is deliberately reinstated with a precise mixed-required/mixed-absent pair schema.
+- Assign one canonical Contract ID to every Design Contract invariant and use exactly the same ID in the Acceptance Matrix. No aliases such as `REV-001` vs `P14C-REV-001`.
+- Add a Matrix row for every explicit Design Contract invariant, including the currently unmapped Evidence, Timestamp, Completeness, Revision, Duplicate/Conflict and Provenance invariants; ensure every Matrix row points to a defined invariant.
+- Keep this repair documentation-only. Do not create Golden Tests, modify `src/`, `tests/`, data, P13-T/U, factors, policy, calibration, or recommendation logic.
+- After repair, stop and await independent acceptance again.
+
+P14-D remains blocked.
