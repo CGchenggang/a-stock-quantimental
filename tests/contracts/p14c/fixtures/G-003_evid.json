@@ -1,0 +1,58 @@
+{
+ "golden_id": "P14C-GOLD-003",
+ "domain": "EVID",
+ "title": "failure evidence is durable, never memory-only",
+ "contract_ids": [
+  "P14C-EVID-003"
+ ],
+ "matrix_ids": [
+  "P14C-EVID-003"
+ ],
+ "input": {
+  "raw_records": [],
+  "observations": [
+   {
+    "observation_type": "SOURCE_ERROR",
+    "source": "public_event_feed",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "error": "auth 401"
+   },
+   {
+    "observation_type": "PARSE_FAILURE",
+    "source": "company_announcement",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "source_id": "ann-001",
+    "error": "payload not JSON"
+   },
+   {
+    "observation_type": "SOURCE_EMPTY",
+    "source": "industry_classification",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "observation_audit_outcomes": [
+   "SOURCE_ERROR",
+   "REJECTED",
+   "SOURCE_EMPTY"
+  ],
+  "audit_outcome_sequence_after_restart": [
+   "SOURCE_ERROR",
+   "REJECTED",
+   "SOURCE_EMPTY"
+  ],
+  "canonical_record_count_after_restart": 0
+ },
+ "evidence": {
+  "restart_recovery": true,
+  "failure_kinds_durable": [
+   "SOURCE_ERROR",
+   "PARSE_FAILURE",
+   "SOURCE_EMPTY"
+  ]
+ }
+}

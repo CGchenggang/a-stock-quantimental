@@ -1,0 +1,79 @@
+{
+ "golden_id": "P14C-GOLD-006",
+ "domain": "MISS",
+ "title": "six missingness classes are mutually exclusive",
+ "contract_ids": [
+  "P14C-MISS-001"
+ ],
+ "matrix_ids": [
+  "P14C-MISS-001"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000"
+    ],
+    "expected_dates": [
+     "2026-03-02"
+    ]
+   }
+  },
+  "observations": [
+   {
+    "observation_type": "SOURCE_ERROR",
+    "source": "public_event_feed",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "error": "reset"
+   },
+   {
+    "observation_type": "PARSE_FAILURE",
+    "source": "company_announcement",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "source_id": "a",
+    "error": "bad json"
+   },
+   {
+    "observation_type": "SOURCE_EMPTY",
+    "source": "industry_classification",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ],
+  "declared_cases_note": "six abstract cases; concrete inputs live in fixtures 7-11"
+ },
+ "expected": {
+  "classifications": [
+   {
+    "case": "obs_source_error",
+    "missingness": "SOURCE_ERROR"
+   },
+   {
+    "case": "obs_parse_failure",
+    "missingness": "PARSE_FAILURE"
+   },
+   {
+    "case": "obs_source_empty",
+    "missingness": "SOURCE_EMPTY"
+   },
+   {
+    "case": "declared_intentional_absence",
+    "missingness": "EXPECTED_ABSENCE"
+   },
+   {
+    "case": "expected_but_absent",
+    "missingness": "UNEXPECTED_MISSING"
+   },
+   {
+    "case": "available_time_null",
+    "missingness": "UNRESOLVED_AVAILABILITY"
+   }
+  ],
+  "each_case_exactly_one_class": true,
+  "classes_all_distinct": true
+ },
+ "evidence": {}
+}

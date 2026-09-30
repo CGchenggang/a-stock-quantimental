@@ -1,0 +1,24 @@
+{
+ "golden_id": "P14C-GOLD-054",
+ "domain": "DET",
+ "title": "deterministic outputs contain no runtime timestamp / random UUID / machine path",
+ "contract_ids": [
+  "P14C-DET-002"
+ ],
+ "matrix_ids": [
+  "P14C-DET-002"
+ ],
+ "input": {},
+ "expected": {
+  "forbidden_patterns": [
+   "generated_at",
+   "uuid",
+   "machine_path",
+   "C:\\",
+   "/home/",
+   "time.now"
+  ],
+  "golden_report_is_deterministic": true
+ },
+ "evidence": {}
+}

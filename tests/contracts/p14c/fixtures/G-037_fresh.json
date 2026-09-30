@@ -1,0 +1,39 @@
+{
+ "golden_id": "P14C-GOLD-037",
+ "domain": "FRESH",
+ "title": "freshness policy is frozen infrastructure, not an alpha threshold",
+ "contract_ids": [
+  "P14C-FRESH-003"
+ ],
+ "matrix_ids": [
+  "P14C-FRESH-003"
+ ],
+ "input": {
+  "decision_time": "2026-03-03T15:00:00+08:00",
+  "info_records": [
+   {
+    "source": "company_announcement",
+    "source_id": "a-1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "announcement_72h"
+   }
+  ]
+ },
+ "expected": {
+  "freshness": {
+   "a-1": "FRESH"
+  },
+  "policy_id": "announcement_72h",
+  "policy_registry": "P14-A FRESHNESS_POLICIES",
+  "alpha_threshold_forbidden": true
+ },
+ "evidence": {}
+}

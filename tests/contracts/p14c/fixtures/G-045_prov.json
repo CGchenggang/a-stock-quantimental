@@ -1,0 +1,53 @@
+{
+ "golden_id": "P14C-GOLD-045",
+ "domain": "PROV",
+ "title": "record provenance (Type A) contains raw_payload_hash and ingestion_id",
+ "contract_ids": [
+  "P14C-PROV-A-001"
+ ],
+ "matrix_ids": [
+  "P14C-PROV-A-001"
+ ],
+ "input": {
+  "raw_records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-prov",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 10.0
+    },
+    "adapter_version": "fixture-adapter-v1",
+    "value": 10.0
+   }
+  ]
+ },
+ "expected": {
+  "put_outcomes": [
+   "ACCEPTED"
+  ],
+  "record_provenance_fields_required": [
+   "source",
+   "source_id",
+   "raw_payload_hash",
+   "ingestion_id",
+   "adapter_version",
+   "event_time",
+   "available_time",
+   "ingested_at"
+  ],
+  "applies_to": [
+   "canonical record",
+   "duplicate",
+   "mutation",
+   "reconciliation record"
+  ]
+ },
+ "evidence": {}
+}

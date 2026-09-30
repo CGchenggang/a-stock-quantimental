@@ -1,0 +1,78 @@
+{
+ "golden_id": "P14C-GOLD-057",
+ "domain": "RR",
+ "title": "replay creates no new canonical record",
+ "contract_ids": [
+  "P14C-RR-002"
+ ],
+ "matrix_ids": [
+  "P14C-RR-002"
+ ],
+ "input": {
+  "raw_records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-600000-0302",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 10.0
+    },
+    "adapter_version": "fixture-adapter-v1",
+    "symbol": "600000",
+    "value": 10.0,
+    "unit": "CNY"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-600000-0302",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 10.0
+    },
+    "adapter_version": "fixture-adapter-v1",
+    "symbol": "600000",
+    "value": 10.0,
+    "unit": "CNY"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-600000-0302",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 10.0
+    },
+    "adapter_version": "fixture-adapter-v1",
+    "symbol": "600000",
+    "value": 10.0,
+    "unit": "CNY"
+   }
+  ]
+ },
+ "expected": {
+  "put_outcomes": [
+   "ACCEPTED",
+   "DUPLICATE",
+   "DUPLICATE"
+  ],
+  "canonical_record_count": 1
+ },
+ "evidence": {}
+}

@@ -1,0 +1,50 @@
+{
+ "golden_id": "P14C-GOLD-012",
+ "domain": "EXP",
+ "title": "expected set is defined a priori, independent of payload",
+ "contract_ids": [
+  "P14C-EXP-001"
+ ],
+ "matrix_ids": [
+  "P14C-EXP-001"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000",
+     "600001",
+     "600002"
+    ],
+    "expected_dates": [
+     "2026-03-02",
+     "2026-03-03"
+    ]
+   }
+  },
+  "actual_pairs": [
+   [
+    "600000",
+    "2026-03-02"
+   ]
+  ]
+ },
+ "expected": {
+  "expected_entities_frozen": [
+   "600000",
+   "600001",
+   "600002"
+  ],
+  "expected_dates_frozen": [
+   "2026-03-02",
+   "2026-03-03"
+  ],
+  "entities_in_expected_but_not_in_actual": [
+   "600001",
+   "600002"
+  ],
+  "expected_set_defined_before_audit": true
+ },
+ "evidence": {}
+}

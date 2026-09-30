@@ -1,0 +1,43 @@
+{
+ "golden_id": "P14C-GOLD-013",
+ "domain": "EXP",
+ "title": "ingestion failure does not change EXPECTED_CONTRACT",
+ "contract_ids": [
+  "P14C-EXP-002"
+ ],
+ "matrix_ids": [
+  "P14C-EXP-002"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "macro_pmi_cn": {
+    "expected_entities": [
+     "PMI_CN"
+    ],
+    "expected_dates": [
+     "2026-03-31"
+    ]
+   }
+  },
+  "observations": [
+   {
+    "observation_type": "SOURCE_ERROR",
+    "source": "macro_pmi_cn",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "error": "connection reset"
+   }
+  ]
+ },
+ "expected": {
+  "expected_entities_after_failure": [
+   "PMI_CN"
+  ],
+  "expected_dates_after_failure": [
+   "2026-03-31"
+  ],
+  "expected_contract_unchanged": true
+ },
+ "evidence": {}
+}

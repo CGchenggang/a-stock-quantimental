@@ -1,0 +1,28 @@
+{
+ "golden_id": "P14C-GOLD-023",
+ "domain": "TS",
+ "title": "ingested_at never substitutes for available_time",
+ "contract_ids": [
+  "P14C-TS-003"
+ ],
+ "matrix_ids": [
+  "P14C-TS-003"
+ ],
+ "input": {
+  "decision_time": "2026-03-04T15:00:00+08:00",
+  "ts_records": [
+   {
+    "key": "late_ingest",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-03T15:00:00+08:00",
+    "ingested_at": "2026-03-05T16:00:00+08:00"
+   }
+  ]
+ },
+ "expected": {
+  "pit_admissible": true,
+  "admissibility_uses": "available_time",
+  "ingested_at_used_for_admissibility": false
+ },
+ "evidence": {}
+}

@@ -1,0 +1,44 @@
+{
+ "golden_id": "P14C-GOLD-005",
+ "domain": "EVID",
+ "title": "SOURCE_ERROR and parse REJECTED outcomes are distinguishable",
+ "contract_ids": [
+  "P14C-EVID-005"
+ ],
+ "matrix_ids": [
+  "P14C-EVID-005"
+ ],
+ "input": {
+  "raw_records": [],
+  "observations": [
+   {
+    "observation_type": "SOURCE_ERROR",
+    "source": "public_event_feed",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "error": "connection reset"
+   },
+   {
+    "observation_type": "PARSE_FAILURE",
+    "source": "company_announcement",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "source_id": "ann-002",
+    "error": "schema mismatch"
+   }
+  ]
+ },
+ "expected": {
+  "observation_audit_outcomes": [
+   "SOURCE_ERROR",
+   "REJECTED"
+  ],
+  "outcomes_distinct": true
+ },
+ "evidence": {
+  "distinct_outcome_fields": [
+   "SOURCE_ERROR",
+   "REJECTED"
+  ]
+ }
+}

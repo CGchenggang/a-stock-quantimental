@@ -1,0 +1,53 @@
+{
+ "golden_id": "P14C-GOLD-016",
+ "domain": "COMP",
+ "title": "complete data yields coverage 1.0 (G-001)",
+ "contract_ids": [
+  "P14C-COMP-001"
+ ],
+ "matrix_ids": [
+  "P14C-COMP-001"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000",
+     "600001"
+    ],
+    "expected_dates": [
+     "2026-03-02",
+     "2026-03-03"
+    ]
+   }
+  },
+  "actual_pairs": [
+   [
+    "600000",
+    "2026-03-02"
+   ],
+   [
+    "600000",
+    "2026-03-03"
+   ],
+   [
+    "600001",
+    "2026-03-02"
+   ],
+   [
+    "600001",
+    "2026-03-03"
+   ]
+  ]
+ },
+ "expected": {
+  "expected_count": 4,
+  "actual_count": 4,
+  "missing_entities": [],
+  "missing_dates": [],
+  "missing_pairs": [],
+  "coverage_ratio": 1.0
+ },
+ "evidence": {}
+}

@@ -1,0 +1,51 @@
+{
+ "golden_id": "P14C-GOLD-018",
+ "domain": "COMP",
+ "title": "denominator comes from expected set, not actual payload",
+ "contract_ids": [
+  "P14C-COMP-003"
+ ],
+ "matrix_ids": [
+  "P14C-COMP-003"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000",
+     "600001",
+     "600002",
+     "600003"
+    ],
+    "expected_dates": [
+     "2026-03-02"
+    ]
+   }
+  },
+  "actual_pairs": [
+   [
+    "600000",
+    "2026-03-02"
+   ],
+   [
+    "600001",
+    "2026-03-02"
+   ],
+   [
+    "600003",
+    "2026-03-02"
+   ]
+  ]
+ },
+ "expected": {
+  "expected_count": 4,
+  "actual_count": 3,
+  "missing_entities": [
+   "600002"
+  ],
+  "coverage_ratio": 0.75,
+  "denominator_source": "expected_contract"
+ },
+ "evidence": {}
+}

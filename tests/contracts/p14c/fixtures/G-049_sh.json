@@ -1,0 +1,31 @@
+{
+ "golden_id": "P14C-GOLD-049",
+ "domain": "SH",
+ "title": "STALE when freshness aggregation is majority stale",
+ "contract_ids": [
+  "P14C-SH-003"
+ ],
+ "matrix_ids": [
+  "P14C-SH-003"
+ ],
+ "input": {
+  "metrics": {
+   "attempted": 4,
+   "accepted": 4,
+   "errors": 0,
+   "mutations": 0,
+   "rejected": 0,
+   "stale": 3,
+   "fresh": 1,
+   "coverage_ratio": 1.0
+  }
+ },
+ "expected": {
+  "health": "STALE",
+  "evidence_used": [
+   "freshness aggregation"
+  ],
+  "hardcoded_counts_forbidden": true
+ },
+ "evidence": {}
+}

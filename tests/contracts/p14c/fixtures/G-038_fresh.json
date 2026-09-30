@@ -1,0 +1,59 @@
+{
+ "golden_id": "P14C-GOLD-038",
+ "domain": "FRESH",
+ "title": "FRESH / STALE / UNRESOLVED evidence all produced",
+ "contract_ids": [
+  "P14C-FRESH-004"
+ ],
+ "matrix_ids": [
+  "P14C-FRESH-004"
+ ],
+ "input": {
+  "decision_time": "2026-03-03T15:00:00+08:00",
+  "info_records": [
+   {
+    "source": "company_announcement",
+    "source_id": "q-f",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "announcement_72h"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-s",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily"
+   }
+  ],
+  "unresolved_records": [
+   {
+    "source_id": "q-u",
+    "available_time": null
+   }
+  ]
+ },
+ "expected": {
+  "freshness": {
+   "q-f": "FRESH",
+   "q-s": "STALE",
+   "q-u": "UNRESOLVED"
+  },
+  "all_three_evidence_kinds_present": true
+ },
+ "evidence": {}
+}

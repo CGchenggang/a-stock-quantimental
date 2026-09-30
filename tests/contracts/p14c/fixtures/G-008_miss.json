@@ -1,0 +1,44 @@
+{
+ "golden_id": "P14C-GOLD-008",
+ "domain": "MISS",
+ "title": "PARSE_FAILURE is not SOURCE_ERROR",
+ "contract_ids": [
+  "P14C-MISS-003"
+ ],
+ "matrix_ids": [
+  "P14C-MISS-003"
+ ],
+ "input": {
+  "observations": [
+   {
+    "observation_type": "SOURCE_ERROR",
+    "source": "public_event_feed",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "error": "dns failure"
+   },
+   {
+    "observation_type": "PARSE_FAILURE",
+    "source": "company_announcement",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "source_id": "ann-003",
+    "error": "unexpected token"
+   }
+  ]
+ },
+ "expected": {
+  "classifications": [
+   {
+    "case": "fetch_error",
+    "missingness": "SOURCE_ERROR"
+   },
+   {
+    "case": "parse_error",
+    "missingness": "PARSE_FAILURE"
+   }
+  ],
+  "parse_not_downgraded_to_source_error": true
+ },
+ "evidence": {}
+}

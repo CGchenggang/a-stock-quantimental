@@ -1,0 +1,37 @@
+{
+ "golden_id": "P14C-GOLD-021",
+ "domain": "TS",
+ "title": "event_time / available_time / ingested_at stay semantically separate",
+ "contract_ids": [
+  "P14C-TS-001"
+ ],
+ "matrix_ids": [
+  "P14C-TS-001"
+ ],
+ "input": {
+  "reference_time": "2026-03-06T15:00:00+08:00",
+  "ts_records": [
+   {
+    "key": "r1",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "ingested_at": "2026-03-02T16:00:00+08:00"
+   },
+   {
+    "key": "r2",
+    "event_time": "2026-03-03T15:00:00+08:00",
+    "available_time": "2026-03-03T15:00:00+08:00",
+    "ingested_at": "2026-03-04T16:00:00+08:00"
+   }
+  ]
+ },
+ "expected": {
+  "issues": [],
+  "fields_independently_checked": [
+   "event_time",
+   "available_time",
+   "ingested_at"
+  ]
+ },
+ "evidence": {}
+}

@@ -1,0 +1,60 @@
+{
+ "golden_id": "P14C-GOLD-041",
+ "domain": "RECON",
+ "title": "conflicting values preserved verbatim",
+ "contract_ids": [
+  "P14C-RECON-003"
+ ],
+ "matrix_ids": [
+  "P14C-RECON-003"
+ ],
+ "input": {
+  "recon_group": {
+   "policy": {
+    "policy_id": "recon-closepx-v1",
+    "policy_version": "1",
+    "abs_tolerance": 0.1
+   },
+   "entries": [
+    {
+     "source": "cn_stock_quote",
+     "source_id": "q-a",
+     "value": 100.0,
+     "event_time": "2026-03-02T15:00:00+08:00",
+     "available_time": "2026-03-02T16:00:00+08:00",
+     "ingested_at": "2026-03-02T16:00:00+08:00",
+     "ingestion_id": "ing-q-a",
+     "raw_payload_hash": "h-q-a"
+    },
+    {
+     "source": "us_index_daily",
+     "source_id": "u-a",
+     "value": 101.0,
+     "event_time": "2026-03-02T15:00:00+08:00",
+     "available_time": "2026-03-02T16:00:00+08:00",
+     "ingested_at": "2026-03-02T16:00:00+08:00",
+     "ingestion_id": "ing-u-a",
+     "raw_payload_hash": "h-u-a"
+    }
+   ]
+  }
+ },
+ "expected": {
+  "status": "CONFLICT",
+  "preserved_values": [
+   100.0,
+   101.0
+  ],
+  "entry_fields_required": [
+   "source",
+   "source_id",
+   "value",
+   "event_time",
+   "available_time",
+   "ingested_at",
+   "ingestion_id",
+   "raw_payload_hash"
+  ]
+ },
+ "evidence": {}
+}

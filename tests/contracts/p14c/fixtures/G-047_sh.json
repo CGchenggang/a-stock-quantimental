@@ -1,0 +1,28 @@
+{
+ "golden_id": "P14C-GOLD-047",
+ "domain": "SH",
+ "title": "OK when no anomaly conditions hold",
+ "contract_ids": [
+  "P14C-SH-001"
+ ],
+ "matrix_ids": [
+  "P14C-SH-001"
+ ],
+ "input": {
+  "metrics": {
+   "attempted": 2,
+   "accepted": 2,
+   "errors": 0,
+   "mutations": 0,
+   "rejected": 0,
+   "stale": 0,
+   "fresh": 0,
+   "coverage_ratio": 1.0
+  }
+ },
+ "expected": {
+  "health": "OK",
+  "deterministic_from_metrics": true
+ },
+ "evidence": {}
+}

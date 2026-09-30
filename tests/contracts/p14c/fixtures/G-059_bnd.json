@@ -1,0 +1,19 @@
+{
+ "golden_id": "P14C-GOLD-059",
+ "domain": "BND",
+ "title": "RESEARCH_END frozen at 2026-09-22",
+ "contract_ids": [
+  "P14C-BND-001"
+ ],
+ "matrix_ids": [
+  "P14C-BND-001"
+ ],
+ "input": {
+  "max_decision_time_in_fixtures": "2026-03-06T15:00:00+08:00"
+ },
+ "expected": {
+  "RESEARCH_END": "2026-09-22",
+  "authority": "src/astock_v2/research_boundary.py"
+ },
+ "evidence": {}
+}

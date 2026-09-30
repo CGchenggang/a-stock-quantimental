@@ -1,0 +1,38 @@
+{
+ "golden_id": "P14C-GOLD-036",
+ "domain": "FRESH",
+ "title": "stale via P14-A policy, not a hardcoded count",
+ "contract_ids": [
+  "P14C-FRESH-002"
+ ],
+ "matrix_ids": [
+  "P14C-FRESH-002"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "info_records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-2",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily"
+   }
+  ]
+ },
+ "expected": {
+  "freshness": {
+   "q-2": "STALE"
+  },
+  "policy_id": "market_daily",
+  "computed_from_policy_max_age": true
+ },
+ "evidence": {}
+}

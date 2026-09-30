@@ -1,0 +1,55 @@
+{
+ "golden_id": "P14C-GOLD-028",
+ "domain": "REV",
+ "title": "same revision with different payload is RAW_MUTATION_DETECTED",
+ "contract_ids": [
+  "P14C-REV-003"
+ ],
+ "matrix_ids": [
+  "P14C-REV-003"
+ ],
+ "input": {
+  "raw_records": [
+   {
+    "source": "company_announcement",
+    "source_id": "ann-102",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "t": "orig"
+    },
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "company_announcement",
+    "source_id": "ann-102",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "t": "MUTATED"
+    },
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "put_outcomes": [
+   "ACCEPTED",
+   "RAW_MUTATION_DETECTED"
+  ],
+  "canonical_record_count": 1,
+  "original_payload_preserved": true,
+  "mutation_is_anomaly": true
+ },
+ "evidence": {}
+}

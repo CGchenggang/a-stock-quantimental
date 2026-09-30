@@ -1,0 +1,71 @@
+{
+ "golden_id": "P14C-GOLD-056",
+ "domain": "RR",
+ "title": "process restart loses no durable audit evidence",
+ "contract_ids": [
+  "P14C-RR-001"
+ ],
+ "matrix_ids": [
+  "P14C-RR-001"
+ ],
+ "input": {
+  "raw_records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-600000-0302",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 10.0
+    },
+    "adapter_version": "fixture-adapter-v1",
+    "symbol": "600000",
+    "value": 10.0,
+    "unit": "CNY"
+   },
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "pmi-202603",
+    "source_category": "MACRO",
+    "entity_id": "PMI_CN",
+    "entity_type": "macro",
+    "event_time": "2026-03-03T15:00:00+08:00",
+    "available_time": "2026-03-03T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-03T16:00:00+08:00",
+    "raw_payload": {
+     "pmi": 50.2
+    },
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ],
+  "observations": [
+   {
+    "observation_type": "SOURCE_ERROR",
+    "source": "public_event_feed",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "error": "reset"
+   }
+  ]
+ },
+ "expected": {
+  "put_outcomes": [
+   "ACCEPTED",
+   "ACCEPTED"
+  ],
+  "audit_outcome_sequence_after_restart": [
+   "ACCEPTED",
+   "ACCEPTED",
+   "SOURCE_ERROR"
+  ],
+  "canonical_record_count_after_restart": 2,
+  "restart_recovery": true
+ },
+ "evidence": {}
+}

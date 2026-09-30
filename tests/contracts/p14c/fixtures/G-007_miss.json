@@ -1,0 +1,53 @@
+{
+ "golden_id": "P14C-GOLD-007",
+ "domain": "MISS",
+ "title": "SOURCE_EMPTY is not EXPECTED_ABSENCE",
+ "contract_ids": [
+  "P14C-MISS-002"
+ ],
+ "matrix_ids": [
+  "P14C-MISS-002"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "industry_classification": {
+    "expected_entities": [
+     "SW801010"
+    ],
+    "expected_dates": [
+     "2026-03-02"
+    ],
+    "intentional_absence_pairs": [
+     [
+      "SW801040",
+      "2026-03-02"
+     ]
+    ]
+   }
+  },
+  "observations": [
+   {
+    "observation_type": "SOURCE_EMPTY",
+    "source": "industry_classification",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "source_id": "sw1-2026Q1"
+   }
+  ]
+ },
+ "expected": {
+  "classifications": [
+   {
+    "case": "empty_response_for_SW801010",
+    "missingness": "SOURCE_EMPTY"
+   },
+   {
+    "case": "declared_absence_SW801040",
+    "missingness": "EXPECTED_ABSENCE"
+   }
+  ],
+  "source_empty_not_reinterpreted": true
+ },
+ "evidence": {}
+}

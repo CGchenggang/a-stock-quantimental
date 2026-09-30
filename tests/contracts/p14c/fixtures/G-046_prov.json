@@ -1,0 +1,50 @@
+{
+ "golden_id": "P14C-GOLD-046",
+ "domain": "PROV",
+ "title": "observation provenance (Type B) carries no raw_payload_hash",
+ "contract_ids": [
+  "P14C-PROV-B-001"
+ ],
+ "matrix_ids": [
+  "P14C-PROV-B-001"
+ ],
+ "input": {
+  "observations": [
+   {
+    "observation_type": "SOURCE_EMPTY",
+    "source": "industry_classification",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "source_id": "sw1-2026Q1"
+   },
+   {
+    "observation_type": "SOURCE_ERROR",
+    "source": "public_event_feed",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "error": "reset"
+   }
+  ]
+ },
+ "expected": {
+  "observation_provenance_fields_required": [
+   "source",
+   "source_id",
+   "observation_type",
+   "observed_at",
+   "adapter_version",
+   "expected_contract_id",
+   "entity_date_pair_scope",
+   "evidence_reference"
+  ],
+  "raw_payload_hash_required": false,
+  "applies_to": [
+   "SOURCE_EMPTY",
+   "SOURCE_ERROR",
+   "PARSE_FAILURE",
+   "EXPECTED_ABSENCE",
+   "UNEXPECTED_MISSING"
+  ]
+ },
+ "evidence": {}
+}

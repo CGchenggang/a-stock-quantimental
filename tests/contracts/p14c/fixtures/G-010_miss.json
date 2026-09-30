@@ -1,0 +1,35 @@
+{
+ "golden_id": "P14C-GOLD-010",
+ "domain": "MISS",
+ "title": "UNEXPECTED_MISSING when expected non-empty but actual empty",
+ "contract_ids": [
+  "P14C-MISS-005"
+ ],
+ "matrix_ids": [
+  "P14C-MISS-005"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "macro_pmi_cn": {
+    "expected_entities": [
+     "PMI_CN"
+    ],
+    "expected_dates": [
+     "2026-03-31"
+    ]
+   }
+  },
+  "actual_pairs": []
+ },
+ "expected": {
+  "missingness": "UNEXPECTED_MISSING",
+  "missing_entities": [
+   "PMI_CN"
+  ],
+  "missing_dates": [
+   "2026-03-31"
+  ]
+ },
+ "evidence": {}
+}

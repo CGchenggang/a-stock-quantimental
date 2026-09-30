@@ -1,0 +1,79 @@
+{
+ "golden_id": "P14C-GOLD-019",
+ "domain": "COMP",
+ "title": "entity / date / pair missing sets reported at all three granularities",
+ "contract_ids": [
+  "P14C-COMP-004"
+ ],
+ "matrix_ids": [
+  "P14C-COMP-004"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000",
+     "600001",
+     "600002"
+    ],
+    "expected_dates": [
+     "2026-03-02",
+     "2026-03-03",
+     "2026-03-04"
+    ]
+   }
+  },
+  "actual_pairs": [
+   [
+    "600000",
+    "2026-03-02"
+   ],
+   [
+    "600000",
+    "2026-03-03"
+   ],
+   [
+    "600001",
+    "2026-03-02"
+   ],
+   [
+    "600001",
+    "2026-03-03"
+   ],
+   [
+    "600002",
+    "2026-03-02"
+   ]
+  ]
+ },
+ "expected": {
+  "expected_count": 9,
+  "actual_count": 5,
+  "missing_entities": [],
+  "missing_dates": [
+   "2026-03-04"
+  ],
+  "missing_pairs": [
+   [
+    "600000",
+    "2026-03-04"
+   ],
+   [
+    "600001",
+    "2026-03-04"
+   ],
+   [
+    "600002",
+    "2026-03-03"
+   ],
+   [
+    "600002",
+    "2026-03-04"
+   ]
+  ],
+  "coverage_ratio": 0.5555555555555556,
+  "three_granularities_reported": true
+ },
+ "evidence": {}
+}

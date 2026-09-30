@@ -1,0 +1,38 @@
+{
+ "golden_id": "P14C-GOLD-035",
+ "domain": "FRESH",
+ "title": "fresh via P14-A market_daily policy",
+ "contract_ids": [
+  "P14C-FRESH-001"
+ ],
+ "matrix_ids": [
+  "P14C-FRESH-001"
+ ],
+ "input": {
+  "decision_time": "2026-03-02T18:00:00+08:00",
+  "info_records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": "market_daily"
+   }
+  ]
+ },
+ "expected": {
+  "freshness": {
+   "q-1": "FRESH"
+  },
+  "policy_id": "market_daily",
+  "policy_source": "P14-A FRESHNESS_POLICIES"
+ },
+ "evidence": {}
+}

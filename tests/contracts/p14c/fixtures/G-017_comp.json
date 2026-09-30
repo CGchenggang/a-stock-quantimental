@@ -1,0 +1,45 @@
+{
+ "golden_id": "P14C-GOLD-017",
+ "domain": "COMP",
+ "title": "missing data is not forward-filled or defaulted",
+ "contract_ids": [
+  "P14C-COMP-002"
+ ],
+ "matrix_ids": [
+  "P14C-COMP-002"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000"
+    ],
+    "expected_dates": [
+     "2026-03-02",
+     "2026-03-03"
+    ]
+   }
+  },
+  "actual_pairs": [
+   [
+    "600000",
+    "2026-03-02"
+   ]
+  ]
+ },
+ "expected": {
+  "expected_count": 2,
+  "actual_count": 1,
+  "missing_pairs": [
+   [
+    "600000",
+    "2026-03-03"
+   ]
+  ],
+  "coverage_ratio": 0.5,
+  "missing_stays_missing": true,
+  "forward_fill_forbidden": true
+ },
+ "evidence": {}
+}

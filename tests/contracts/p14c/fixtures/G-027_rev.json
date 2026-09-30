@@ -1,0 +1,54 @@
+{
+ "golden_id": "P14C-GOLD-027",
+ "domain": "REV",
+ "title": "duplicate revision: same key same payload replays as DUPLICATE",
+ "contract_ids": [
+  "P14C-REV-002"
+ ],
+ "matrix_ids": [
+  "P14C-REV-002"
+ ],
+ "input": {
+  "raw_records": [
+   {
+    "source": "company_announcement",
+    "source_id": "ann-101",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "t": "x"
+    },
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "company_announcement",
+    "source_id": "ann-101",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "t": "x"
+    },
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "put_outcomes": [
+   "ACCEPTED",
+   "DUPLICATE"
+  ],
+  "canonical_record_count": 1,
+  "duplicate_is_same_revision_same_payload": true
+ },
+ "evidence": {}
+}

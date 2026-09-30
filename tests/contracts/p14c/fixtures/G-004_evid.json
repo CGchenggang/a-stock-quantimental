@@ -1,0 +1,35 @@
+{
+ "golden_id": "P14C-GOLD-004",
+ "domain": "EVID",
+ "title": "SOURCE_EMPTY observation produces no canonical record, hash or ingestion_id",
+ "contract_ids": [
+  "P14C-EVID-004"
+ ],
+ "matrix_ids": [
+  "P14C-EVID-004"
+ ],
+ "input": {
+  "raw_records": [],
+  "observations": [
+   {
+    "observation_type": "SOURCE_EMPTY",
+    "source": "industry_classification",
+    "ingested_at": "2026-03-02T08:00:00+08:00",
+    "adapter_version": "fixture-adapter-v1",
+    "source_id": "sw1-2026Q1"
+   }
+  ]
+ },
+ "expected": {
+  "observation_audit_outcomes": [
+   "SOURCE_EMPTY"
+  ],
+  "canonical_record_count": 0,
+  "empty_event_has_raw_payload_hash": false,
+  "empty_event_has_ingestion_id": false
+ },
+ "evidence": {
+  "canonical_file_lines": 0,
+  "audit_file_lines": 1
+ }
+}

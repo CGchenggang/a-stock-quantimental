@@ -1,0 +1,31 @@
+{
+ "golden_id": "P14C-GOLD-050",
+ "domain": "SH",
+ "title": "EMPTY when attempted>0, accepted=0, errors=0",
+ "contract_ids": [
+  "P14C-SH-004"
+ ],
+ "matrix_ids": [
+  "P14C-SH-004"
+ ],
+ "input": {
+  "metrics": {
+   "attempted": 2,
+   "accepted": 0,
+   "errors": 0,
+   "mutations": 0,
+   "rejected": 0,
+   "stale": 0,
+   "fresh": 0,
+   "coverage_ratio": 1.0
+  }
+ },
+ "expected": {
+  "health": "EMPTY",
+  "distinct_from": [
+   "SOURCE_ERROR",
+   "EXPECTED_ABSENCE"
+  ]
+ },
+ "evidence": {}
+}

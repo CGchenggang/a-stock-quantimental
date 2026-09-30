@@ -1,0 +1,63 @@
+{
+ "golden_id": "P14C-GOLD-029",
+ "domain": "REV",
+ "title": "available_time regression reported as ANOMALY, record retained",
+ "contract_ids": [
+  "P14C-REV-004"
+ ],
+ "matrix_ids": [
+  "P14C-REV-004"
+ ],
+ "input": {
+  "raw_records": [
+   {
+    "source": "company_announcement",
+    "source_id": "ann-103",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-04T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-04T16:00:00+08:00",
+    "raw_payload": {
+     "t": "r0"
+    },
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "company_announcement",
+    "source_id": "ann-103",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-03T16:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-03T16:00:00+08:00",
+    "raw_payload": {
+     "t": "r1"
+    },
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "put_outcomes": [
+   "ACCEPTED",
+   "ACCEPTED"
+  ],
+  "available_time_regressions": [
+   {
+    "source_id": "ann-103",
+    "from_revision": 0,
+    "to_revision": 1,
+    "earlier_available_time": "2026-03-03T16:00:00+08:00"
+   }
+  ],
+  "record_deleted": false,
+  "canonical_record_count": 2,
+  "regression_is_anomaly": true
+ },
+ "evidence": {}
+}

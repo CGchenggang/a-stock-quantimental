@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Acceptance Harness Reset — PASS (independently accepted 2026-10-01); Golden Tests is the next gated stage**
+**P14-C Golden Tests / Fixtures Design & Freeze — implementation complete — awaiting independent acceptance** (previous stage: P14-C Acceptance Harness Reset — PASS, independently accepted 2026-10-01)
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -856,3 +856,29 @@ The Acceptance Harness is now the mechanical gate for the next P14-C stage. The 
 **Next allowed stage: P14-C Golden Tests / Fixtures Design & Freeze.**
 
 P14-D remains blocked until P14-C Golden Tests, implementation, CI, and independent acceptance are complete.
+
+## P14-C Golden Tests / Fixtures Design & Freeze — 2026-10-01
+
+**P14-C Golden Tests / Fixtures Design & Freeze
+implementation complete — awaiting independent acceptance**
+
+Deliverables (scope per mandate: only `tests/contracts/p14c/**`, the golden coverage doc, and this status file):
+
+- `tests/contracts/p14c/fixtures/` — **64 frozen golden fixtures** (`P14C-GOLD-001..064`), one scenario per file, every expected value a hand-written literal (standard answer, never an implementation snapshot).
+- `tests/contracts/p14c/golden/core.py` — validation engine: schema checks, contract-arithmetic self-consistency (§9 completeness, §10.1 timestamp checks, §15 tolerance, §17 health priority), frozen-authority cross-checks (P14-A `is_admissible`/`visible_revisions`/`freshness_status`/`FRESHNESS_POLICIES`, P14-B `RawStore` durable replay, P13-U boundary guard), anti-cheat scans (mandate §31 A–E), Matrix coverage closure, deterministic canonical report.
+- `tests/contracts/p14c/test_p14c_golden.py` — 76 pytest cases (64 per-fixture + 12 global gates).
+- `docs/contracts/P14-C-GOLDEN-TESTS.md` — frozen coverage matrix (64 rows) + interpretation notes.
+
+Coverage: **all 61 canonical Contract IDs** in the frozen Acceptance Matrix are covered (closure mechanically asserted); PIT-GOOD/PIT-BAD additionally exercise P14-A PIT authority; G-TS-005 extends TS-001.
+
+Anti-cheat: no fixture-control fields (`expected_empty`/`expected_absence`/`broken_source`/`force_source_error`/`fixture_mode` — scanned); golden layer never imports the P14-C production implementation (import-scan); expected sets proven a-priori by fixtures where actual ≠ expected; contract/matrix bytes hash-pinned so silent contract edits fail the golden layer.
+
+RECON-001 vs RECON-006 (mandate §26): distinct semantics demonstrated (tolerance classification vs output-schema prohibition). **CONTRACT_BLOCKER: NO.** Intentional absence is declared positively as `intentional_absence_pairs` (a-priori pair declaration; the contract's §8.2 structure has no absence field — documented in the golden doc, contract itself untouched).
+
+Determinism: full suite run #1 = run #2 = **437 passed, 2 warnings, 0 failed**; canonical golden report byte-identical across rebuilds (sha256 `1c7a0b4b36564fa92c258f4e1ba65499e2806f826decf676997e6f47d3ebe13f`); engine total 338 checks, 0 failures.
+
+Boundaries: `research_end = 2026-09-22`, `virgin_start = 2026-09-23` unchanged; P13-T STOPPED / NOT EXECUTED; P13-U protection intact; all fixture dates are synthetic, deterministic, pre-virgin (the single sanctioned virgin date, BND-003's `violating_decision_date=2026-09-24`, exists only to prove the guard rejects it). No production alpha/policy/calibration/recommendation changes. FACTOR_REGISTRY hash-pinned (`689d7463…8601b`, 8 factors).
+
+No P14-C production implementation was started. Awaiting independent acceptance.
+
+P14-D remains blocked.

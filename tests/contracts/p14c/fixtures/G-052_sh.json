@@ -1,0 +1,27 @@
+{
+ "golden_id": "P14C-GOLD-052",
+ "domain": "SH",
+ "title": "UNRESOLVED when attempted=0",
+ "contract_ids": [
+  "P14C-SH-006"
+ ],
+ "matrix_ids": [
+  "P14C-SH-006"
+ ],
+ "input": {
+  "metrics": {
+   "attempted": 0,
+   "accepted": 0,
+   "errors": 0,
+   "mutations": 0,
+   "rejected": 0,
+   "stale": 0,
+   "fresh": 0,
+   "coverage_ratio": 1.0
+  }
+ },
+ "expected": {
+  "health": "UNRESOLVED"
+ },
+ "evidence": {}
+}

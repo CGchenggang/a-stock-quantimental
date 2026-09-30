@@ -1,0 +1,26 @@
+{
+ "golden_id": "P14C-GOLD-055",
+ "domain": "DET",
+ "title": "manifest carries no dynamic timestamp",
+ "contract_ids": [
+  "P14C-DET-003"
+ ],
+ "matrix_ids": [
+  "P14C-DET-003"
+ ],
+ "input": {},
+ "expected": {
+  "manifest_forbidden_keys": [
+   "generated_at",
+   "created_at",
+   "timestamp"
+  ],
+  "manifest_keys": [
+   "schema_version",
+   "fixture_count",
+   "golden_ids",
+   "fixture_digests"
+  ]
+ },
+ "evidence": {}
+}

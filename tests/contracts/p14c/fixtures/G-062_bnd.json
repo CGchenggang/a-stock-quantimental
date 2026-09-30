@@ -1,0 +1,17 @@
+{
+ "golden_id": "P14C-GOLD-062",
+ "domain": "BND",
+ "title": "production FACTOR_REGISTRY unchanged during P14-C",
+ "contract_ids": [
+  "P14C-BND-004"
+ ],
+ "matrix_ids": [
+  "P14C-BND-004"
+ ],
+ "input": {},
+ "expected": {
+  "factor_registry_sha256": "689d7463ad479083a23d40e8a58a7a84b015c51b99e1ca406df913ed5318601b",
+  "factor_count": 8
+ },
+ "evidence": {}
+}

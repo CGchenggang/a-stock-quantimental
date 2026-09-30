@@ -1,0 +1,57 @@
+{
+ "golden_id": "P14C-GOLD-058",
+ "domain": "RR",
+ "title": "replay attempt audited as DUPLICATE",
+ "contract_ids": [
+  "P14C-RR-003"
+ ],
+ "matrix_ids": [
+  "P14C-RR-003"
+ ],
+ "input": {
+  "raw_records": [
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "pmi-202603",
+    "source_category": "MACRO",
+    "entity_id": "PMI_CN",
+    "entity_type": "macro",
+    "event_time": "2026-03-03T15:00:00+08:00",
+    "available_time": "2026-03-03T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-03T16:00:00+08:00",
+    "raw_payload": {
+     "pmi": 50.2
+    },
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "pmi-202603",
+    "source_category": "MACRO",
+    "entity_id": "PMI_CN",
+    "entity_type": "macro",
+    "event_time": "2026-03-03T15:00:00+08:00",
+    "available_time": "2026-03-03T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-03T16:00:00+08:00",
+    "raw_payload": {
+     "pmi": 50.2
+    },
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "put_outcomes": [
+   "ACCEPTED",
+   "DUPLICATE"
+  ],
+  "audit_outcome_sequence": [
+   "ACCEPTED",
+   "DUPLICATE"
+  ],
+  "replay_outcome_is_duplicate": true
+ },
+ "evidence": {}
+}

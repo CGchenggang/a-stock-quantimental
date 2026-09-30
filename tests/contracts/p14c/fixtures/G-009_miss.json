@@ -1,0 +1,42 @@
+{
+ "golden_id": "P14C-GOLD-009",
+ "domain": "MISS",
+ "title": "EXPECTED_ABSENCE cannot be auto-derived from missing data",
+ "contract_ids": [
+  "P14C-MISS-004"
+ ],
+ "matrix_ids": [
+  "P14C-MISS-004"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000",
+     "600001"
+    ],
+    "expected_dates": [
+     "2026-03-02"
+    ]
+   }
+  },
+  "actual_pairs": [
+   [
+    "600000",
+    "2026-03-02"
+   ]
+  ]
+ },
+ "expected": {
+  "undeclared_missing_pair": [
+   [
+    "600001",
+    "2026-03-02"
+   ]
+  ],
+  "missingness": "UNEXPECTED_MISSING",
+  "auto_derivation_forbidden": true
+ },
+ "evidence": {}
+}

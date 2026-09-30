@@ -1,0 +1,53 @@
+{
+ "golden_id": "P14C-GOLD-063",
+ "domain": "PIT",
+ "title": "PIT-GOOD: available_time <= decision_time is admissible (P14-A authority)",
+ "contract_ids": [
+  "P14C-REV-005"
+ ],
+ "matrix_ids": [
+  "P14C-REV-005"
+ ],
+ "input": {
+  "decision_time": "2026-03-03T15:00:00+08:00",
+  "info_records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-good",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": null
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-edge",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-03T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": null
+   }
+  ]
+ },
+ "expected": {
+  "admissibility": {
+   "q-good": true,
+   "q-edge": true
+  },
+  "boundary_is_inclusive": true,
+  "pit_authority": "P14-A is_admissible"
+ },
+ "evidence": {}
+}

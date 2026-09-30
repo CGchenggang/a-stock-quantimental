@@ -1,0 +1,51 @@
+{
+ "golden_id": "P14C-GOLD-032",
+ "domain": "DUP",
+ "title": "conflicting values are never averaged",
+ "contract_ids": [
+  "P14C-DUP-002"
+ ],
+ "matrix_ids": [
+  "P14C-DUP-002"
+ ],
+ "input": {
+  "conflict_group": {
+   "entity_id": "600000",
+   "event_time": "2026-03-02T15:00:00+08:00",
+   "entries": [
+    {
+     "source": "cn_stock_quote",
+     "source_id": "q-a",
+     "value": 10.0,
+     "event_time": "2026-03-02T15:00:00+08:00",
+     "available_time": "2026-03-02T16:00:00+08:00",
+     "ingested_at": "2026-03-02T16:00:00+08:00",
+     "ingestion_id": "ing-q-a",
+     "raw_payload_hash": "h-q-a"
+    },
+    {
+     "source": "us_index_daily",
+     "source_id": "u-a",
+     "value": 12.0,
+     "event_time": "2026-03-02T15:00:00+08:00",
+     "available_time": "2026-03-02T16:00:00+08:00",
+     "ingested_at": "2026-03-02T16:00:00+08:00",
+     "ingestion_id": "ing-u-a",
+     "raw_payload_hash": "h-u-a"
+    }
+   ]
+  }
+ },
+ "expected": {
+  "preserved_values": [
+   10.0,
+   12.0
+  ],
+  "forbidden_output_fields": [
+   "averaged_value",
+   "mean_value"
+  ],
+  "averaging_forbidden": true
+ },
+ "evidence": {}
+}

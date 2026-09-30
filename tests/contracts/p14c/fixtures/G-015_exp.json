@@ -1,0 +1,47 @@
+{
+ "golden_id": "P14C-GOLD-015",
+ "domain": "EXP",
+ "title": "expected pairs are the cartesian product entities x dates",
+ "contract_ids": [
+  "P14C-EXP-004"
+ ],
+ "matrix_ids": [
+  "P14C-EXP-004"
+ ],
+ "input": {
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000",
+     "600001"
+    ],
+    "expected_dates": [
+     "2026-03-02",
+     "2026-03-03"
+    ]
+   }
+  }
+ },
+ "expected": {
+  "expected_pairs": [
+   [
+    "600000",
+    "2026-03-02"
+   ],
+   [
+    "600000",
+    "2026-03-03"
+   ],
+   [
+    "600001",
+    "2026-03-02"
+   ],
+   [
+    "600001",
+    "2026-03-03"
+   ]
+  ],
+  "expected_count": 4
+ },
+ "evidence": {}
+}

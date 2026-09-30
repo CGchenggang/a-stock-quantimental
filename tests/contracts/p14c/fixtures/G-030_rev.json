@@ -1,0 +1,52 @@
+{
+ "golden_id": "P14C-GOLD-030",
+ "domain": "REV",
+ "title": "revision anomaly never breaks PIT visibility (P14-A authority)",
+ "contract_ids": [
+  "P14C-REV-005"
+ ],
+ "matrix_ids": [
+  "P14C-REV-005"
+ ],
+ "input": {
+  "decision_time": "2026-03-03T15:00:00+08:00",
+  "info_records": [
+   {
+    "source": "company_announcement",
+    "source_id": "ann-104",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T15:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": null
+   },
+   {
+    "source": "company_announcement",
+    "source_id": "ann-104",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-04T15:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-02T15:00:00+08:00",
+    "value": 1.0,
+    "quality_status": "OK",
+    "freshness_policy_id": null
+   }
+  ]
+ },
+ "expected": {
+  "visible_revision_at_decision": {
+   "ann-104": 0
+  },
+  "later_revision_invisible_before_availability": true,
+  "pit_authority": "P14-A"
+ },
+ "evidence": {}
+}

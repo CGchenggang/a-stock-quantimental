@@ -1,0 +1,31 @@
+{
+ "golden_id": "P14C-GOLD-048",
+ "domain": "SH",
+ "title": "DEGRADED computed from rejected/mutation evidence, not hardcoded counts",
+ "contract_ids": [
+  "P14C-SH-002"
+ ],
+ "matrix_ids": [
+  "P14C-SH-002"
+ ],
+ "input": {
+  "metrics": {
+   "attempted": 3,
+   "accepted": 2,
+   "errors": 0,
+   "mutations": 0,
+   "rejected": 1,
+   "stale": 0,
+   "fresh": 0,
+   "coverage_ratio": 1.0
+  }
+ },
+ "expected": {
+  "health": "DEGRADED",
+  "evidence_used": [
+   "rejected"
+  ],
+  "hardcoded_counts_forbidden": true
+ },
+ "evidence": {}
+}

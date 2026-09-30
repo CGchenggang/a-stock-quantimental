@@ -1,0 +1,50 @@
+{
+ "golden_id": "P14C-GOLD-020",
+ "domain": "COMP",
+ "title": "declared intentional absence excluded from denominator",
+ "contract_ids": [
+  "P14C-COMP-005"
+ ],
+ "matrix_ids": [
+  "P14C-COMP-005"
+ ],
+ "input": {
+  "decision_time": "2026-03-06T15:00:00+08:00",
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000"
+    ],
+    "expected_dates": [
+     "2026-03-02",
+     "2026-03-03"
+    ],
+    "intentional_absence_pairs": [
+     [
+      "600000",
+      "2026-03-03"
+     ]
+    ]
+   }
+  },
+  "actual_pairs": [
+   [
+    "600000",
+    "2026-03-02"
+   ]
+  ]
+ },
+ "expected": {
+  "required_expected_count": 1,
+  "actual_count": 1,
+  "coverage_ratio": 1.0,
+  "absence_pairs_reported": [
+   [
+    "600000",
+    "2026-03-03"
+   ]
+  ],
+  "absence_in_denominator": false
+ },
+ "evidence": {}
+}

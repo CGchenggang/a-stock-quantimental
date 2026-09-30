@@ -1,0 +1,36 @@
+{
+ "golden_id": "P14C-GOLD-014",
+ "domain": "EXP",
+ "title": "each source appears at most once in EXPECTED_CONTRACT",
+ "contract_ids": [
+  "P14C-EXP-003"
+ ],
+ "matrix_ids": [
+  "P14C-EXP-003"
+ ],
+ "input": {
+  "expected_contract": {
+   "cn_stock_quote": {
+    "expected_entities": [
+     "600000"
+    ],
+    "expected_dates": [
+     "2026-03-02"
+    ]
+   },
+   "macro_pmi_cn": {
+    "expected_entities": [
+     "PMI_CN"
+    ],
+    "expected_dates": [
+     "2026-03-31"
+    ]
+   }
+  }
+ },
+ "expected": {
+  "duplicate_source_keys_rejected": true,
+  "source_keys_count": 2
+ },
+ "evidence": {}
+}
