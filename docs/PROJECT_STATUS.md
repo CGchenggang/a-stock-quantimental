@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Contract Repair — EXPECTED_ABSENCE representation frozen — implementation complete — awaiting independent acceptance** (previous stage: Golden Tests Freeze FAIL / REPAIR REQUIRED, 6489fad)
+**P14-C Contract Repair — EXPECTED_ABSENCE representation frozen — FAIL / CI GATE REPAIR REQUIRED** (independent review of 38bbf823; Contract semantics accepted, exact-HEAD CI evidence missing)
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -42,7 +42,7 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 
 ## Current Commit
 
-`447a2b4a54f2a1575e3cc3a3547d152fd9606558`
+`38bbf82340fd22fd196ea97639ce014e2bf15033`
 
 Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd` (P14-B baseline); `1961773d` is the current documentation-synchronized HEAD for the independently accepted P14-C Acceptance Harness Reset. The functional submission tree was independently verified at `3144a695`; `1961773d` adds only the acceptance-state documentation sync.
 
@@ -966,3 +966,57 @@ Replace G-061's `violating_decision_date = 2026-09-24` (an actual protected virg
 Stopping here; awaiting independent acceptance.
 
 P14-D remains blocked.
+
+
+## P14-C Contract Repair — Independent Acceptance — 2026-10-01
+
+**Decision: FAIL / CI GATE REPAIR REQUIRED. Do not advance to Golden Re-freeze yet.**
+
+Independently inspected exact Contract Repair HEAD `38bbf82340fd22fd196ea97639ce014e2bf15033` against the Golden Freeze failure `6489fad` and P14-B accepted baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Contract semantic findings
+
+**PASS at the Contract layer:**
+
+- `expected_absence_pairs` is now explicitly defined in `EXPECTED_CONTRACT[source]` as the sole authoritative declaration channel.
+- Boolean/test-control alternatives remain prohibited.
+- EXPECTED_ABSENCE is explicitly separated from SOURCE_EMPTY, SOURCE_ERROR, PARSE_FAILURE and UNEXPECTED_MISSING.
+- MISS-004 now prohibits deriving EXPECTED_ABSENCE from actual missingness or source anomalies.
+- Completeness arithmetic is frozen as `X = declared absence pairs`, `R = P - X`, with denominator based on required pairs.
+- EXPECTED_ABSENCE pairs are separately reported and excluded from the completeness denominator.
+- Type-C Contract Declaration Provenance is explicitly distinguished from record/observation provenance.
+- No new Contract IDs were introduced; Contract/Matrix closure remains structurally 61/61, with the Matrix unchanged.
+- Diff from the Golden Freeze HEAD contains only `docs/PROJECT_STATUS.md` and `docs/contracts/P14-C-DESIGN-CONTRACT.md`; no `src/**`, `data/**`, Golden, Harness, P13-U/T or production factor/policy/calibration/recommendation changes.
+
+### Blocking finding
+
+**CI_GATE_BLOCKER — no independently verifiable GitHub Actions run exists for exact HEAD `38bbf82340fd22fd196ea97639ce014e2bf15033`.**
+
+- `fetch_commit_workflow_runs` for exact HEAD returned no workflow runs.
+- Combined commit status for exact HEAD returned no statuses.
+- The repository workflow is configured to run on every push to `main`, so the absence of an exact-HEAD run cannot be treated as equivalent to PASS.
+- The reported local result (`435 passed, 2 failed`) is not sufficient for final acceptance. The two failures are the expected Golden contract-hash pin failures caused by this intentional Contract change, but exact-HEAD CI evidence is still required by the project workflow.
+
+### Important non-blocking observation
+
+The Golden layer is intentionally expected to fail its pinned-contract checks until the next gated Golden Re-freeze. This is correct anti-drift behavior and is **not** a reason to modify Golden/Harness during Contract Repair.
+
+### Determination
+
+**P14-C Contract Repair is NOT independently accepted yet.**
+
+The Contract semantic repair itself is accepted as correctly scoped and internally coherent, but the phase fails the mandatory exact-HEAD CI gate.
+
+Required next step:
+
+1. Obtain a verifiable GitHub Actions run for exact Contract Repair HEAD.
+2. Inspect run → job → step, including Harness and regression/full-test evidence.
+3. If CI is green, independently accept this Contract Repair.
+4. Then proceed to the already-defined **Golden Re-freeze** task:
+   - re-pin the Contract hash;
+   - rename `intentional_absence_pairs` → `expected_absence_pairs`;
+   - update Golden completeness reads and anti-cheat token rules;
+   - replace G-061's actual virgin date with a synthetic post-boundary date;
+   - rerun exact-HEAD CI, Golden, full pytest, P13-M and deterministic double-run.
+
+P14-C Production Implementation remains blocked. P14-D remains blocked.
