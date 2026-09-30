@@ -136,7 +136,13 @@ FIXTURE_PAYLOADS: dict[str, list[dict]] = {
 
 INGESTED_AT = "2026-03-10T16:00:00+08:00"
 
-# R1-1: what the completeness contract expects per source
+# R1-1/R5: what the completeness contract expects per source.
+# EXPECTED_CONTRACT is frozen a priori and INDEPENDENT of the fixture
+# payloads: it defines what the source contract says SHOULD exist. The
+# delta between this contract and the actual ingested records reveals
+# missing entities/dates. company_announcement has an extra expected
+# date (2026-03-04) that the fixture does not provide -> UNEXPECTED_MISSING
+# evidence in the audit.
 EXPECTED_CONTRACT = {
     "cn_index_daily": {
         "expected_entities": ["CSI300"],
@@ -144,7 +150,7 @@ EXPECTED_CONTRACT = {
     },
     "company_announcement": {
         "expected_entities": ["000001"],
-        "expected_dates": ["2026-03-03"],
+        "expected_dates": ["2026-03-03", "2026-03-04"],
     },
     "macro_pmi_cn": {
         "expected_entities": ["CN"],
@@ -157,11 +163,27 @@ EXPECTED_CONTRACT = {
     "broken_source": {
         "expected_entities": ["NONE"],
         "expected_dates": [],
-        "expected_absence": True,  # deliberate SOURCE_EMPTY fixture
+        "expected_absence": True,
+    },
+    "parse_failure_source": {
+        "expected_entities": ["CN"],
+        "expected_dates": ["2026-03-01"],
+    },
+    "source_empty_source": {
+        "expected_entities": [],
+        "expected_dates": [],
+        "expected_empty": True,
     },
 }
 
-# R1-2/R3-2: adapters that exercise failure paths (deterministic)
+# R1-2/R3-2/R5: adapters that exercise isolated failure paths (deterministic)
+# Each anomaly semantic is carried by exactly ONE source:
+#   broken_source          -> SOURCE_ERROR (fetch always raises)
+#   parse_failure_source   -> PARSE_FAILURE (parse always fails)
+#   source_empty_source    -> SOURCE_EMPTY (fetch returns zero payloads)
+#   company_announcement   -> UNEXPECTED_MISSING (contract expects 03-04
+#                             but only 03-03 ingested)
+#   broken_source + EXPECTED_CONTRACT.expected_absence -> EXPECTED_ABSENCE
 class BrokenSourceAdapter(MacroPMICNAdapter):
     """Always raises a fetch error -> SOURCE_ERROR in the audit chain."""
 
@@ -199,6 +221,22 @@ class ParseFailureAdapter(MacroPMICNAdapter):
         raise ValueError("deterministic fixture: missing source_id triggers parse failure")
 
 
+class SourceEmptyAdapter(MacroPMICNAdapter):
+    """Fetch succeeds but returns zero payloads -> SOURCE_EMPTY evidence."""
+
+    metadata = AdapterMetadata(
+        source="source_empty_source",
+        source_category="MACRO",
+        adapter_version="source_empty_adapter@1",
+        timestamp_semantics="N/A (source is healthy but returns no data)",
+        revision_semantics="N/A",
+        provenance_requirements=("source", "source_id", "ingested_at"),
+    )
+
+    def fetch(self):
+        return []
+
+
 # R1-2: adapters that exercise failure paths
 def _payload_adapters():
     adapters = {
@@ -210,6 +248,7 @@ def _payload_adapters():
             ("us_index_daily", USIndexDailyAdapter),
             ("broken_source", BrokenSourceAdapter),
             ("parse_failure_source", ParseFailureAdapter),
+            ("source_empty_source", SourceEmptyAdapter),
         )
     }
     return adapters
@@ -234,6 +273,7 @@ def _compute_completeness(
         expected_entities = sorted(contract_entry.get("expected_entities", []))
         expected_dates = sorted(contract_entry.get("expected_dates", []))
         expected_absence = contract_entry.get("expected_absence", False)
+        expected_empty = contract_entry.get("expected_empty", False)
         report = audit_out.get(source, {})
         actual_entities = sorted({
             r.entity_id for r in raw_records if r.source == source
@@ -241,7 +281,37 @@ def _compute_completeness(
         actual_dates = sorted({
             r.event_time[:10] for r in raw_records if r.source == source
         })
-        if expected_absence:
+        # R5: classification priority is documented and frozen:
+        #   1. EXPECTED_ABSENCE: the contract explicitly declares this
+        #      source requires no data (e.g. broken_source fixture)
+        #   2. SOURCE_EMPTY: the adapter's own report says EMPTY_SUCCESS
+        #   3. SOURCE_ERROR: the adapter's own report says SOURCE_ERROR
+        #   4. PARSE_FAILURE: the adapter's own report says PARSE_ERROR
+        #   5. UNEXPECTED_MISSING: the expected contract requires entities
+        #      or dates that the actual ingestion did not deliver
+        #   6. EXPECTED_ABSENCE: no gap and no expected_absence flag
+        if report.get("status") == "EMPTY_SUCCESS":
+            missingness = "SOURCE_EMPTY"
+            missing_entities = []
+            missing_dates = []
+            expected_count = 0
+            actual_count = 0
+            coverage = 1.0
+        elif report.get("status") == "SOURCE_ERROR":
+            missingness = "SOURCE_ERROR"
+            missing_entities = sorted(set(expected_entities) - set(actual_entities))
+            missing_dates = sorted(set(expected_dates) - set(actual_dates))
+            expected_count = len(expected_entities) * max(len(expected_dates), 1)
+            actual_count = 0
+            coverage = 0.0
+        elif report.get("status") == "PARSE_ERROR":
+            missingness = "PARSE_FAILURE"
+            missing_entities = sorted(set(expected_entities) - set(actual_entities))
+            missing_dates = sorted(set(expected_dates) - set(actual_dates))
+            expected_count = len(expected_entities) * max(len(expected_dates), 1)
+            actual_count = 0
+            coverage = 0.0
+        elif expected_absence:
             missingness = "EXPECTED_ABSENCE"
             missing_entities = []
             missing_dates = []
@@ -261,14 +331,7 @@ def _compute_completeness(
             expected_count = len(expected_pairs) if expected_pairs else len(expected_entities)
             actual_count = len(expected_pairs) - len(missing_pairs) if expected_pairs else 0
             coverage = (actual_count / expected_count) if expected_count > 0 else 1.0
-            if report.get("status") == "SOURCE_ERROR":
-                missingness = "SOURCE_ERROR"
-            elif report.get("status") == "PARSE_ERROR":
-                missingness = "PARSE_FAILURE"
-            elif report.get("attempted", 0) > 0 and report.get("accepted", 0) == 0 \
-                    and not expected_entities and not expected_dates:
-                missingness = "SOURCE_EMPTY"
-            elif missing_entities or missing_dates:
+            if missing_entities or missing_dates:
                 missingness = "UNEXPECTED_MISSING"
             else:
                 missingness = "EXPECTED_ABSENCE"
