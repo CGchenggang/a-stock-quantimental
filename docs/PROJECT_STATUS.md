@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-B — Source Adapters & Immutable Raw Information Store — FAIL / REPAIR REQUIRED**
+**P14-C — Data Quality / Reconciliation / Source Health — IN PROGRESS / NEXT**
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -36,28 +36,28 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 | P13-T | STOPPED / NOT EXECUTED | No true evaluable virgin holdout was available |
 | P13-U | PASS | Independently accepted virgin-holdout integrity gate; currently ACCUMULATING |
 | P14-A | PASS | Information contract, provenance, PIT, freshness, revision, dedup/conflict infrastructure |
-| P14-B | FAIL / REPAIR REQUIRED | Independent audit found non-durable ingestion outcome evidence; do not advance to P14-C |
+| P14-B | PASS | Independently accepted after durable ingestion-audit repair (P14-B-R1) |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`89349da30e656a571c7f97a4344a46502c3336ae`
+`84021d6c9039582cfa831e1e3a85f1141fb87efd`
 
-Latest commit message: `fix: make the P14-A registry snapshot test independent of local data files`.
+Latest accepted commit message: `fix: persist every ingestion attempt in a durable audit log (P14-B-R1)`.
 
 Current HEAD was independently checked on 2026-09-30.
 
-Current-head CI:
+Current accepted-head CI:
 - workflow: `tests`
-- run: `36642731938`
-- HEAD: `89349da30e656a571c7f97a4344a46502c3336ae`
+- run: `36650601210`
+- HEAD: `84021d6c9039582cfa831e1e3a85f1141fb87efd`
 - pytest job: success
 - p13m job: success
-- Full pytest: **281 passed / 2 warnings / 0 failed**
+- Full pytest: **all tests passed / 0 failed** (P14-B-R1 repair included)
 - Full pytest step executed `python -m pytest -q -ra`
 - P13-M regression step: success
-- P14-A tests are included in the full suite.
+- P14-A/P14-B tests are included in the full suite.
 
 The immediately preceding documentation commit CI `36641360624` failed because a P14-A production-snapshot test incorrectly depended on a gitignored local calibration artifact. ZCODE fixed that test in the next commit; the current-head run `36642731938` is green. This failure/fix is retained as audit history rather than hidden.
 
@@ -148,7 +148,7 @@ Information contract and PIT/provenance infrastructure:
 - P13-U virgin protection;
 - deterministic audit.
 
-### P14-B — NEXT
+### P14-B — PASS
 
 **Source Adapters & Immutable Raw Information Store**
 
@@ -158,7 +158,7 @@ Build the controlled ingestion boundary:
 
 Representative sources only; no broad source-count optimization.
 
-### P14-C — planned
+### P14-C — IN PROGRESS / NEXT
 
 Data quality/reconciliation and source health:
 - completeness;
@@ -298,6 +298,25 @@ Independently verified against HEAD `98bfe54bc76e0511e66feb57768b6456c9bf612a`:
 **Blocking finding:** P14-B documentation/research plan states that a same-key/different-payload mutation is recorded as a rejected ingestion attempt and that ingestion outcomes are auditable. In `RawStore.put()`, however, `DUPLICATE` and `RAW_MUTATION_DETECTED` outcomes are appended only to the in-memory `_outcomes` list; only accepted records are persisted to the JSONL file. After process restart/reload, the rejected mutation/duplicate attempt evidence is therefore not durable. This is inconsistent with the claimed immutable/auditable raw-ingestion boundary and is not merely a documentation issue.
 
 **Required repair before re-acceptance:** persist ingestion-attempt audit events (including at minimum DUPLICATE and RAW_MUTATION_DETECTED, with source/source_id/revision, incoming payload hash, stored hash when applicable, ingestion_id, adapter_version, outcome, and deterministic audit metadata) in an append-only durable audit representation; reload must reconstruct the audit history; add restart/reload tests proving the evidence survives process boundaries; preserve byte-identical deterministic replay; keep accepted raw records immutable; keep P13-U/P14-A boundaries unchanged; rerun full CI and provide updated P14B docs. Do not start P14-C until this repair is independently accepted.
+
+
+## P14-B Independent Re-acceptance — 2026-09-30
+
+**Decision: PASS.**
+
+Independently re-audited after P14-B-R1 against HEAD `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+Verified:
+- `RawStore` now persists a separate append-only `raw_ingestion_audit.jsonl`; ACCEPTED canonical records remain in `raw_records.jsonl`.
+- DUPLICATE and RAW_MUTATION_DETECTED events survive process restart; mutation events preserve incoming and stored hashes and never overwrite the canonical record.
+- Adapter-level REJECTED / SOURCE_ERROR / AUTH_ERROR / TIMEOUT events are durably audited.
+- Frozen `RawIngestRecord` availability semantics are derived at construction; no post-construction `__dict__` mutation remains in adapters.
+- Restart, append-only, deterministic replay, no-duplicate-canonical-record, partial-failure and source-failure tests are present and passing.
+- P14-A normalization/PIT semantics and P13-U virgin-zone protection remain intact.
+- Production diff from P14-A baseline contains P14-B ingestion infrastructure/tests/docs only; no factor/policy/calibration/recommendation promotion was observed.
+- GitHub Actions run `36650601210`: pytest and p13m jobs both SUCCESS; all workflow steps inspected and Full pytest SUCCESS.
+
+P14-B is therefore accepted. P14-C is the next phase.
 
 ## Operating Rule
 
