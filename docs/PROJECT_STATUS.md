@@ -1261,3 +1261,30 @@ Regression tests added (`tests/test_p14c_production.py`, +4): partial declared a
 Validation: audit PASS 0/0 (61/61/61); golden 76 ×2; p14c 90; P13-M 3; full pytest **463 passed / 0 failed**; Contract SHA `c217f6b9…167b` and Matrix SHA `fc99637a…636` unchanged; golden report byte-identical (`09cca5b0…`); boundary `2026-09-22`/`2026-09-23` unchanged; P13-T STOPPED; P13-U protected.
 
 P14-D remains blocked.
+
+
+## P14-C Production Implementation — Independent Acceptance — 2026-10-01
+
+**Decision: PASS / ACCEPTED.**
+
+Independently accepted against final implementation HEAD `06250722e5660975733695c1ffd956cde9a8c118`, following the narrow repair for P14-C-COMP-BLOCKER-001.
+
+### Independent verification
+
+1. **Narrow repair scope is clean.** Compare `5ed21175c914aa4e45c04272f6310c8a0668c63e..06250722e5660975733695c1ffd956cde9a8c118` contains only `src/astock_v2/information/expected_contract.py`, `tests/test_p14c_production.py`, and this status documentation. The repair changes only completeness semantics and regression coverage.
+2. **Blocking semantic defect is repaired.** `missing_entities` and `missing_dates` are now derived from the required universe `R = P - X) and satisfied pairs `A ∩ R`; declared EXPECTED_ABSENCE pairs therefore cannot leak into `missing_*`. Out-of-P actual pairs cannot satisfy required entities/dates.
+3. **Regression coverage is explicit.** Four new tests cover partial declared absence, an entirely declared-absent entity, mixed required/absence with an out-of-P actual pair, and the real production audit path including the completeness quality dimension.
+4. **Frozen artifacts remain unchanged.** Contract SHA remains `c217f6b984a27cfb6e54322e731f1fe6a381a868e319755191a68290c922167b`; Matrix SHA remains `fc99637a74b6fb08fea977a6edcb6245c3bce1c2636d9736380da4b5599a3636`; Golden layer remains unchanged from `349c6b274b6b72f89bc4db35e5b1961f719011ed).
+5. **P14-C regression state is green.** Contract audit PASS with 61/61/61 closure; Golden 76/76; P14-C directory 90/90; P13-M 3/3; full pytest **463 passed, 0 failed, 2 warnings**.
+6. **Exact-head CI is independently verified.** GitHub Actions run `36788739673` is successful with pytest job `110136302080` and P13-M job `110136302565`. The pytest checkout log reports `git log -1 --format=%H` as exactly `06250722e5660975733695c1ffd956cde9a8c118`. Contract Harness audit, P14-C tests, Golden tests, P13-M regression and full pytest all completed successfully.
+7. **Boundaries remain protected.** `research_end = 2026-09-22`, `virgin_start = 2026-09-23); P13-T remains STOPPED / NOT EXECUTED; P13-U remains protected. No factor, alpha, policy, calibration, recommendation, portfolio, or trading semantics were changed.
+
+### Determination
+
+**P14-C Production Implementation — PASS / ACCEPTED.**
+
+The production implementation now conforms to the frozen Contract, Harness and Golden semantics, including the previously blocking completeness/missing-set invariant. P14-C is independently accepted.
+
+### Next gate
+
+P14-D is now the next authorized implementation stage. It must remain infrastructure/research-only, preserve the P13-T/P13-U boundary, and introduce no production alpha/policy/calibration/recommendation promotion.
