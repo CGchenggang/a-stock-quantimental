@@ -260,6 +260,18 @@ def test_semantic_drift_suspect(tmp_path):
     assert "P14C-REV-001" in _finding_ids(result, "W002")
 
 
+def test_near_duplicate_invariants(tmp_path):
+    bad = _replace(GOOD_CONTRACT,
+                   "- **P14C-REV-001**: revision gap 被检测并报告为 ANOMALY。",
+                   "- **P14C-REV-001**: revision gap 被检测并报告为 ANOMALY。\n"
+                   "- **P14C-REV-002**: revision gap 被检测并报告为 ANOMALY"
+                   "（无 resolved_value 字段）。")
+    result = _run(tmp_path, bad, GOOD_MATRIX)
+    near_dups = [f for f in _findings(result, "W003")
+                 if f["ids"] == ["P14C-REV-001", "P14C-REV-002"]]
+    assert near_dups, "near-duplicate pair must be flagged as W003"
+
+
 def test_real_docs_characterization():
     """Snapshot of harness findings on the real documents as of 2026-09-30.
 
@@ -289,6 +301,17 @@ def test_real_docs_characterization():
     assert result["stats"]["contract_only"] == []
     # Cross-domain duplication DUP-001..004 == RECON-001..004
     assert len(_findings(result, "W001")) == 4
+    # RECON-006 duplicates the winner-prohibition of both RECON-001 (same
+    # domain) and DUP-001 (cross-domain) — reviewer finding #3
+    near = sorted(tuple(sorted(f["ids"])) for f in _findings(result, "W003"))
+    assert near == [
+        ("P14C-DUP-001", "P14C-RECON-006"),
+        ("P14C-RECON-001", "P14C-RECON-006"),
+    ]
+    # Unique-ID cross-check against the independent extraction (54d6b6e)
+    assert result["stats"]["contract_unique_ids"] == 61
+    assert result["stats"]["matrix_unique_ids"] == 61
+    assert result["stats"]["matrix_rows"] == 64
     # Known semantic drift suspects (matrix requirement != contract invariant)
     assert _finding_ids(result, "W002") >= {
         "P14C-COMP-002", "P14C-COMP-003", "P14C-COMP-004",

@@ -31,6 +31,10 @@ Soft checks (report-only drift suspects):
   W001 duplicate_invariant_content  identical text across domains
   W002 semantic_drift_suspect       matrix requirement shares no content
                                     token with its contract invariant
+  W003 near_duplicate_invariant     two invariants whose token sets overlap
+                                    >= 85% (containment) — redundant
+                                    normative requirements behind
+                                    different IDs
 
 This harness validates CONTRACT DOCUMENTS ONLY. It never inspects src/ or
 tests/, and it must never be "made to pass" by editing implementation code:
@@ -435,6 +439,32 @@ def run_harness(contract_path: Path, matrix_path: Path) -> dict:
                 f"invariants {cids} share identical content across domains "
                 f"{sorted(domains)}", ids=sorted(cids))
 
+    # --- W003 near-duplicate invariant content ------------------------------
+    exact_dup_pairs = {
+        frozenset(cids)
+        for cids in by_normalized.values() if len(cids) > 1
+    }
+    tok_of = {cid: _tokens(text) for cid, text in defs.items()}
+    ordered_ids = sorted(defs)
+    for i, cid_a in enumerate(ordered_ids):
+        tok_a = tok_of[cid_a]
+        if len(tok_a) < 4:
+            continue
+        for cid_b in ordered_ids[i + 1:]:
+            if frozenset((cid_a, cid_b)) in exact_dup_pairs:
+                continue  # already reported as E013/W001
+            tok_b = tok_of[cid_b]
+            if len(tok_b) < 4:
+                continue
+            inter = tok_a & tok_b
+            containment = len(inter) / min(len(tok_a), len(tok_b))
+            if containment >= 0.85:
+                add("W003", "soft",
+                    f"invariants {cid_a} / {cid_b} are near-duplicates "
+                    f"(token containment {containment:.2f}) — redundant "
+                    f"normative requirements behind different IDs",
+                    ids=[cid_a, cid_b])
+
     # --- W002 semantic drift suspects ----------------------------------------
     for row in rows:
         cid = row["id"]
@@ -457,8 +487,11 @@ def run_harness(contract_path: Path, matrix_path: Path) -> dict:
         "soft_count": len(soft),
         "findings": findings,
         "stats": {
-            "contract_invariants": len(contract_ids),
+            "contract_invariants_canonical_form": len(contract_ids),
+            "contract_invariants_malformed_form": len(malformed),
+            "contract_unique_ids": len(contract_ids | set(malformed)),
             "matrix_rows": len(rows),
+            "matrix_unique_ids": len(matrix_ids),
             "contract_only": contract_only,
             "matrix_only": matrix_only,
         },
