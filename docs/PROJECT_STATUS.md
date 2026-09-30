@@ -521,6 +521,70 @@ Independently audited the latest P14-C-R5 implementation HEAD `f7bd995129721d554
 
 P14-D remains blocked.
 
+## P14-C Contract Repair R2 Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Contract is NOT frozen. Do not start Golden Tests.**
+
+Independently reviewed R2 HEAD `ea2e72846551fb48d6452f8064f9062e1ff418ae` against accepted P14-B baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Positive findings
+
+- EXPECTED_ABSENCE semantics are now internally consistent: `EXPECTED_CONTRACT` contains only `expected_entities` / `expected_dates`; stale `expected_absence=True` references were removed.
+- Contract invariant identifiers were canonicalized to the `P14C-*` namespace.
+- The R2 delta from `9a5d399` to `ea2e728` is documentation-only (`docs/PROJECT_STATUS.md` and `docs/contracts/P14-C-DESIGN-CONTRACT.md`).
+- P13-U/P13-T boundaries remain unchanged.
+
+### Blocking finding
+
+**Contract ID ↔ Acceptance Matrix traceability is still not bidirectionally closed.**
+
+Independent extraction of the current documents found:
+
+- Design Contract IDs: **46 unique**
+- Acceptance Matrix IDs: **41 unique**
+- Contract IDs without a Matrix row: **18**
+  - `P14C-EVID-004/005`
+  - `P14C-COMP-005`
+  - `P14C-TS-001..004`
+  - `P14C-DUP-001..004`
+  - `P14C-FRESH-004`
+  - `P14C-PROV-A-001`
+  - `P14C-PROV-B-001`
+  - `P14C-DET-003`
+  - `P14C-RR-001..003`
+- Matrix IDs without a Design Contract invariant: **13**
+  - `P14C-MISS-005/006`
+  - `P14C-REV-001..003`
+  - `P14C-RECON-006`
+  - `P14C-SH-004..006`
+  - `P14C-BND-001..004`
+
+Therefore the claimed bidirectional closure remains false. The R2 commit canonicalized existing IDs but did not complete the required one-to-one Contract ↔ Matrix registry.
+
+### CI evidence
+
+No GitHub Actions workflow run or combined status is independently available for R2 HEAD `ea2e728`. Because this is a documentation-only contract stage, the missing CI evidence is secondary to the direct contract traceability failure, but it must still be obtained before final acceptance if the repository workflow requires CI evidence for the frozen contract.
+
+### Required R3 repair
+
+- Keep the repair documentation-only.
+- Build one canonical invariant registry: every Design Contract invariant gets exactly one `P14C-*` ID.
+- Add Matrix rows for all currently orphaned Contract IDs.
+- Either define every currently orphaned Matrix ID as a formal Contract invariant, or remove the Matrix row if it is not a contract requirement. Preferred: retain requirements only when explicitly defined in the Design Contract.
+- Perform a mechanical bidirectional audit and record:
+  - `orphan_contract_invariants = 0`
+  - `orphan_matrix_rows = 0`
+  - `duplicate_contract_ids = 0`
+  - `undefined_matrix_ids = 0`
+- Verify invariant wording is aligned between Contract and Matrix.
+- Keep EXPECTED_ABSENCE semantics as currently repaired; do not reintroduce fixture-specific fields.
+- Do not modify `src/`, `tests/`, `data/`, `scripts/`, P13-T/U, factors, policy, calibration, recommendation logic, or production-alpha logic.
+- Do not create Golden Tests yet.
+- Obtain inspectable CI evidence for the final R3 HEAD if required by the repository workflow.
+- Stop and await independent acceptance.
+
+P14-D remains blocked.
+
 ## P14-C Contract Reset Independent Acceptance — 2026-09-30
 
 **Decision: FAIL / REPAIR REQUIRED. Contract is NOT frozen. Do not start Golden Tests and do not advance to implementation or P14-D.**
