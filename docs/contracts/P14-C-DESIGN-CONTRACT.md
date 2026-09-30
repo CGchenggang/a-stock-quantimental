@@ -137,11 +137,11 @@ SOURCE_EMPTY observation：
 
 ### 6.4 不变量
 
-- **INV-EVID-001**: 每一次 ingestion attempt 必须在 raw_ingestion_audit.jsonl 中有一条事件。
-- **INV-EVID-002**: raw_ingestion_audit.jsonl 重启后必须完整恢复。
-- **INV-EVID-003**: SOURCE_ERROR / PARSE_FAILURE / SOURCE_EMPTY 的 evidence 不得仅存在于进程内存。
-- **INV-EVID-004**: SOURCE_EMPTY observation 不产生 canonical raw record、raw_payload_hash 或 ingestion_id。
-- **INV-EVID-005**: source failure (SOURCE_ERROR) 和 parse failure (REJECTED) 在 audit 中的 outcome 字段必须可区分。
+- **P14C-EVID-001**: 每一次 ingestion attempt 必须在 raw_ingestion_audit.jsonl 中有一条事件。
+- **P14C-EVID-002**: raw_ingestion_audit.jsonl 重启后必须完整恢复。
+- **P14C-EVID-003**: SOURCE_ERROR / PARSE_FAILURE / SOURCE_EMPTY 的 evidence 不得仅存在于进程内存。
+- **P14C-EVID-004**: SOURCE_EMPTY observation 不产生 canonical raw record、raw_payload_hash 或 ingestion_id。
+- **P14C-EVID-005**: source failure (SOURCE_ERROR) 和 parse failure (REJECTED) 在 audit 中的 outcome 字段必须可区分。
 
 ---
 
@@ -173,10 +173,10 @@ SOURCE_EMPTY
 
 ### 7.3 不变量
 
-- **INV-MISS-001**: 六类互斥，任何 observation 只能属于一类。
-- **INV-MISS-002**: SOURCE_EMPTY 不能被重新解释为 EXPECTED_ABSENCE。
-- **INV-MISS-003**: PARSE_FAILURE 不能被重新解释为 SOURCE_ERROR。
-- **INV-MISS-004**: EXPECTED_ABSENCE 不能由"实际没数据"自动推导。
+- **P14C-MISS-001**: 六类互斥，任何 observation 只能属于一类。
+- **P14C-MISS-002**: SOURCE_EMPTY 不能被重新解释为 EXPECTED_ABSENCE。
+- **P14C-MISS-003**: PARSE_FAILURE 不能被重新解释为 SOURCE_ERROR。
+- **P14C-MISS-004**: EXPECTED_ABSENCE 不能由"实际没数据"自动推导。
 
 ---
 
@@ -205,10 +205,10 @@ EXPECTED_CONTRACT = {
 
 ### 8.3 不变量
 
-- **INV-EXP-001**: EXPECTED_CONTRACT 在 audit 运行前定义。
-- **INV-EXP-002**: ingestion 失败不改变 EXPECTED_CONTRACT。
-- **INV-EXP-003**: 每个 source 在 EXPECTED_CONTRACT 中最多出现一次。
-- **INV-EXP-004**: expected_pairs 由 expected_entities × expected_dates 的
+- **P14C-EXP-001**: EXPECTED_CONTRACT 在 audit 运行前定义。
+- **P14C-EXP-002**: ingestion 失败不改变 EXPECTED_CONTRACT。
+- **P14C-EXP-003**: 每个 source 在 EXPECTED_CONTRACT 中最多出现一次。
+- **P14C-EXP-004**: expected_pairs 由 expected_entities × expected_dates 的
   笛卡尔积构成。
 
 ---
@@ -246,16 +246,21 @@ coverage_ratio   = actual_count / expected_count
 | 完整 | missing_entities = ∅ 且 missing_dates = ∅ 且 missing_pairs = ∅ |
 | 部分完整 | 某些 entity/date/pair 缺失但非全部 |
 | 完全缺失 | actual_entities = ∅ 且 expected_entities ≠ ∅ |
-| 合法预期缺失 | EXPECTED_CONTRACT 声明 expected_absence = True |
+
+**注意**：EXPECTED_ABSENCE（domain 声明的合法缺失）不是 completeness 的一个状态。
+它是 missingness 分类的一个输入条件：声明为 expected_absence 的 entity/date pair
+从 coverage denominator 中排除，从而不影响 coverage_ratio 的计算。
+completeness 只报告 **required** expected pairs 的 coverage。
 
 ### 9.4 不变量
 
-- **INV-COMP-001**: coverage_ratio 由 |P| 和 |P ∩ A| 计算，不得手工填写。
-- **INV-COMP-002**: missing data **不得**被 forward-fill / 默认值填充 / 静默删除。
-- **INV-COMP-003**: expected set 独立于 actual ingestion 结果。
-- **INV-COMP-004**: entity / date / pair 三种粒度的 missing 集合必须分别报告。
-- **INV-COMP-005**: expected contract 中明确声明 expected_absence 的 entity/date
-  **不计入** coverage denominator。
+- **P14C-COMP-001**: coverage_ratio 由 |required_expected_pairs| 和
+  |required_expected_pairs ∩ actual_pairs| 计算，不得手工填写。
+- **P14C-COMP-002**: missing data **不得**被 forward-fill / 默认值填充 / 静默删除。
+- **P14C-COMP-003**: expected set 独立于 actual ingestion 结果。
+- **P14C-COMP-004**: entity / date / pair 三种粒度的 missing 集合必须分别报告。
+- **P14C-COMP-005**: 声明为 EXPECTED_ABSENCE 的 entity/date pair
+  **不计入** coverage denominator，但必须被单独报告为 EXPECTED_ABSENCE evidence。
 
 ---
 
@@ -274,10 +279,10 @@ coverage_ratio   = actual_count / expected_count
 
 ### 10.2 不变量
 
-- **INV-TS-001**: 三个时间字段语义分离（event_time / available_time / ingested_at）。
-- **INV-TS-002**: 不得用 event_time 替代 available_time。
-- **INV-TS-003**: 不得用 ingested_at 替代 available_time。
-- **INV-TS-004**: source contract 无法证明顺序时报告 UNKNOWN，不猜测。
+- **P14C-TS-001**: 三个时间字段语义分离（event_time / available_time / ingested_at）。
+- **P14C-TS-002**: 不得用 event_time 替代 available_time。
+- **P14C-TS-003**: 不得用 ingested_at 替代 available_time。
+- **P14C-TS-004**: source contract 无法证明顺序时报告 UNKNOWN，不猜测。
 
 ---
 
@@ -351,10 +356,10 @@ P14-A `detect_conflicts` 已负责检测。P14-C 消费检测结果并统计。
 
 ### 12.4 不变量
 
-- **INV-DUP-001**: 不得自动选择 source winner。
-- **INV-DUP-002**: 不得自动平均。
-- **INV-DUP-003**: 不得静默 resolution。
-- **INV-DUP-004**: 不同 source 的 value 都必须保留。
+- **P14C-DUP-001**: 不得自动选择 source winner。
+- **P14C-DUP-002**: 不得自动平均。
+- **P14C-DUP-003**: 不得静默 resolution。
+- **P14C-DUP-004**: 不同 source 的 value 都必须保留。
 
 ---
 
@@ -373,10 +378,10 @@ P14-C 将 P14-A 的小写状态（fresh/stale/unknown/missing_policy）规范化
 
 ### 13.3 不变量
 
-- **INV-FRESH-001**: freshness 判断必须调用 P14-A `freshness_status`。
-- **INV-FRESH-002**: 不得硬编码 stale 计数。
-- **INV-FRESH-003**: freshness policy 是 infrastructure 配置，不是 alpha threshold。
-- **INV-FRESH-004**: FRESH / STALE / UNRESOLVED 三种证据必须在 audit 中产生。
+- **P14C-FRESH-001**: freshness 判断必须调用 P14-A `freshness_status`。
+- **P14C-FRESH-002**: 不得硬编码 stale 计数。
+- **P14C-FRESH-003**: freshness policy 是 infrastructure 配置，不是 alpha threshold。
+- **P14C-FRESH-004**: FRESH / STALE / UNRESOLVED 三种证据必须在 audit 中产生。
 
 ---
 
@@ -399,11 +404,11 @@ difference, relative_difference, policy_id, policy_version, status
 
 ### 14.2 不变量
 
-- **INV-RECON-001**: 不得自动选择 source winner。
-- **INV-RECON-002**: 不得自动平均。
-- **INV-RECON-003**: 不得静默 resolution。
-- **INV-RECON-004**: 不同 source 的 value 都必须保留。
-- **INV-RECON-005**: tolerance policy 必须版本化（policy_id + policy_version）。
+- **P14C-RECON-001**: 不得自动选择 source winner。
+- **P14C-RECON-002**: 不得自动平均。
+- **P14C-RECON-003**: 不得静默 resolution。
+- **P14C-RECON-004**: 不同 source 的 value 都必须保留。
+- **P14C-RECON-005**: tolerance policy 必须版本化（policy_id + policy_version）。
 
 ---
 
@@ -435,8 +440,8 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 ### 15.3 不变量
 
-- **INV-PROV-A-001**: Record provenance 必须包含 raw_payload_hash。
-- **INV-PROV-B-001**: Observation provenance 不得包含 raw_payload_hash
+- **P14C-PROV-A-001**: Record provenance 必须包含 raw_payload_hash。
+- **P14C-PROV-B-001**: Observation provenance 不得包含 raw_payload_hash
   （该字段对 observation 无意义）。
 
 ---
@@ -452,9 +457,9 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 | UNRESOLVED | attempted = 0 且 accepted = 0 且 errors = 0 | 低 |
 | OK | 无上述任何条件 | — |
 
-**INV-SH-001**: health 状态由 deterministic 规则从 observable metrics 计算。
-**INV-SH-002**: 不得硬编码 stale 计数。
-**INV-SH-003**: 不得引入 ML health score。
+**P14C-SH-001**: health 状态由 deterministic 规则从 observable metrics 计算。
+**P14C-SH-002**: 不得硬编码 stale 计数。
+**P14C-SH-003**: 不得引入 ML health score。
 
 ---
 
@@ -512,17 +517,17 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 ## 19. Determinism Contract
 
-- **INV-DET-001**: 相同输入 → byte-identical 输出（从两个独立空目录运行）。
-- **INV-DET-002**: 禁止 runtime timestamp / random UUID / unordered iteration / machine path 进入 deterministic output。
-- **INV-DET-003**: manifest 不含动态 timestamp。
+- **P14C-DET-001**: 相同输入 → byte-identical 输出（从两个独立空目录运行）。
+- **P14C-DET-002**: 禁止 runtime timestamp / random UUID / unordered iteration / machine path 进入 deterministic output。
+- **P14C-DET-003**: manifest 不含动态 timestamp。
 
 ---
 
 ## 20. Restart / Replay Contract
 
-- **INV-RR-001**: process restart 后 durable audit file 必须完整恢复。
-- **INV-RR-002**: 重复 replay 同一 payload 不得产生新的 canonical record。
-- **INV-RR-003**: replay 的 audit event 必须标记为 DUPLICATE。
+- **P14C-RR-001**: process restart 后 durable audit file 必须完整恢复。
+- **P14C-RR-002**: 重复 replay 同一 payload 不得产生新的 canonical record。
+- **P14C-RR-003**: replay 的 audit event 必须标记为 DUPLICATE。
 
 ---
 
@@ -537,5 +542,5 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 ## 22. Invariant Registry
 
-全部 INV-* 编号在本文件 §6-§21 中定义，此处不再重复列举。
-每个 INV-* 在 Acceptance Matrix 中至少对应一行。
+全部 P14C-* Contract ID 在本文件 §6-§21 中定义，此处不再重复列举。
+每个 P14C-* Contract ID 在 Acceptance Matrix 中至少对应一行。
