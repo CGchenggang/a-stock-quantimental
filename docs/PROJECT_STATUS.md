@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Acceptance Harness Reset — FAIL / REPAIR REQUIRED (independent verdict 2026-10-01, `e881b09`); CI Gate Repair delivered — awaiting independent acceptance; Contract not frozen**
+**P14-C Acceptance Harness Reset — PASS (independently accepted 2026-10-01); Golden Tests is the next gated stage**
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -42,9 +42,9 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 
 ## Current Commit
 
-`3144a6951d33281af38e8663d394115148bb00d1`
+`1961773d6af4e742d2c05a662a34d1d91b9ccf29`
 
-Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd` (P14-B baseline); `3144a695` is the current **P14-C Acceptance Harness + R4 documentation-only contract repair** submission and is **not accepted** pending independent Acceptance Harness/CI verification. Commits after `3144a69` in this round are PROJECT_STATUS CI-gate documentation sync only (no code, test, contract, or data changes).
+Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd` (P14-B baseline); `1961773d` is the current documentation-synchronized HEAD for the independently accepted P14-C Acceptance Harness Reset. The functional submission tree was independently verified at `3144a695`; `1961773d` adds only the acceptance-state documentation sync.
 
 Independent review state: the latest independent verdict on the P14-C contract line is **Acceptance Harness Reset FAIL / REPAIR REQUIRED** (2026-10-01, `e881b09`, see its section at the end of this file); the CI/documentation repair it requires is delivered in this round and **awaits independent acceptance**.
 
@@ -813,3 +813,46 @@ P13 boundaries unchanged: `research_end = 2026-09-22`, `virgin_start = 2026-09-2
 Stopping here; awaiting independent acceptance.
 
 P14-D remains blocked.
+
+
+## P14-C Acceptance Harness Reset — Independent Acceptance — 2026-10-01
+
+**Decision: PASS. P14-C Acceptance Harness Reset is independently accepted.**
+
+Independent verification was performed against the functional submission `3144a6951d33281af38e8663d394115148bb00d1` and the final documentation-sync HEAD `1961773d6af4e742d2c05a662a34d1d91b9ccf29`.
+
+### Acceptance evidence
+
+- GitHub Actions workflow: `tests`
+- Exact functional submission SHA: `3144a6951d33281af38e8663d394115148bb00d1`
+- Run: `36739506965`
+- Workflow result: **success**
+- `pytest` job `109969874122`: **success**
+- `p13m` job `109969874447`: **success**
+- `pytest` job steps independently inspected; Environment diagnostics, core tests, agent/backtest/ledger tests, P8 regression, P13-M regression, and Full pytest all succeeded.
+- Full pytest log: **361 passed, 2 warnings, 0 failed**.
+- Full pytest command: `python -m pytest -q -ra`.
+- P13-M regression: **3 passed** in the dedicated job.
+- Harness characterization is included in the Full pytest suite and pins the clean real-document state:
+  - `contract_unique_ids = 61`
+  - `matrix_unique_ids = 61`
+  - `matrix_rows = 61`
+  - `contract_only = []`
+  - `matrix_only = []`
+  - `duplicate_contract_ids = 0`
+  - `duplicate_matrix_ids = 0`
+  - `hard_findings = 0`
+  - `soft_findings = 0`
+- The current HEAD delta after the verified functional submission contains only `docs/PROJECT_STATUS.md`; no Contract, Harness, test, source, data, or workflow changes were introduced by the synchronization commit.
+- EXPECTED_CONTRACT remains restricted to `expected_entities` / `expected_dates`; the forbidden fixture-control fields remain absent.
+- P13-T remains **STOPPED / NOT EXECUTED**; P13-U virgin protection remains intact.
+- No Golden Tests were created in this stage.
+- No production factor/policy/calibration/recommendation changes were introduced.
+
+### Acceptance boundary
+
+The Acceptance Harness is now the mechanical gate for the next P14-C stage. The Contract is treated as frozen for the purpose of proceeding to Golden Tests/Fixtures. P14-C production implementation is still **not accepted** merely by this harness acceptance.
+
+**Next allowed stage: P14-C Golden Tests / Fixtures Design & Freeze.**
+
+P14-D remains blocked until P14-C Golden Tests, implementation, CI, and independent acceptance are complete.
