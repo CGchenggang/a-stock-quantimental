@@ -94,7 +94,8 @@ class SourceAdapter:
 
         Partial failure is audited: attempted = accepted + rejected +
         failed; the source health status distinguishes EMPTY_SUCCESS /
-        SOURCE_ERROR / PARSE_ERROR / AUTH_ERROR / TIMEOUT.
+        SOURCE_ERROR / PARSE_ERROR / AUTH_ERROR / TIMEOUT. Every attempt —
+        including failures — is durably audited via the store's audit log.
         """
         report = IngestionReport(source=self.metadata.source,
                                  adapter_version=self.metadata.adapter_version)
@@ -102,15 +103,21 @@ class SourceAdapter:
             payloads = self.fetch()
         except TimeoutError:
             report.status = TIMEOUT
-            report.errors.append("fetch timed out")
+            store.audit_event({"outcome": TIMEOUT, "source": self.metadata.source,
+                               "adapter_version": self.metadata.adapter_version,
+                               "error": "fetch timed out"})
             return report
         except PermissionError:
             report.status = AUTH_ERROR
-            report.errors.append("fetch not authorized")
+            store.audit_event({"outcome": AUTH_ERROR, "source": self.metadata.source,
+                               "adapter_version": self.metadata.adapter_version,
+                               "error": "fetch not authorized"})
             return report
         except Exception as exc:  # noqa: BLE001 - audited as source health
             report.status = SOURCE_ERROR
-            report.errors.append(f"fetch failed: {exc}")
+            store.audit_event({"outcome": SOURCE_ERROR, "source": self.metadata.source,
+                               "adapter_version": self.metadata.adapter_version,
+                               "error": f"fetch failed: {exc}"})
             return report
 
         report.attempted = len(payloads)
@@ -122,11 +129,16 @@ class SourceAdapter:
             except Exception as exc:  # noqa: BLE001 - tracked parse failure
                 parse_failures += 1
                 report.errors.append(f"parse failed for payload[{index}]: {exc}")
+                store.audit_event({
+                    "outcome": "REJECTED",
+                    "source": self.metadata.source,
+                    "source_id": str(payload.get("source_id")),
+                    "revision": int(payload.get("revision", 0)),
+                    "adapter_version": self.metadata.adapter_version,
+                    "error": f"parse failed for payload[{index}]: {exc}",
+                    "payload_index": index,
+                })
                 continue
-            if record.available_time is None:
-                # adapter contract: never fabricate availability
-                record.__dict__["quality_status"] = "UNRESOLVED"
-                record.__dict__["availability_status"] = "available_time_unresolved"
             outcome = store.put(record)
             if outcome == "ACCEPTED":
                 report.accepted += 1
@@ -145,10 +157,8 @@ class SourceAdapter:
         report.rejected = parse_failures
         if not payloads:
             report.status = EMPTY_SUCCESS
-        elif parse_failures and accepted_or_duplicate == 0:
-            report.status = PARSE_ERROR
         elif parse_failures:
             report.status = PARSE_ERROR  # partial failure is still a failure
         else:
-            report.status = EMPTY_SUCCESS if not payloads else "OK"
+            report.status = "OK"
         return report

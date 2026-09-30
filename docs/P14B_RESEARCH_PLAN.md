@@ -42,6 +42,15 @@ P14-A 14 字段之外新增：`raw_payload`（adapter 实际收到的原始内�
 
 Raw ingestion 可以记录真实 source 数据（含日期 > research_end 的源数据——那是数据，不是研究消费）；但研究层访问仍被 P13-U guard 保护：`select_asof` 对 decision_time ≥ 2026-09-23 继续 fail-fast（P14-B 回归测试锁定 raw→normalize→select_asof 全链路）。RESEARCH_END/VIRGIN_START 常量未改（现从 `research_boundary.py` 单一来源导入）。
 
+## 7. Durable ingestion attempt audit（P14-B-R1 修复）
+
+Raw store 与 ingestion attempt audit 是**两个不同的 append-only 文件**：
+
+- `raw_records.jsonl`：仅 ACCEPTED 的 canonical record（每 key 一条）。
+- `raw_ingestion_audit.jsonl`：**每一次 ingestion attempt** 的持久化事件——ACCEPTED / DUPLICATE / RAW_MUTATION_DETECTED / REJECTED（parse 失败）/ SOURCE_ERROR / AUTH_ERROR / TIMEOUT（source 失败）。
+
+事件字段：`outcome, source, source_id, revision, incoming_raw_payload_hash, stored_raw_payload_hash, ingestion_id, adapter_version`（adapter 失败/拒绝另加 `error, payload_index`）。`RawStore.__init__` 从两文件加载；`put`/`audit_event` 追加式写入，进程重启后全部 attempt 历史可恢复。三态语义：同 key 同 hash → DUPLICATE（原记录不变）；同 key 异 hash → RAW_MUTATION_DETECTED（incoming/stored hash 均记录，不覆盖）。
+
 ## 7. 产物
 
 `scripts/run_p14b_ingestion_audit.py --out-dir data/industry/p14b`：4 source 全 OK，每 source attempted=1/accepted=1，raw_records.jsonl 4 行，normalized 4 条，全部在 research-zone 决策日可见；manifest 记录 SHA256。双次运行全部 byte-identical。

@@ -33,6 +33,16 @@
 - partial ingestion：attempted = accepted + rejected，错误带 payload 索引，status=PARSE_ERROR；empty source = EMPTY_SUCCESS；SOURCE_ERROR/AUTH_ERROR/TIMEOUT 状态齐备。
 - adapter_version 与 ingested_at/event_time/available_time 全部原样保留。
 
+## 4-R1. Durable Ingestion Audit Repair（P14-B-R1，验收阻塞修复）
+
+独立验收发现：DUPLICATE / RAW_MUTATION_DETECTED 的 ingestion outcome 仅存于进程内存，重启即失。修复：
+
+1. `RawStore` 现维护两个 append-only 文件——`raw_records.jsonl`（ACCEPTED canonical records）与 `raw_ingestion_audit.jsonl`（**每一次 attempt** 的持久化事件：ACCEPTED/DUPLICATE/RAW_MUTATION_DETECTED/REJECTED/SOURCE_ERROR/AUTH_ERROR/TIMEOUT）。事件含 incoming/stored raw_payload_hash、ingestion_id、adapter_version、错误与 payload 索引。
+2. `RawIngestRecord.__post_init__` 构造期派生 availability 语义（available_time=None → UNRESOLVED + available_time_unresolved），移除 adapters.py 的 frozen-object `__dict__` 突变。
+3. 测试 A–G 新增（restart 后 duplicate/mutation 审计可恢复、append-only 前缀不变、deterministic replay、replay 不产生重复 canonical records、partial failure 与 source failure 持久可审计）。
+
+实测：双次 deterministic fixture 运行 5 个产物 byte-identical（含 audit 文件）；mutation/duplicate/restart/append-only/partial/source-failure 全部 PASS。
+
 ## 4. Known Limitations
 
 - RawStore 为单进程内存+JSONL 实现，无并发锁/压缩（当前单机研究用途足够；多进程写入属后续阶段）。

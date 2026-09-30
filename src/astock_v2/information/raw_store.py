@@ -86,6 +86,15 @@ class RawIngestRecord:
                 raise ValueError(f"raw ingest record requires {name}")
         if int(self.revision) < 0:
             raise ValueError("revision must be non-negative")
+        # Availability semantics are derived at construction, never patched
+        # onto the frozen object afterwards: a record without a reliable
+        # available_time is UNRESOLVED and can never pass PIT admissibility.
+        if self.available_time is None:
+            object.__setattr__(self, "quality_status", "UNRESOLVED")
+            object.__setattr__(self, "availability_status",
+                               "available_time_unresolved")
+        else:
+            object.__setattr__(self, "availability_status", "RESOLVED")
         object.__setattr__(self, "raw_payload_hash", canonical_payload_hash(self.raw_payload))
         object.__setattr__(
             self, "ingestion_id",
@@ -104,28 +113,68 @@ class RawIngestRecord:
 
 
 class RawStore:
-    """Append-only JSONL store with idempotent, mutation-detecting puts."""
+    """Append-only raw record store plus a durable ingestion attempt audit.
 
-    def __init__(self, path: Path):
+    Two distinct append-only files:
+
+    - ``path`` (raw_records.jsonl): one line per ACCEPTED canonical record.
+    - ``audit_path`` (raw_ingestion_audit.jsonl): one durable event per
+      ingestion attempt — ACCEPTED, DUPLICATE and RAW_MUTATION_DETECTED —
+      so rejected/replayed attempts remain auditable across restarts.
+
+    The audit file is the durable record of every attempt; the in-memory
+    list is only a cache of it.
+    """
+
+    def __init__(self, path: Path, audit_path: Path | None = None):
         self.path = Path(path)
+        self.audit_path = (
+            Path(audit_path) if audit_path
+            else self.path.parent / "raw_ingestion_audit.jsonl"
+        )
         self._records: dict[tuple[str, str, int], RawIngestRecord] = {}
         self._outcomes: list[dict] = []
-        self._load()
+        self._load_records()
+        self._load_audit()
 
-    def _load(self):
+    def _load_records(self):
         if not self.path.exists():
             return
         for line in self.path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
             entry = json.loads(line)
-            record = RawIngestRecord(**entry["record"])
+            fields = entry["record"]
+            # raw_payload_hash / ingestion_id are deterministic init=False
+            # fields; drop the serialized copies, __post_init__ recomputes.
+            fields.pop("raw_payload_hash", None)
+            fields.pop("ingestion_id", None)
+            record = RawIngestRecord(**fields)
             self._records[record.key()] = record
-            self._outcomes.append(entry["outcome"])
+
+    def _load_audit(self):
+        if not self.audit_path.exists():
+            return
+        for line in self.audit_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            self._outcomes.append(json.loads(line))
+
+    def _append_audit(self, event: dict):
+        self.audit_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.audit_path.open("a", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps(event, sort_keys=True, ensure_ascii=False) + "\n")
+
+    def audit_event(self, event: dict):
+        """Durably record an ingestion attempt that produced no canonical
+        record (adapter-level parse/source failures)."""
+        self._append_audit(event)
+        self._outcomes.append(event)
 
     def put(self, record: RawIngestRecord) -> str:
         """Store one raw record; returns ACCEPTED / DUPLICATE /
-        RAW_MUTATION_DETECTED (append-only, never overwrites)."""
+        RAW_MUTATION_DETECTED (append-only, never overwrites). Every
+        attempt — accepted, replayed or mutated — is durably audited."""
         key = record.key()
         current = self._records.get(key)
         if current is None:
@@ -134,23 +183,27 @@ class RawStore:
             outcome = DUPLICATE
         else:
             outcome = RAW_MUTATION_DETECTED
-        if outcome == ACCEPTED:
-            self._records[key] = record
-            self._append(record, outcome)
-        self._outcomes.append({
+        event = {
             "outcome": outcome,
             "source": record.source,
             "source_id": record.source_id,
             "revision": record.revision,
-            "ingestion_id": record.ingestion_id,
-            "raw_payload_hash": record.raw_payload_hash,
+            "incoming_raw_payload_hash": record.raw_payload_hash,
             "stored_raw_payload_hash": (
                 current.raw_payload_hash if current is not None else None
             ),
-        })
+            "ingestion_id": record.ingestion_id,
+            "adapter_version": record.adapter_version,
+        }
+        if outcome == ACCEPTED:
+            self._records[key] = record
+            self._append(record, outcome)
+        self._append_audit(event)
+        self._outcomes.append(event)
         return outcome
 
     def _append(self, record: RawIngestRecord, outcome: str):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(
                 {"record": record.as_dict(), "outcome": outcome},
@@ -161,6 +214,8 @@ class RawStore:
         return [self._records[key] for key in sorted(self._records)]
 
     def outcomes(self) -> list[dict]:
+        """All ingestion attempt events, including those persisted by
+        earlier RawStore instances on the same files."""
         return list(self._outcomes)
 
 

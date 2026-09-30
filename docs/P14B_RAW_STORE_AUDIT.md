@@ -43,3 +43,12 @@ canonical payload 的 SHA256。确定性：`test_canonical_payload_hash_detects_
 ## 8. 无越界
 
 `test_raw_store_module_generates_no_recommendation`：gate/raw_store/adapters 三个模块源码不含 buy_now/place_order/execute_trade/open_position/close_position/broker 任何字样；`test_production_factor_policy_calibration_snapshots`：factor registry 8 因子不变、P13-R policy registry 8 policy 不变、P13-Q calibration registry research_only 不变。
+
+
+## 9. Durable ingestion attempt audit（P14-B-R1 修复）
+
+`RawStore` 现在维护**两个** append-only 文件：`raw_records.jsonl`（仅 ACCEPTED canonical records）与 `raw_ingestion_audit.jsonl`（每一次 ingestion attempt 的事件）。审计事件字段：outcome / source / source_id / revision / incoming_raw_payload_hash / stored_raw_payload_hash / ingestion_id / adapter_version（+ error/payload_index 用于失败）。`RawStore.__init__` 重载两文件，进程重启后全部 attempt 历史可恢复；`put` 对每次 attempt 追加事件（ACCEPTED 也记录），`audit_event` 承载 adapter 层失败（SOURCE_ERROR/AUTH_ERROR/TIMEOUT/REJECTED）。
+
+## 10. frozen dataclass 修正
+
+`RawIngestRecord.__post_init__` 现在按 available_time 派生 `quality_status=UNRESOLVED` 与 `availability_status=available_time_unresolved`（构造期，不再由 adapters.py 在 frozen 对象创建后改 `__dict__`）。available_time 缺失语义不变：绝不回填 event_time/ingested_at，P14-A 投影仍拒绝。

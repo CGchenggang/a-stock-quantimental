@@ -357,3 +357,152 @@ def test_raw_store_module_generates_no_recommendation(tmp_path):
         for banned in ("buy_now", "place_order", "execute_trade",
                        "open_position", "close_position", "broker"):
             assert banned not in source, (module.__name__, banned)
+
+
+# ---------------- P14-B-R1: durable ingestion audit (Tests A-G) ----------------
+
+PMI_SEED = [
+    dict(FIXTURES["macro_pmi_cn"], revision=0,
+         available_time="2026-02-01T09:30:00+08:00", value=50.1),
+    dict(FIXTURES["macro_pmi_cn"], source_id="PMI_CN_2026M01", revision=1,
+         available_time="2026-02-15T09:30:00+08:00", value=50.3),
+]
+
+
+def _seed_store(path, payloads=None):
+    root = pathlib.Path(path)
+    root.mkdir(parents=True, exist_ok=True)
+    store = RawStore(root / "raw.jsonl")
+    _adapter("macro_pmi_cn", list(payloads or PMI_SEED)).ingest(
+        store, ingested_at="2026-03-10T16:00:00+08:00")
+    return store
+
+
+def _outcomes_of(path):
+    audit = pathlib.Path(path) / "raw_ingestion_audit.jsonl"
+    return [json.loads(l) for l in audit.read_text(encoding="utf-8").splitlines() if l.strip()]
+
+
+# Test A: duplicate audit survives restart
+def test_duplicate_audit_survives_restart(tmp_path):
+    root = tmp_path / "a"
+    _seed_store(root).records()
+    # replay the same payloads into a NEW store instance on the same files
+    _seed_store(root)
+    store2 = RawStore(root / "raw.jsonl")
+    assert len(store2.records()) == 2
+    outcomes = [o["outcome"] for o in _outcomes_of(root)]
+    assert outcomes == ["ACCEPTED", "ACCEPTED", "DUPLICATE", "DUPLICATE"]
+
+
+# Test B: mutation audit survives restart with both hashes
+def test_mutation_audit_survives_restart(tmp_path):
+    root = tmp_path / "b"
+    _seed_store(root)
+    h1 = _seed_store  # noqa: F841 - seeds carry H1 payloads
+    stored_h1 = [r.raw_payload_hash for r in
+                 RawStore(root / "raw.jsonl").records()]
+    # same key as rev0, different value -> H2
+    tampered = [dict(PMI_SEED[0], value=99.9)]
+    _adapter("macro_pmi_cn", tampered).ingest(
+        RawStore(root / "raw.jsonl"), ingested_at="2026-03-10T16:00:00+08:00")
+    store2 = RawStore(root / "raw.jsonl")
+    records = store2.records()
+    # original H1 record still canonical; H2 never stored as canonical
+    assert any(r.raw_payload_hash == stored_h1[0] for r in records)
+    assert all(r.value != 99.9 for r in records)
+    events = _outcomes_of(root)
+    mutation = [e for e in events if e["outcome"] == RAW_MUTATION_DETECTED]
+    assert len(mutation) == 1
+    event = mutation[0]
+    assert event["stored_raw_payload_hash"] == stored_h1[0]
+    assert event["incoming_raw_payload_hash"] != stored_h1[0]
+    assert event["source_id"] == "PMI_CN_2026M01" and event["revision"] == 0
+    assert event["adapter_version"] == "macro_pmi_cn_adapter@1"
+
+
+# Test C: audit is append-only across reloads
+def test_audit_is_append_only(tmp_path):
+    root = tmp_path / "c"
+    store = RawStore(root / "raw.jsonl")
+    _adapter("macro_pmi_cn", [dict(p) for p in PMI_BOTH]).ingest(
+        store, ingested_at="2026-03-10T16:00:00+08:00")
+    snapshot_a = (root / "raw_ingestion_audit.jsonl").read_bytes()
+    # replay duplicates
+    _adapter("macro_pmi_cn", [dict(p) for p in PMI_BOTH]).ingest(
+        RawStore(root / "raw.jsonl"), ingested_at="2026-03-10T16:00:00+08:00")
+    history_b = (root / "raw_ingestion_audit.jsonl").read_bytes()
+    # earlier events are an immutable prefix of the grown history
+    assert history_b.startswith(snapshot_a)
+    # a fresh store on the same files reloads the same history
+    reloaded = RawStore(root / "raw.jsonl")
+    assert [o["outcome"] for o in reloaded.outcomes()] == [
+        "ACCEPTED", "ACCEPTED", "DUPLICATE", "DUPLICATE"]
+
+
+# Test D: deterministic replay across fresh stores
+def test_deterministic_replay_fresh_dirs(tmp_path):
+    digests = []
+    for run in ("run_a", "run_b"):
+        root = tmp_path / run
+        _seed_store(root)
+        raw = (root / "raw.jsonl").read_bytes()
+        audit = (root / "raw_ingestion_audit.jsonl").read_bytes()
+        digests.append((raw, audit))
+    assert digests[0] == digests[1]
+
+
+# Test E: replay never duplicates canonical records
+def test_replay_never_duplicates_canonical_records(tmp_path):
+    root = tmp_path / "e"
+    _seed_store(root)
+    _seed_store(root)
+    _seed_store(root)
+    store = RawStore(root / "raw.jsonl")
+    assert len(store.records()) == 2  # rev0 + rev1, still exactly two
+    events = _outcomes_of(root)
+    assert events.count("ACCEPTED") if False else [
+        e["outcome"] for e in events].count("ACCEPTED") == 2
+    assert [e["outcome"] for e in events].count("DUPLICATE") == 4
+
+
+# Test F: partial failure remains auditable durably
+def test_partial_failure_audit_survives_restart(tmp_path):
+    root = tmp_path / "f"
+    store = RawStore(root / "raw.jsonl")
+    good = dict(FIXTURES["macro_pmi_cn"])
+    broken = {k: v for k, v in good.items() if k != "source_id"}
+    adapter = _adapter("macro_pmi_cn", [good, broken, dict(good)])
+    report = adapter.ingest(store, ingested_at="2026-03-10T16:00:00+08:00")
+    # the third payload is an identical replay -> DUPLICATE, not a new fact
+    assert report.attempted == 3
+    assert (report.accepted, report.duplicates, report.rejected) == (1, 1, 1)
+    # recreate the store: ALL attempts (incl. the rejected one) survive in
+    # the durable audit with the same outcome order
+    reloaded = RawStore(root / "raw.jsonl")
+    outcomes = [o["outcome"] for o in reloaded.outcomes()]
+    assert outcomes == ["ACCEPTED", "REJECTED", "DUPLICATE"]
+    rejected = [o for o in reloaded.outcomes() if o["outcome"] == "REJECTED"]
+    assert rejected[0]["payload_index"] == 1 and "source_id" in rejected[0]
+
+
+# Test G: source failures remain auditable, no fake records
+def test_source_failures_audited_and_no_fake_records(tmp_path):
+    class Boom(MacroPMICNAdapter):
+        def fetch(self):
+            raise RuntimeError("boom")
+
+    class Denied(MacroPMICNAdapter):
+        def fetch(self):
+            raise PermissionError("denied")
+
+    root = tmp_path / "g"
+    store = RawStore(root / "raw.jsonl")
+    Boom([]).ingest(store, ingested_at="2026-03-10T16:00:00+08:00")
+    Denied([]).ingest(store, ingested_at="2026-03-10T16:00:00+08:00")
+    outcomes = [o["outcome"] for o in store.outcomes()]
+    assert outcomes == ["SOURCE_ERROR", "AUTH_ERROR"]
+    assert store.records() == []  # no fabricated valid records
+    # restart keeps the same audit history
+    reloaded = RawStore(root / "raw.jsonl")
+    assert [o["outcome"] for o in reloaded.outcomes()] == ["SOURCE_ERROR", "AUTH_ERROR"]
