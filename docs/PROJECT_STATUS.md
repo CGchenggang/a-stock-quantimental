@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Contract Repair — EXPECTED_ABSENCE representation frozen — FAIL / CI GATE REPAIR REQUIRED** (independent review of 38bbf823; Contract semantics accepted, exact-HEAD CI evidence missing)
+**P14-C Contract Repair — EXPECTED_ABSENCE representation frozen — PASS / INDEPENDENTLY ACCEPTED** (Golden Re-freeze is the next gated stage)
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -37,6 +37,7 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 | P13-U | PASS | Independently accepted virgin-holdout integrity gate; currently ACCUMULATING |
 | P14-A | PASS | Information contract, provenance, PIT, freshness, revision, dedup/conflict infrastructure |
 | P14-B | PASS | Independently accepted after durable ingestion-audit repair (P14-B-R1) |
+| P14-C Contract Repair | PASS | EXPECTED_ABSENCE representation frozen; exact-head CI evidence independently verified; Golden Re-freeze is next |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
@@ -888,7 +889,7 @@ P14-D remains blocked.
 
 **Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-C Production Implementation.**
 
-Independently inspected against exact HEAD `447a2b4a54f2a1575e3cc3a3547d152fd9606558`, with P14-C Acceptance Harness Reset accepted baseline `a8104e755cbaf6fa6909b26cae343b66877c0ab3` / functional harness tree `3144a6951d33281af38e8663d394115148bb00d1`.
+Independently inspected against exact HEAD `06f3294c8c76dae031510f9c308722678ac08092`, with P14-C Acceptance Harness Reset accepted baseline `a8104e755cbaf6fa6909b26cae343b66877c0ab3` / functional harness tree `3144a6951d33281af38e8663d394115148bb00d1`.
 
 ### Positive acceptance evidence
 
@@ -1078,3 +1079,71 @@ Diff `38bbf823..HEAD`: only `.github/workflows/tests.yml` + `docs/PROJECT_STATUS
 Stopping here; awaiting independent acceptance.
 
 P14-D remains blocked.
+
+
+## P14-C Contract Repair — Independent Acceptance — 2026-10-01
+
+**Decision: PASS. Contract Repair is independently accepted. Do not treat this as P14-C production acceptance; proceed only to the gated Golden Re-freeze stage.**
+
+Independent acceptance target:
+- Contract Repair implementation HEAD: `38bbf82340fd22fd196ea97639ce014e2bf15033`
+- P14-B accepted baseline: `84021d6c9039582cfa831e1e3a85f1141fb87efd`
+- Current repository HEAD after CI-only/documentation evidence commits: `06f3294c8c76dae031510f9c308722678ac08092`
+
+### Acceptance evidence
+
+1. **Exact-head CI evidence exists and is genuine.**
+   - GitHub Actions run: `36752429513`
+   - pytest job: `110014139560`
+   - p13m job: `110014139754`
+   - The pytest job checkout log explicitly fetched and checked out `38bbf82340fd22fd196ea97639ce014e2bf15033`; `git log -1 --format=%H` returned the same SHA.
+   - P13-M regression step succeeded.
+   - All pre-full-suite pytest groups succeeded.
+   - Full pytest reported **435 passed, 2 failed, 2 warnings**; both failures are exactly the sanctioned Golden contract-hash pin checks:
+     - `test_anticheat_contract_pinned`
+     - `test_all_checks_green`
+     Both report the newly repaired Contract SHA-256 `c217f6b984a27cfb6e54322e731f1fe6a381a868e319755191a68290c922167b` as the mismatch. This is the expected anti-drift behavior until the separately gated Golden Re-freeze. It is not a Contract Repair defect.
+
+2. **CI gate repair added an explicit inspectable Contract Harness step without changing the Contract or production implementation.**
+   - CI-only commit: `7d00b1cf2a1cbde3ca61b5da63ffd386f8fc196a`
+   - Its workflow run: `36782824995`
+   - Dedicated `Contract Harness audit (P14-C)` step: SUCCESS.
+   - P13-M job: SUCCESS.
+   - Full pytest again fails only the same two expected Golden contract-pin checks.
+   - Diff from Contract Repair HEAD to the CI-only commit contains only `.github/workflows/tests.yml` and `docs/PROJECT_STATUS.md`; no Contract, Matrix, Golden, Harness script, `src/`, data, factor, policy, calibration, recommendation, or P13-T/U changes.
+
+3. **Final documentation evidence commit is status-only.**
+   - Commit: `06f3294c8c76dae031510f9c308722678ac08092`
+   - Diff from `7d00b1cf2a1cbde3ca61b5da63ffd386f8fc196a` contains only `docs/PROJECT_STATUS.md`.
+   - No semantic or production changes were introduced after the CI-only repair.
+
+4. **Contract semantics remain consistent with the independently reviewed repair.**
+   - `expected_absence_pairs` is the sole authoritative EXPECTED_ABSENCE declaration inside `EXPECTED_CONTRACT[source]`.
+   - EXPECTED_ABSENCE is distinct from SOURCE_EMPTY, SOURCE_ERROR, PARSE_FAILURE, and UNEXPECTED_MISSING.
+   - Completeness uses required set `R = P - X`.
+   - Contract Declaration Provenance is separated from observation provenance.
+   - Acceptance Matrix closure remains 61/61 with no orphan/duplicate/undefined IDs according to the repaired harness evidence.
+   - P13-T remains STOPPED / NOT EXECUTED; P13-U remains protected.
+   - No production factor, policy, calibration, recommendation, or alpha logic was changed.
+
+### Independent determination
+
+**P14-C Contract Repair — PASS / ACCEPTED.**
+
+The CI gate repair requirement is satisfied because there is machine-verifiable GitHub Actions evidence for the exact Contract Repair HEAD, and the later CI-only commit adds an independently inspectable Contract Harness step without modifying the Contract semantics.
+
+The two Golden hash-pin failures are intentionally preserved as the anti-drift gate. They must be resolved only by the next **P14-C Golden Re-freeze** task, not by weakening or bypassing the pin.
+
+### Next gate
+
+**P14-C Golden Re-freeze** is now the only authorized next implementation stage.
+
+It must:
+- re-pin the repaired Contract hash;
+- replace `intentional_absence_pairs` with canonical `expected_absence_pairs`;
+- update Golden anti-cheat/interpretation rules consistently;
+- replace G-061's actual virgin date `2026-09-24` with a synthetic post-boundary date;
+- run deterministic double-run, exact-head CI, full pytest, and P13-M regression;
+- remain Golden/test/fixture scope only.
+
+P14-C Production Implementation and P14-D remain blocked until Golden Re-freeze is independently accepted.
