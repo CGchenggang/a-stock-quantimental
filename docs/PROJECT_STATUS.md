@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Contract Reset — FAIL / REPAIR REQUIRED; Contract not frozen**
+**P14-C Acceptance Harness Reset — FAIL / REPAIR REQUIRED; Contract not frozen**
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -42,9 +42,9 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 
 ## Current Commit
 
-`a3f22a894e7de3c7b8c520bd65de28cba5034b05`
+`3144a6951d33281af38e8663d394115148bb00d1`
 
-Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd`; `a3f22a8` is the current Contract Reset submission and is **not accepted**.
+Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd`; current HEAD `3144a695` is **not accepted** pending independent Acceptance Harness/CI verification.
 
 Current HEAD was independently checked on 2026-09-30.
 
@@ -721,5 +721,42 @@ Documentation-only repair per the R3 independent acceptance verdict (`54d6b6e`).
 - EXPECTED_ABSENCE model and all P14-A/P14-B authority boundaries unchanged. P13-T STOPPED, P13-U ACCUMULATING. No Golden Tests created.
 
 Stopping here; awaiting independent acceptance.
+
+P14-D remains blocked.
+
+
+## P14-C Acceptance Harness Reset — Independent Acceptance — 2026-10-01
+
+**Decision: FAIL / REPAIR REQUIRED. Contract is NOT frozen. Do not start Golden Tests or advance to P14-D.**
+
+Independently inspected current HEAD `3144a6951d33281af38e8663d394115148bb00d1` against accepted P14-B baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Positive findings
+
+- The Acceptance Harness is now present at `scripts/audit_p14c_contract.py`.
+- Meta-tests are present at `tests/contracts/p14c/test_p14c_contract_harness.py`.
+- The harness checks canonical ID closure, duplicate rows, aliases, section numbering, EXPECTED_CONTRACT fixture-field bans, nine dimensions, frozen boundaries, DRAFT governance status, stale traceability claims, and semantic-drift suspects.
+- R4 removed the three duplicate Source Health Matrix rows found in the R3 independent review. The current R4 report states 61 unique IDs / 61 Matrix rows / zero orphan and duplicate findings.
+- The current workflow definition `.github/workflows/tests.yml` includes a Full pytest suite and P13-M regression, so the new harness meta-test would be exercised by Full pytest.
+- No new P13-T execution or production alpha/policy/calibration/recommendation promotion was introduced by the R4 documentation repair itself.
+
+### Blocking findings
+
+1. **No independently verifiable GitHub Actions run exists for current HEAD.** Both the commit workflow-run lookup and combined commit status for `3144a695` return no run/status. The repository acceptance rule explicitly requires GitHub Actions evidence, including workflow → job → step inspection. Therefore the claimed harness PASS cannot yet be independently accepted.
+
+2. **The current `PROJECT_STATUS.md` was stale at HEAD.** Its Current Phase and Current Commit still pointed to the earlier Contract Reset submission `a3f22a8`, not the actual R4/harness HEAD. This is now recorded as a documentation-consistency defect and must be corrected before final acceptance.
+
+3. **The characterization snapshot is intentionally pinned to the clean current documents.** This is acceptable as a regression mechanism only if the clean state has first been independently verified. Because current-head CI is unavailable, the snapshot cannot by itself substitute for the required independent execution evidence.
+
+4. **Local direct execution could not be independently reproduced in this environment** because external GitHub network access is unavailable. Therefore the reported `PASS, 0 hard + 0 soft` result is treated as ZCODE evidence, not as an independently executed result.
+
+### Required repair
+
+- Obtain a real GitHub Actions run for exact HEAD `3144a6951d33281af38e8663d394115148bb00d1` and expose the workflow/job/step evidence.
+- Ensure the run executes `tests/contracts/p14c/test_p14c_contract_harness.py` and the Full pytest suite; retain P13-M regression evidence.
+- Correct `docs/PROJECT_STATUS.md` so Current Phase / Current Commit reflect the actual submission and the independent acceptance state.
+- Do not weaken or rewrite the clean-state characterization snapshot merely to obtain PASS.
+- Keep P13-T STOPPED / NOT EXECUTED, preserve P13-U virgin protection, and do not add P14-D or production factor/policy/calibration/recommendation logic.
+- Stop after the CI/documentation repair and await independent acceptance.
 
 P14-D remains blocked.
