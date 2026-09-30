@@ -85,14 +85,25 @@ class ExpectedContract:
 
     def completeness(self, actual_pairs) -> dict:
         """§9.2 arithmetic on R; every list canonically sorted (JSON-friendly
-        lists, not tuples)."""
+        lists, not tuples).
+
+        Satisfaction is measured ONLY by ``A_pair ∩ R`` — an actual pair
+        outside P can never satisfy a required entity/date — and
+        ``missing_entities`` / ``missing_dates`` are derived from the
+        REQUIRED universe (entities/dates participating in R, satisfied by
+        A_pair ∩ R), so declared absences never enter any ``missing_*``
+        set (Contract §9.2 note; P14-C-COMP-BLOCKER-001 repair).
+        """
         actual = {(str(e), str(d)) for e, d in actual_pairs}
         required = self.required_pairs
-        missing_entities = sorted(set(self.entities) - {e for e, _ in actual})
-        missing_dates = sorted(set(self.dates) - {d for _, d in actual})
-        missing_pairs = sorted(required - actual)
+        satisfied = actual & required
+        missing_entities = sorted(
+            {e for e, _ in required} - {e for e, _ in satisfied})
+        missing_dates = sorted(
+            {d for _, d in required} - {d for _, d in satisfied})
+        missing_pairs = sorted(required - satisfied)
         expected_count = len(required)
-        actual_count = len(actual & required)
+        actual_count = len(satisfied)
         coverage = (actual_count / expected_count) if expected_count else 1.0
         return {
             "expected_entities": self.entities,

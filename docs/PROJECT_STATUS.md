@@ -1245,3 +1245,19 @@ Boundaries: `research_end = 2026-09-22`, `virgin_start = 2026-09-23` unchanged; 
 Stopping here; awaiting independent acceptance.
 
 P14-D remains blocked.
+
+## P14-C Production Implementation — Narrow Repair (P14-C-COMP-BLOCKER-001) — 2026-10-01
+
+Root cause: `ExpectedContract.completeness()` derived `missing_entities` / `missing_dates` as literal `E − A_entity` / `D − A_date`, so a contract-declared absence pair could leak a date into `missing_dates` (e.g. us_index_daily's declared-absent 2026-03-03), violating the Contract §9.2 note that X enters no `missing_*` set.
+
+Repair (production changes limited to the completeness semantic + regression tests):
+
+- satisfaction is measured ONLY by `A_pair ∩ R` (an actual pair outside P satisfies nothing);
+- `missing_entities` / `missing_dates` are derived from the REQUIRED universe: entities/dates participating in R, satisfied by `A_pair ∩ R`;
+- declared absences therefore enter no `missing_*` set; coverage still counts only R.
+
+Regression tests added (`tests/test_p14c_production.py`, +4): partial declared absence (all missing sets empty, coverage 1.0); entire entity declared absent (R empty, coverage 1.0); mixed required+absence with an out-of-P actual pair proving only `A_pair ∩ R` satisfies; production-path Case 4 (`us_index_daily` coverage 1.0, all missing sets empty, class EXPECTED_ABSENCE) and the completeness quality dimension's failing-source set exactly `{company_announcement, parse_failure_source}` (genuine UNEXPECTED_MISSING / PARSE_FAILURE evidence), never us_index_daily.
+
+Validation: audit PASS 0/0 (61/61/61); golden 76 ×2; p14c 90; P13-M 3; full pytest **463 passed / 0 failed**; Contract SHA `c217f6b9…167b` and Matrix SHA `fc99637a…636` unchanged; golden report byte-identical (`09cca5b0…`); boundary `2026-09-22`/`2026-09-23` unchanged; P13-T STOPPED; P13-U protected.
+
+P14-D remains blocked.

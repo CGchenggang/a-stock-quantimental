@@ -84,6 +84,58 @@ def test_case_c_unexpected_missing_reduces_coverage():
     assert c.source_missingness_class([("A", "2026-03-02")]) == "UNEXPECTED_MISSING"
 
 
+# ---------------- P14-C-COMP-BLOCKER-001 regression (required-universe gaps)
+
+def test_comp_blocker_001_case1_partial_declared_absence():
+    """Declared absence must not leak into missing_entities/missing_dates."""
+    c = _contract({"expected_entities": ["A"],
+                   "expected_dates": ["2026-03-02", "2026-03-03"],
+                   "expected_absence_pairs": [["A", "2026-03-03"]]})
+    comp = c.completeness([("A", "2026-03-02")])
+    assert comp["missing_entities"] == []
+    assert comp["missing_dates"] == []
+    assert comp["missing_pairs"] == []
+    assert comp["expected_count"] == 1
+    assert comp["actual_count"] == 1
+    assert comp["coverage_ratio"] == 1.0
+
+
+def test_comp_blocker_001_case2_entire_entity_declared_absent():
+    c = _contract({"expected_entities": ["A"], "expected_dates": ["2026-03-02"],
+                   "expected_absence_pairs": [["A", "2026-03-02"]]})
+    comp = c.completeness([])
+    assert comp["expected_count"] == 0
+    assert comp["actual_count"] == 0
+    assert comp["coverage_ratio"] == 1.0
+    assert comp["missing_entities"] == []
+    assert comp["missing_dates"] == []
+    assert comp["missing_pairs"] == []
+
+
+def test_comp_blocker_001_case3_mixed_required_and_absence():
+    """Two entities x two dates: one declared absent, one required observed,
+    one required missing — and an out-of-P actual pair must not satisfy
+    anything."""
+    c = _contract({"expected_entities": ["A", "B"],
+                   "expected_dates": ["2026-03-02", "2026-03-03"],
+                   "expected_absence_pairs": [["A", "2026-03-03"]]})
+    # R = {(A,02),(B,02),(B,03)}; observed: (A,02) required, (B,03) missing;
+    # (Z,02) is outside P and must satisfy nothing
+    comp = c.completeness([("A", "2026-03-02"), ("Z", "2026-03-02")])
+    assert comp["expected_count"] == 3              # |R|, X excluded
+    assert comp["actual_count"] == 1                # |A ∩ R|
+    assert comp["coverage_ratio"] == round(1 / 3, 4)
+    assert comp["missing_pairs"] == [["B", "2026-03-02"], ["B", "2026-03-03"]]
+    # declared-absent (A,03) is absent from A_pair yet enters no missing set;
+    # the date 03-03 is missing only because the REQUIRED pair (B,03) is
+    # unobserved
+    assert comp["missing_entities"] == ["B"]
+    assert comp["missing_dates"] == ["2026-03-03"]
+    assert comp["expected_absence_pairs"] == [["A", "2026-03-03"]]
+    assert c.source_missingness_class([("A", "2026-03-02"), ("Z", "2026-03-02")]) \
+        == "UNEXPECTED_MISSING"
+
+
 def test_contract_structurally_rejects_control_fields():
     """Anti-cheat as production code: control fields raise, never interpret."""
     for field in CONTRACT_CONTROL_FIELDS:
@@ -163,11 +215,32 @@ def test_production_expected_absence_end_to_end(tmp_path):
     assert us["expected_count"] == 1
     assert us["coverage_ratio"] == 1.0
     assert us["missingness_class"] == "EXPECTED_ABSENCE"
+    # P14-C-COMP-BLOCKER-001: the declared-absence date leaks into NO
+    # missing set
+    assert us["missing_pairs"] == []
+    assert us["missing_entities"] == []
+    assert us["missing_dates"] == []
     prov = us["expected_absence_evidence"]
     assert len(prov) == 1
     assert prov[0]["entity_date_pair_scope"] == {"entity_id": "SPX", "date": "2026-03-03"}
     assert set(prov[0]) == {"source_id", "expected_contract_id",
                             "entity_date_pair_scope", "declaration_reference"}
+
+
+def test_production_completeness_dimension_not_failed_by_absence(tmp_path):
+    """P14-C-COMP-BLOCKER-001 Case 4: the completeness quality dimension
+    must not count us_index_daily as failing because its declared-absence
+    date was not observed."""
+    from scripts.run_p14c_quality_audit import run_quality_audit
+    out = tmp_path / "audit"
+    run_quality_audit(out)
+    qr = json.load(open(out / "quality_report.json"))
+    dim = qr["dimensions"]["completeness"]
+    failing_sources = {e["source"] for e in dim["evidence"]
+                       if e.get("missing_entities") or e.get("missing_dates")
+                       or e.get("missing_pairs")}
+    assert "us_index_daily" not in failing_sources
+    assert failing_sources == {"company_announcement", "parse_failure_source"}
 
 
 # ------------------------- golden fixtures consumed through production code
