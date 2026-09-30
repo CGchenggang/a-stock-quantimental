@@ -689,3 +689,37 @@ Independently reviewed R3 implementation HEAD `1a6178a3e090b7509eeacfcb99161d249
 - Stop after the documentation-only repair and await independent acceptance.
 
 P14-D remains blocked.
+
+## P14-C Contract Repair R4 — 2026-09-30
+
+Documentation-only repair per the R3 independent acceptance verdict (`54d6b6e`). All changes confined to `docs/contracts/P14-C-DESIGN-CONTRACT.md` and `docs/contracts/P14-C-ACCEPTANCE-MATRIX.md`; verified by the mechanical audit `scripts/audit_p14c_contract.py` (delivered `b358670`/`18e44f3`): **PASS, 0 hard + 0 soft findings**.
+
+### Design Contract changes
+
+- Numbered the Boundary section into the section sequence (`## P14C-BND:` → `## 12. Boundary Contract`); resequenced Duplicate / Conflict to §13 and fixed the off-by-one subsection numbering in Freshness (13.x→14.x), Reconciliation (14.x→15.x), and Provenance (15.x→16.x). Section numbers now run §1..§23 with no gaps.
+- Canonicalized `P14C-SH-001..003` from bare bold text to the `- **P14C-SH-00N**:` list form, making their Acceptance Matrix rows traceable.
+- Reworded `P14C-RECON-001..004` to reconciliation semantics (CONSISTENT/CONFLICT tolerance classification; contributing-source value and provenance preservation) per §15.1's field requirements. The "不得自动选择 winner / 不得自动平均 / 不得静默 resolution" prohibitions remain normative under `P14C-DUP-001..004`; RECON-006 restated as an output-schema prohibition (no `resolved_value`). No normative requirement deleted.
+- Disambiguated the identical pair FRESH-002/SH-002 ("不得硬编码 stale 计数"): FRESH-002 now scopes to record-level P14-A policy evaluation; SH-002 scopes to aggregation of per-record freshness results into the STALE health state.
+
+### Acceptance Matrix changes
+
+- Removed the trailing duplicate Source Health block; `P14C-SH-004/005/006` each appear exactly once (61 rows = 61 unique IDs).
+- Aligned drifted rows to their Design Contract invariants: REV-003/REV-004 (mutation/regression were swapped), COMP-002..004, DET-002/003 (swapped), EVID-003 (was testing quality_reasons instead of durable failure evidence), SH-001..003 (now trace to the deterministic/no-hardcode/no-ML invariants; the OK/DEGRADED/STALE state behaviors remain the expected results and are normative in Contract §17's state table).
+- Closure header now states the mechanically verified counts.
+
+### Mechanical audit result (repair HEAD)
+
+- `contract_unique_ids = matrix_unique_ids = 61`
+- `orphan_contract_invariants = 0`, `orphan_matrix_rows = 0`
+- `duplicate_contract_ids = 0`, `duplicate_matrix_ids = 0`, `undefined_matrix_ids = 0`
+- Cross-domain duplicate invariant text (W001) and near-duplicates (W003): 0.
+
+### Notes
+
+- The nine-dimension report structure and per-dimension `reasons` checks remain normative via Contract §18/§19 schema enforcement; they no longer occupy matrix rows (previously mis-filed under COMP-004/EVID-003).
+- `tests/contracts/p14c/test_p14c_contract_harness.py`'s characterization snapshot was consciously updated to the repaired clean state, exactly as the test's own docstring prescribes ("contract edits require independent review, and the snapshot must be consciously updated alongside them"). No assertion was weakened: the test now pins the strictest state (zero findings, 61/61/61 counts). No other `tests/`, `src/`, `data/`, or `scripts/` changes.
+- EXPECTED_ABSENCE model and all P14-A/P14-B authority boundaries unchanged. P13-T STOPPED, P13-U ACCUMULATING. No Golden Tests created.
+
+Stopping here; awaiting independent acceptance.
+
+P14-D remains blocked.

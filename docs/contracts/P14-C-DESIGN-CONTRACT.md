@@ -9,6 +9,9 @@
 > v1: 初始版本（P14-C-R1 前）
 > v2: R3 修复——增加 Revision Integrity / Nine Dimensions / Provenance split /
 >     SOURCE_EMPTY durable evidence / completeness denominator / bidirectional traceability
+> v3: R4 修复（54d6b6e 验收意见）——Boundary 节编号入序、Source Health
+>     不变量规范化为列表格式、Reconciliation 不变量改为 reconciliation 语义
+>     （winner/平均/静默 resolution 禁令由 P14C-DUP-001..004 统一承载）
 
 ---
 
@@ -326,7 +329,7 @@ P14-A 仍然是 PIT authority。
 
 ---
 
-## P14C-BND: Boundary Contract
+## 12. Boundary Contract
 
 ### P14C-BND-001: Research end boundary
 
@@ -346,9 +349,9 @@ FACTOR_REGISTRY 在 P14-C 期间不得修改。
 
 ---
 
-## 12. Duplicate / Conflict Contract
+## 13. Duplicate / Conflict Contract
 
-### 12.1 Duplicate
+### 13.1 Duplicate
 
 ```text
 duplicate = same (source, source_id) + same canonical JSON
@@ -356,7 +359,7 @@ duplicate = same (source, source_id) + same canonical JSON
 
 由 RawStore 幂等 put 自动处理。audit event 记录 outcome=DUPLICATE。
 
-### 12.2 Payload mutation
+### 13.2 Payload mutation
 
 ```text
 same (source, source_id, revision) + different canonical JSON
@@ -365,7 +368,7 @@ same (source, source_id, revision) + different canonical JSON
 
 P14-B RawStore 已负责检测和报告。
 
-### 12.3 Cross-source conflict
+### 13.3 Cross-source conflict
 
 ```text
 same (entity_id, event_time, unit, currency)
@@ -376,7 +379,7 @@ same (entity_id, event_time, unit, currency)
 
 P14-A `detect_conflicts` 已负责检测。P14-C 消费检测结果并统计。
 
-### 12.4 不变量
+### 13.4 不变量
 
 - **P14C-DUP-001**: 不得自动选择 source winner。
 - **P14C-DUP-002**: 不得自动平均。
@@ -387,21 +390,22 @@ P14-A `detect_conflicts` 已负责检测。P14-C 消费检测结果并统计。
 
 ## 14. Freshness Contract
 
-### 13.1 唯一来源
+### 14.1 唯一来源
 
 P14-A `freshness_status(record, decision_time, policies)` 是 freshness 的
 唯一判断函数。P14-C 不定义第二套 freshness policy 或 threshold。
 
-### 13.2 报告键
+### 14.2 报告键
 
 P14-C 将 P14-A 的小写状态（fresh/stale/unknown/missing_policy）规范化为
 大写（FRESH/STALE/UNKNOWN/MISSING_POLICY），并追加 UNRESOLVED
 （available_time 缺失）。
 
-### 13.3 不变量
+### 14.3 不变量
 
 - **P14C-FRESH-001**: freshness 判断必须调用 P14-A `freshness_status`。
-- **P14C-FRESH-002**: 不得硬编码 stale 计数。
+- **P14C-FRESH-002**: record 级 STALE 状态必须由 P14-A freshness policy 计算，
+  不得硬编码 stale 计数。
 - **P14C-FRESH-003**: freshness policy 是 infrastructure 配置，不是 alpha threshold。
 - **P14C-FRESH-004**: FRESH / STALE / UNRESOLVED 三种证据必须在 audit 中产生。
 
@@ -409,7 +413,7 @@ P14-C 将 P14-A 的小写状态（fresh/stale/unknown/missing_policy）规范化
 
 ## 15. Reconciliation Contract
 
-### 14.1 必须保留的字段
+### 15.1 必须保留的字段
 
 每个 reconciliation group 中的每个 contributing source 必须保留：
 
@@ -424,20 +428,27 @@ ingestion_id, raw_payload_hash, provenance
 difference, relative_difference, policy_id, policy_version, status
 ```
 
-### 14.2 不变量
+### 15.2 不变量
 
-- **P14C-RECON-001**: 不得自动选择 source winner。
-- **P14C-RECON-002**: 不得自动平均。
-- **P14C-RECON-003**: 不得静默 resolution。
-- **P14C-RECON-004**: 不同 source 的 value 都必须保留。
+- **P14C-RECON-001**: 同一 reconciliation group 内 difference ≤ tolerance 时
+  status = CONSISTENT。
+- **P14C-RECON-002**: difference > tolerance 时 status = CONFLICT。
+- **P14C-RECON-003**: 冲突 group 中每个 contributing source 的 value
+  必须原样保留，不得丢弃任一 source。
+- **P14C-RECON-004**: 每个 contributing source 的 provenance 字段
+  （event_time / available_time / ingested_at）必须保留。
 - **P14C-RECON-005**: tolerance policy 必须版本化（policy_id + policy_version）。
-- **P14C-RECON-006**: 不得自动选择 source winner（无 resolved_value 字段）。
+- **P14C-RECON-006**: reconciliation 输出不得包含 resolved_value 等 winner
+  字段（冲突保持未裁决）。
+
+「不得自动平均」「不得静默 resolution」由 P14C-DUP-002 / P14C-DUP-003
+统一承载，不在本节重复编号（R4 修复，消除跨域重复不变量）。
 
 ---
 
 ## 16. Provenance Contract
 
-### 15.1 Record Provenance（Type A）
+### 16.1 Record Provenance（Type A）
 
 适用于：canonical raw record, accepted record, rejected record with payload,
 revision, reconciliation record。
@@ -449,7 +460,7 @@ event_time, available_time, ingested_at
 
 引用 P14-A provenance contract：`astock_v2.information.provenance`。
 
-### 15.2 Observation / Completeness Provenance（Type B）
+### 16.2 Observation / Completeness Provenance（Type B）
 
 适用于：SOURCE_EMPTY, SOURCE_ERROR, PARSE_FAILURE, EXPECTED_ABSENCE,
 UNEXPECTED_MISSING, missing entity/date/pair。
@@ -461,7 +472,7 @@ expected_contract_id, entity_date_pair_scope, evidence_reference
 
 **不应**强制要求不存在的 raw_payload_hash 或 canonical record id。
 
-### 15.3 不变量
+### 16.3 不变量
 
 - **P14C-PROV-A-001**: Record provenance 必须包含 raw_payload_hash。
 - **P14C-PROV-B-001**: Observation provenance 不得包含 raw_payload_hash
@@ -492,9 +503,10 @@ errors > 0 且 accepted = 0 → source fetch/transport/auth/timeout 失败。
 
 attempted = 0 且 accepted = 0 且 errors = 0 → no ingestion attempts observed。
 
-**P14C-SH-001**: health 状态由 deterministic 规则从 observable metrics 计算。
-**P14C-SH-002**: 不得硬编码 stale 计数。
-**P14C-SH-003**: 不得引入 ML health score。
+- **P14C-SH-001**: health 状态由 deterministic 规则从 observable metrics 计算。
+- **P14C-SH-002**: STALE health 态必须由 per-record freshness 结果聚合得出，
+  不得硬编码计数。
+- **P14C-SH-003**: 不得引入 ML health score。
 
 ---
 

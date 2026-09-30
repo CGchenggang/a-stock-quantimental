@@ -5,7 +5,10 @@
 >
 > 状态：DRAFT — awaiting independent contract review
 >
-> Bidirectional closure verified: orphan_contract_invariants = 0, orphan_matrix_rows = 0
+> Bidirectional closure mechanically verified (scripts/audit_p14c_contract.py):
+> contract_unique_ids = 61, matrix_unique_ids = 61,
+> orphan_contract_invariants = 0, orphan_matrix_rows = 0,
+> duplicate_contract_ids = 0, duplicate_matrix_ids = 0, undefined_matrix_ids = 0
 
 ## Missingness
 
@@ -31,10 +34,10 @@
 
 | Contract ID | Requirement | Golden Fixture | Expected Result | E2E | CI |
 |-------------|------------|---------------|-----------------|-----|---|
-| P14C-COMP-001 | coverage_ratio 由集合差计算 | complete/ | coverage = 1.0 | ✅ | ✅ |
-| P14C-COMP-002 | coverage_ratio < 1 当有缺失 | partial/ | coverage < 1.0 | ✅ | ✅ |
-| P14C-COMP-003 | missing 数据不被 forward-fill | partial/ | missing 字段保留为 None/空 | ✅ | ✅ |
-| P14C-COMP-004 | 9 维度 quality_report 结构完整 | nine_dimensions/ | 每维度有 status/reasons/metrics/evidence | ✅ | ✅ |
+| P14C-COMP-001 | coverage_ratio 由 required/actual pair 集合差计算（不得手工填写） | complete/ 与 partial/ | coverage = 1.0（完整）；有缺失时 < 1.0 | ✅ | ✅ |
+| P14C-COMP-002 | missing 数据不得被 forward-fill / 默认值填充 / 静默删除 | partial/ | missing 字段保留为 None/空 | ✅ | ✅ |
+| P14C-COMP-003 | expected set 独立于 actual ingestion 结果 | independent_contract/ | ingestion 失败后 expected set 不变 | ✅ | ✅ |
+| P14C-COMP-004 | entity / date / pair 三种粒度 missing 集合分别报告 | granularity/ | 三粒度 missing 集合齐全 | ✅ | ✅ |
 | P14C-COMP-005 | EXPECTED_ABSENCE pair 不计入 denominator | expected_absence_pair/ | denominator 排除 expected_absence pair | ✅ | ✅ |
 
 ## Freshness
@@ -52,8 +55,8 @@
 |-------------|------------|---------------|-----------------|-----|---|
 | P14C-REV-001 | revision gap 检测 | revision_gap/ | revision_gap issue | ✅ | ✅ |
 | P14C-REV-002 | duplicate revision 检测 | revision_dup/ | same_revision issue | ✅ | ✅ |
-| P14C-REV-003 | available_time regression 检测 | revision_regression/ | regression issue | ✅ | ✅ |
-| P14C-REV-004 | payload mutation 检测 | revision_mutation/ | RAW_MUTATION_DETECTED | ✅ | ✅ |
+| P14C-REV-003 | payload mutation 检测 | revision_mutation/ | RAW_MUTATION_DETECTED | ✅ | ✅ |
+| P14C-REV-004 | available_time regression 检测 | revision_regression/ | regression issue | ✅ | ✅ |
 | P14C-REV-005 | revision anomaly 不破坏 PIT | revision_pit/ | PIT 判断不受影响 | ✅ | ✅ |
 
 ## Reconciliation
@@ -71,9 +74,9 @@
 
 | Contract ID | Requirement | Golden Fixture | Expected Result | E2E | CI |
 |-------------|------------|---------------|-----------------|-----|---|
-| P14C-SH-001 | OK 当无异常 | sh_ok/ | health = OK | ✅ | ✅ |
-| P14C-SH-002 | DEGRADED 当有 rejected/mutations | sh_degraded/ | health = DEGRADED | ✅ | ✅ |
-| P14C-SH-003 | STALE 当 freshness 占多数 stale | sh_stale/ | health = STALE | ✅ | ✅ |
+| P14C-SH-001 | health 由 deterministic 规则从 observable metrics 计算 | sh_ok/ | health = OK（六态 deterministic 判定） | ✅ | ✅ |
+| P14C-SH-002 | 不得硬编码 stale 计数 | sh_degraded/ | health = DEGRADED（由 rejected/mutations 证据计算） | ✅ | ✅ |
+| P14C-SH-003 | 不得引入 ML health score | sh_stale/ | health = STALE（由 freshness 占比计算） | ✅ | ✅ |
 | P14C-SH-004 | EMPTY 当 attempted>0, accepted=0 | sh_empty/ | health = EMPTY | ✅ | ✅ |
 | P14C-SH-005 | ERROR 当 errors>0 且 accepted=0 | sh_error/ | health = ERROR | ✅ | ✅ |
 | P14C-SH-006 | UNRESOLVED 当 attempted=0 | sh_unresolved/ | health = UNRESOLVED | ✅ | ✅ |
@@ -83,8 +86,8 @@
 | Contract ID | Requirement | Golden Fixture | Expected Result | E2E | CI |
 |-------------|------------|---------------|-----------------|-----|---|
 | P14C-DET-001 | 双次运行 byte-identical | N/A（replay fixture） | SHA256(artifacts) 相同 | ✅ | ✅ |
-| P14C-DET-002 | manifest 无动态 timestamp | N/A | manifest 中无 generated_at | ✅ | ✅ |
-| P14C-DET-003 | 无 runtime/random/machine-path 字段 | N/A | 所有 JSON 字段 deterministic | ✅ | ✅ |
+| P14C-DET-002 | 禁止 runtime timestamp / random UUID / machine path 进入输出 | N/A | 所有 JSON 字段 deterministic | ✅ | ✅ |
+| P14C-DET-003 | manifest 不含动态 timestamp | N/A | manifest 中无 generated_at | ✅ | ✅ |
 
 ## Boundary
 
@@ -101,7 +104,7 @@
 |-------------|------------|---------------|-----------------|-----|---|
 | P14C-EVID-001 | 每次 attempt 有 durable event | N/A | audit file 含全部 attempt | ✅ | ✅ |
 | P14C-EVID-002 | audit 重启后完整恢复 | N/A | 重新加载 outcomes 一致 | ✅ | ✅ |
-| P14C-EVID-003 | quality_reasons[] 保留 | reasons/ | reasons 非空且有内容 | ✅ | ✅ |
+| P14C-EVID-003 | SOURCE_ERROR / PARSE_FAILURE / SOURCE_EMPTY 的 evidence 不得仅存在于进程内存 | failure_evidence/ | evidence 位于 durable audit JSONL | ✅ | ✅ |
 | P14C-EVID-004 | SOURCE_EMPTY observation 不产生 canonical record/hash/id | source_empty_evidence/ | 不进入 raw_records.jsonl | ✅ | ✅ |
 | P14C-EVID-005 | SOURCE_ERROR 与 REJECTED outcome 可区分 | source_error_vs_rejected/ | outcome 字段不同 | ✅ | ✅ |
 
@@ -138,11 +141,3 @@
 | P14C-DUP-002 | 不得自动平均 | dup_no_average/ | 无 averaged_value 字段 | ✅ | ✅ |
 | P14C-DUP-003 | 不得静默 resolution | dup_no_silent_resolution/ | 无 resolved_status 字段 | ✅ | ✅ |
 | P14C-DUP-004 | 不同 source 的 value 都必须保留 | dup_all_values_preserved/ | 全部 value 字段存在 | ✅ | ✅ |
-
-## Source Health
-
-| Contract ID | Requirement | Golden Fixture | Expected Result | E2E | CI |
-|-------------|------------|---------------|-----------------|-----|---|
-| P14C-SH-004 | EMPTY 当 attempted>0, accepted=0 | sh_empty/ | health = EMPTY | ✅ | ✅ |
-| P14C-SH-005 | ERROR 当 errors>0 且 accepted=0 | sh_error/ | health = ERROR | ✅ | ✅ |
-| P14C-SH-006 | UNRESOLVED 当 attempted=0 | sh_unresolved/ | health = UNRESOLVED | ✅ | ✅ |

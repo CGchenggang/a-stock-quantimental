@@ -273,53 +273,31 @@ def test_near_duplicate_invariants(tmp_path):
 
 
 def test_real_docs_characterization():
-    """Snapshot of harness findings on the real documents as of 2026-09-30.
+    """Snapshot of harness findings on the real documents.
 
-    This test is EXPECTED TO FAIL after any contract repair that changes
-    the finding set — that is deliberate: contract edits require independent
-    review, and the snapshot must be consciously updated alongside them.
+    History: at harness introduction (2026-09-30, pre-R4) the documents
+    produced 18 hard + 18 soft findings — duplicate Source Health matrix
+    block, unnumbered Boundary section, off-by-one subsection numbering,
+    bare-bold SH-001..003 invariants, RECON/DUP duplicated invariant text,
+    and 12 matrix↔contract semantic drift suspects. The R4 documentation
+    repair (driven by independent acceptance verdict 54d6b6e) resolved all
+    of them; the harness now reports a clean PASS.
+
+    This test deliberately pins the CLEAN state: any future contract edit
+    that reintroduces a governance defect fails here, forcing a conscious
+    snapshot update alongside independent review.
     """
     result = harness.run_harness(REAL_CONTRACT, REAL_MATRIX)
 
-    assert result["status"] == "FAIL"
-    # Unnumbered "## P14C-BND:" section header
-    assert any("P14C-BND" in f["detail"] for f in _findings(result, "E001"))
-    # SH-001..003 written as bare bold text; E003 suppressed for them
-    assert _finding_ids(result, "E017") == {
-        "P14C-SH-001", "P14C-SH-002", "P14C-SH-003"}
-    assert _findings(result, "E003") == []
-    # Trailing duplicated Source Health block in the matrix
-    assert _finding_ids(result, "E005") == {
-        "P14C-SH-004", "P14C-SH-005", "P14C-SH-006"}
-    assert any("Source Health" in f["detail"] for f in _findings(result, "E006"))
-    # Missing §13 and subsection parents off by one (13.x/14.x/15.x)
-    assert len(_findings(result, "E007")) == 9
-    # Traceability claim says 0/0 orphans; 3 matrix rows are untraceable
-    assert _findings(result, "E012")
-    assert result["stats"]["matrix_only"] == [
-        "P14C-SH-001", "P14C-SH-002", "P14C-SH-003"]
-    assert result["stats"]["contract_only"] == []
-    # Cross-domain duplication DUP-001..004 == RECON-001..004
-    assert len(_findings(result, "W001")) == 4
-    # RECON-006 duplicates the winner-prohibition of both RECON-001 (same
-    # domain) and DUP-001 (cross-domain) — reviewer finding #3
-    near = sorted(tuple(sorted(f["ids"])) for f in _findings(result, "W003"))
-    assert near == [
-        ("P14C-DUP-001", "P14C-RECON-006"),
-        ("P14C-RECON-001", "P14C-RECON-006"),
-    ]
-    # Unique-ID cross-check against the independent extraction (54d6b6e)
-    assert result["stats"]["contract_unique_ids"] == 61
-    assert result["stats"]["matrix_unique_ids"] == 61
-    assert result["stats"]["matrix_rows"] == 64
-    # Known semantic drift suspects (matrix requirement != contract invariant)
-    assert _finding_ids(result, "W002") >= {
-        "P14C-COMP-002", "P14C-COMP-003", "P14C-COMP-004",
-        "P14C-REV-004",
-        "P14C-RECON-001", "P14C-RECON-002", "P14C-RECON-003",
-        "P14C-SH-001", "P14C-SH-002", "P14C-SH-003",
-        "P14C-DET-003", "P14C-EVID-003",
-    }
-    # Checks that must NOT fire on the current documents
-    for clean in ("E004", "E008", "E009", "E011", "E013", "E014", "E015", "E016"):
-        assert _findings(result, clean) == [], f"unexpected {clean} finding"
+    assert result["status"] == "PASS"
+    assert result["hard_count"] == 0
+    assert result["soft_count"] == 0
+    assert result["findings"] == []
+    # Mechanical criteria from the R3 acceptance verdict (54d6b6e)
+    stats = result["stats"]
+    assert stats["contract_unique_ids"] == 61
+    assert stats["matrix_unique_ids"] == 61
+    assert stats["matrix_rows"] == 61  # 61 rows, no duplicates
+    assert stats["contract_invariants_malformed_form"] == 0
+    assert stats["contract_only"] == []
+    assert stats["matrix_only"] == []
