@@ -1,7 +1,7 @@
 {
  "golden_id": "P14C-GOLD-061",
  "domain": "BND",
- "title": "assert_research_zone raises on virgin decision dates",
+ "title": "assert_research_zone raises on post-boundary decision dates",
  "contract_ids": [
   "P14C-BND-003"
  ],
@@ -9,7 +9,8 @@
   "P14C-BND-003"
  ],
  "input": {
-  "violating_decision_date": "2026-09-24"
+  "violating_decision_date": "2099-01-01T09:00:00+08:00",
+  "synthetic_marker": "purely synthetic far-future date; proves the boundary guard rejects post-virgin-start decision dates without consuming any real virgin-zone observation"
  },
  "expected": {
   "assert_research_zone_raises": true

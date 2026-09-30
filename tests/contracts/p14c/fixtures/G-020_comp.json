@@ -1,7 +1,7 @@
 {
  "golden_id": "P14C-GOLD-020",
  "domain": "COMP",
- "title": "declared intentional absence excluded from denominator",
+ "title": "declared expected absence excluded from denominator",
  "contract_ids": [
   "P14C-COMP-005"
  ],
@@ -19,7 +19,7 @@
      "2026-03-02",
      "2026-03-03"
     ],
-    "intentional_absence_pairs": [
+    "expected_absence_pairs": [
      [
       "600000",
       "2026-03-03"

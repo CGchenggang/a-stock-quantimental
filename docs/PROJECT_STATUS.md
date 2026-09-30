@@ -1147,3 +1147,35 @@ It must:
 - remain Golden/test/fixture scope only.
 
 P14-C Production Implementation and P14-D remain blocked until Golden Re-freeze is independently accepted.
+
+## P14-C Golden Re-freeze — 2026-10-01
+
+Golden Re-freeze against the independently accepted Contract Repair (`38bbf823`, accepted by `441e3fa8`). Scope: only `tests/contracts/p14c/fixtures/**` + `tests/contracts/p14c/golden/core.py` + this status file.
+
+### Changes
+
+1. **Absence declaration canonicalized**: fixture field `intentional_absence_pairs` → the contract-canonical `expected_absence_pairs` in G-007 (MISS-002) and G-020 (COMP-005); `golden/core.py` completeness arithmetic and MISS classification now read `X` from the canonical field (formulas already matched §9.1/§9.2: R = P − X, expected_count = |R|).
+2. **G-007 contract-conformance fix**: its declared pair referenced entity `SW801040` outside `expected_entities`, violating frozen Contract §8.3 rule 3 (every declared pair must lie in E × D). `expected_entities` extended to `["SW801010", "SW801040"]` so the declaration is in-scope; SOURCE_EMPTY (SW801010, required, fetch returned []) vs EXPECTED_ABSENCE (SW801040, declared) semantics unchanged.
+3. **New golden check `absence_scope.*`**: mechanically enforces §8.3 rule 3 (X ⊆ P) on every fixture's expected_contract.
+4. **Anti-cheat retuned without weakening**: textual scan keeps banning `expected_empty` / `broken_source` / `force_source_error` / `fixture_mode`; the bare boolean/control key `expected_absence` (e.g. `"expected_absence": true`) is banned as an exact JSON key via a new structural scan — while the canonical `expected_absence_pairs` list is the sanctioned declaration channel. Import-scan against the P14-C production implementation unchanged.
+5. **Contract hash re-pinned** (computed from the actual files, not guessed): `P14-C-DESIGN-CONTRACT.md` → `c217f6b984a27cfb6e54322e731f1fe6a381a868e319755191a68290c922167b`; Matrix pin unchanged `fc99637a…636` (file untouched).
+6. **G-061 boundary fixture repaired**: `violating_decision_date` real virgin date `2026-09-24` → purely synthetic far-future `2099-01-01T09:00:00+08:00` (+ explicit `synthetic_marker` note). The fixture still proves `assert_research_zone` raises on post-boundary decision dates; no real virgin-zone data is consumed anywhere. Structural scan confirms no fixture input contains any date ≥ `2026-09-23` other than this exempted synthetic guard date.
+
+### Validation (all commands actually executed)
+
+- `python scripts/audit_p14c_contract.py` → exit 0, PASS, 0 hard + 0 soft, closure 61/61/61, 0 duplicates/orphans/undefined
+- `python -m pytest -q -ra tests/contracts/p14c/test_p14c_golden.py` → **76 passed** (both formerly-failing pin tests now green), run #2 → 76 passed
+- `python -m pytest -q -ra tests/contracts/p14c/` → 90 passed (harness meta-tests unbroken)
+- `python -m pytest -q -ra` → **437 passed, 0 failed**, 2 warnings
+- `python -m pytest -q -ra tests/test_industry_relative.py` → 3 passed
+- Deterministic canonical report double-run: byte-identical, sha256 `09cca5b0985265deddb42672b770efd88f82152a46b473acec7d1bb8970438f4` (64 fixtures, 0 failed validations)
+
+### Boundaries
+
+`research_end = 2026-09-22`, `virgin_start = 2026-09-23` unchanged; P13-T STOPPED / NOT EXECUTED; P13-U protected; no real virgin data consumed. No src/, data/, Contract, Matrix, Harness, factor/policy/calibration/recommendation changes. P14-C Production Implementation NOT started.
+
+Note for the next documentation pass (outside this round's allowed scope): `docs/contracts/P14-C-GOLDEN-TESTS.md` interpretation notes still mention the pre-refreeze field name; no test consumes that prose.
+
+Stopping here; awaiting independent acceptance.
+
+P14-D remains blocked.

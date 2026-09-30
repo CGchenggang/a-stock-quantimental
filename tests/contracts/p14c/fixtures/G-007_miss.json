@@ -13,12 +13,13 @@
   "expected_contract": {
    "industry_classification": {
     "expected_entities": [
-     "SW801010"
+     "SW801010",
+     "SW801040"
     ],
     "expected_dates": [
      "2026-03-02"
     ],
-    "intentional_absence_pairs": [
+    "expected_absence_pairs": [
      [
       "SW801040",
       "2026-03-02"

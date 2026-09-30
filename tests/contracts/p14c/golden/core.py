@@ -49,9 +49,10 @@ MATRIX_MD = REPO_ROOT / "docs" / "contracts" / "P14-C-ACCEPTANCE-MATRIX.md"
 
 # The contract/matrix are frozen upstream gates; their exact bytes are pinned
 # here so any contract edit fails the golden layer loudly (anti-cheat D:
-# expected answers may never silently track a moving contract).
+# expected answers may never silently track a moving contract). Re-pinned to
+# the independently accepted Contract Repair v4 (441e3fa8).
 PINNED_CONTRACT_SHA = {
-    "P14-C-DESIGN-CONTRACT.md": "77eb79b2269720e06a42098b2d4cb3fe24fca9701d1603a8e29da123171d8d37",
+    "P14-C-DESIGN-CONTRACT.md": "c217f6b984a27cfb6e54322e731f1fe6a381a868e319755191a68290c922167b",
     "P14-C-ACCEPTANCE-MATRIX.md": "fc99637a74b6fb08fea977a6edcb6245c3bce1c2636d9736380da4b5599a3636",
 }
 
@@ -59,9 +60,13 @@ VIRGIN_START_FROZEN = "2026-09-23"
 RESEARCH_END_FROZEN = "2026-09-22"
 
 BANNED_FIXTURE_TOKENS = [
-    "expected_empty", "expected_absence", "broken_source",
-    "force_source_error", "fixture_mode",
+    "expected_empty", "broken_source", "force_source_error", "fixture_mode",
 ]
+# Boolean/control style of declaring absence: a bare `expected_absence` key
+# (e.g. "expected_absence": true). The canonical declaration channel is the
+# `expected_absence_pairs` list (Contract §8.3); this is matched as an exact
+# JSON key, so the canonical field itself is never flagged.
+BANNED_ABSENCE_CONTROL_KEY = "expected_absence"
 BANNED_GOLDEN_IMPORTS = [
     "run_p14c_quality_audit", "information.quality", "information.reconciliation",
     "information.source_health", "information.adapters",
@@ -155,7 +160,7 @@ def _pairs(entities: list[str], dates: list[str]) -> set[tuple[str, str]]:
 
 def _required_pairs(entry: dict) -> set[tuple[str, str]]:
     all_pairs = _pairs(entry["expected_entities"], entry["expected_dates"])
-    absent = {tuple(p) for p in entry.get("intentional_absence_pairs", [])}
+    absent = {tuple(p) for p in entry.get("expected_absence_pairs", [])}
     return all_pairs - absent
 
 
@@ -175,7 +180,7 @@ def compute_completeness(fixture: dict) -> dict:
         "missing_dates": sorted(dates - a_date),
         "missing_pairs": sorted(required - actual),
         "coverage_ratio": 1.0 if not required else len(actual & required) / len(required),
-        "absence_pairs": sorted({tuple(p) for p in entry.get("intentional_absence_pairs", [])}),
+        "absence_pairs": sorted({tuple(p) for p in entry.get("expected_absence_pairs", [])}),
     }
 
 
@@ -302,7 +307,7 @@ def check_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
                 f"{record.quality_status}/{record.availability_status}")
         if "missingness" in exp and "expected_contract" in inp:
             entry = inp["expected_contract"][next(iter(inp["expected_contract"]))]
-            declared = {tuple(p) for p in entry.get("intentional_absence_pairs", [])}
+            declared = {tuple(p) for p in entry.get("expected_absence_pairs", [])}
             actual = {tuple(p) for p in inp.get("actual_pairs", [])}
             required = _required_pairs(entry)
             missing = required - actual
@@ -581,12 +586,44 @@ def check_boundary_dates(fixtures: list[dict]) -> list[tuple[str, bool, str]]:
     return out
 
 
+def _all_keys(obj) -> list:
+    if isinstance(obj, dict):
+        keys = list(obj.keys())
+        for v in obj.values():
+            keys += _all_keys(v)
+        return keys
+    if isinstance(obj, list):
+        keys = []
+        for item in obj:
+            keys += _all_keys(item)
+        return keys
+    return []
+
+
 def check_anticheat_fixtures(fixtures: list[dict]) -> list[tuple[str, bool, str]]:
     out = []
     for path in sorted(FIXTURE_DIR.glob("*.json")):
         text = path.read_text(encoding="utf-8")
         hits = [t for t in BANNED_FIXTURE_TOKENS if t in text]
-        out.append((f"anticheat.fixture.{path.name}", not hits, f"banned tokens {hits}"))
+        data = json.loads(text)
+        control_keys = [k for k in _all_keys(data) if k == BANNED_ABSENCE_CONTROL_KEY]
+        out.append((f"anticheat.fixture.{path.name}", not hits and not control_keys,
+                    f"banned tokens {hits} / control keys {control_keys}"))
+    return out
+
+
+def check_absence_declaration_scope(fixtures: list[dict]) -> list[tuple[str, bool, str]]:
+    """Contract §8.3 rule 3: every declared expected_absence pair must lie in
+    E x D for its source; out-of-scope declarations are contract structure
+    errors and fail the golden layer."""
+    out = []
+    for f in fixtures:
+        for source_id, entry in (f["input"].get("expected_contract") or {}).items():
+            declared = {tuple(p) for p in entry.get("expected_absence_pairs", [])}
+            scope = _pairs(entry["expected_entities"], entry["expected_dates"])
+            bad = sorted(declared - scope)
+            out.append((f"absence_scope.{f['golden_id']}.{source_id}", not bad,
+                        f"out-of-scope declarations {bad}"))
     return out
 
 
@@ -672,6 +709,7 @@ def run_all_checks() -> list[tuple[str, bool, str]]:
     out += check_schema(fixtures)
     out += check_boundary_dates(fixtures)
     out += check_anticheat_fixtures(fixtures)
+    out += check_absence_declaration_scope(fixtures)
     out += check_anticheat_layer()
     out += check_contract_pinned()
     out += check_coverage(fixtures)
