@@ -136,13 +136,21 @@ FIXTURE_PAYLOADS: dict[str, list[dict]] = {
 
 INGESTED_AT = "2026-03-10T16:00:00+08:00"
 
-# R1-1/R5: what the completeness contract expects per source.
+# R1-1/R5/Production: what the completeness contract expects per source.
 # EXPECTED_CONTRACT is frozen a priori and INDEPENDENT of the fixture
 # payloads: it defines what the source contract says SHOULD exist. The
 # delta between this contract and the actual ingested records reveals
 # missing entities/dates. company_announcement has an extra expected
 # date (2026-03-04) that the fixture does not provide -> UNEXPECTED_MISSING
 # evidence in the audit.
+#
+# Production (Contract §8.2/§8.3): EXPECTED_ABSENCE is declared ONLY via
+# expected_absence_pairs (X ⊆ E x D, enforced fail-fast by
+# astock_v2.information.expected_contract). Boolean control keys
+# (expected_absence / expected_empty) and fixture-control fields are
+# structurally rejected. us_index_daily declares (SPX, 2026-03-03) absent:
+# the pair is not required and is reported as EXPECTED_ABSENCE evidence
+# without touching the coverage denominator.
 EXPECTED_CONTRACT = {
     "cn_index_daily": {
         "expected_entities": ["CSI300"],
@@ -158,12 +166,12 @@ EXPECTED_CONTRACT = {
     },
     "us_index_daily": {
         "expected_entities": ["SPX"],
-        "expected_dates": ["2026-03-02"],
+        "expected_dates": ["2026-03-02", "2026-03-03"],
+        "expected_absence_pairs": [["SPX", "2026-03-03"]],
     },
     "broken_source": {
         "expected_entities": ["NONE"],
         "expected_dates": [],
-        "expected_absence": True,
     },
     "parse_failure_source": {
         "expected_entities": ["CN"],
@@ -172,7 +180,6 @@ EXPECTED_CONTRACT = {
     "source_empty_source": {
         "expected_entities": [],
         "expected_dates": [],
-        "expected_empty": True,
     },
 }
 
@@ -259,94 +266,53 @@ def _compute_completeness(
     raw_records: list,
     audit_out: dict[str, dict],
 ) -> dict:
-    """R3-1: completeness from INDEPENDENT expected contract.
+    """Production completeness (Contract §8/§9), via
+    astock_v2.information.expected_contract.ExpectedContract.
 
-    expected_entities/expected_dates come from EXPECTED_CONTRACT (frozen
-    a priori), NOT from the actual fixture payloads. If a payload fails
-    to ingest, the expected set still includes it, so the delta reveals
-    the gap. This is the fundamental fix for R3 finding #1.
+    - The expected universe (E, D, X) comes from EXPECTED_CONTRACT, frozen
+      a priori, never from actual payloads (EXP-001..004).
+    - R = P - X; expected_count = |R|; actual_count = |A ∩ R|; coverage is
+      1.0 when R is empty (§9.2). Declared absences never reduce coverage.
+    - Source-level missingness class (§7.1), frozen priority:
+        1. SOURCE_EMPTY   — adapter fetch succeeded and returned zero
+                            payloads (EMPTY_SUCCESS status)
+        2. SOURCE_ERROR   — adapter fetch raised
+        3. PARSE_FAILURE  — adapter parse raised (PARSE_ERROR status)
+        4. UNEXPECTED_MISSING — a required pair (in R) was not delivered
+        5. EXPECTED_ABSENCE   — every required pair was delivered but some
+                            contract-declared absent pairs remain unobserved
+        6. NONE           — no missing observation exists; EXPECTED_ABSENCE
+                            is a pair-level declaration, never a label for
+                            "everything is fine"
+      Observation-evidence classes take precedence over contract-derived
+      classes because a failed fetch/parse is itself an observed anomaly.
+    - Each entry carries the Type C declaration provenance (§16.4) for its
+      expected_absence_pairs; observation-only fields never appear there.
     """
+    from astock_v2.information.expected_contract import ExpectedContract
+
     completeness: dict[str, dict] = {}
     all_sources = sorted(set(list(contract) + list(audit_out)))
     for source in all_sources:
-        contract_entry = contract.get(source, {})
-        expected_entities = sorted(contract_entry.get("expected_entities", []))
-        expected_dates = sorted(contract_entry.get("expected_dates", []))
-        expected_absence = contract_entry.get("expected_absence", False)
-        expected_empty = contract_entry.get("expected_empty", False)
+        entry = ExpectedContract(source, contract.get(source, {}))
+        actual_pairs = {
+            (r.entity_id, r.event_time[:10])
+            for r in raw_records if r.source == source
+        }
+        comp = entry.completeness(actual_pairs)
         report = audit_out.get(source, {})
-        actual_entities = sorted({
-            r.entity_id for r in raw_records if r.source == source
-        })
-        actual_dates = sorted({
-            r.event_time[:10] for r in raw_records if r.source == source
-        })
-        # R5: classification priority is documented and frozen:
-        #   1. EXPECTED_ABSENCE: the contract explicitly declares this
-        #      source requires no data (e.g. broken_source fixture)
-        #   2. SOURCE_EMPTY: the adapter's own report says EMPTY_SUCCESS
-        #   3. SOURCE_ERROR: the adapter's own report says SOURCE_ERROR
-        #   4. PARSE_FAILURE: the adapter's own report says PARSE_ERROR
-        #   5. UNEXPECTED_MISSING: the expected contract requires entities
-        #      or dates that the actual ingestion did not deliver
-        #   6. EXPECTED_ABSENCE: no gap and no expected_absence flag
         if report.get("status") == "EMPTY_SUCCESS":
             missingness = "SOURCE_EMPTY"
-            missing_entities = []
-            missing_dates = []
-            expected_count = 0
-            actual_count = 0
-            coverage = 1.0
         elif report.get("status") == "SOURCE_ERROR":
             missingness = "SOURCE_ERROR"
-            missing_entities = sorted(set(expected_entities) - set(actual_entities))
-            missing_dates = sorted(set(expected_dates) - set(actual_dates))
-            expected_count = len(expected_entities) * max(len(expected_dates), 1)
-            actual_count = 0
-            coverage = 0.0
         elif report.get("status") == "PARSE_ERROR":
             missingness = "PARSE_FAILURE"
-            missing_entities = sorted(set(expected_entities) - set(actual_entities))
-            missing_dates = sorted(set(expected_dates) - set(actual_dates))
-            expected_count = len(expected_entities) * max(len(expected_dates), 1)
-            actual_count = 0
-            coverage = 0.0
-        elif expected_absence:
-            missingness = "EXPECTED_ABSENCE"
-            missing_entities = []
-            missing_dates = []
-            expected_count = 0
-            actual_count = 0
-            coverage = 1.0
         else:
-            missing_entities = sorted(set(expected_entities) - set(actual_entities))
-            missing_dates = sorted(set(expected_dates) - set(actual_dates))
-            # entity-date pair coverage
-            expected_pairs = {(e, d) for e in expected_entities for d in expected_dates}
-            actual_pairs = {
-                (r.entity_id, r.event_time[:10])
-                for r in raw_records if r.source == source
-            }
-            missing_pairs = sorted(expected_pairs - actual_pairs)
-            expected_count = len(expected_pairs) if expected_pairs else len(expected_entities)
-            actual_count = len(expected_pairs) - len(missing_pairs) if expected_pairs else 0
-            coverage = (actual_count / expected_count) if expected_count > 0 else 1.0
-            if missing_entities or missing_dates:
-                missingness = "UNEXPECTED_MISSING"
-            else:
-                missingness = "EXPECTED_ABSENCE"
+            missingness = entry.source_missingness_class(actual_pairs)
         completeness[source] = {
-            "expected_entities": expected_entities,
-            "actual_entities": actual_entities,
-            "missing_entities": missing_entities,
-            "expected_dates": expected_dates,
-            "actual_dates": actual_dates,
-            "missing_dates": missing_dates,
-            "expected_count": expected_count,
-            "actual_count": actual_count,
-            "coverage_ratio": round(coverage, 4),
+            **comp,
             "missingness_class": missingness,
-            "expected_absence": expected_absence,
+            "expected_absence_evidence": entry.declaration_provenance(),
         }
     return completeness
 

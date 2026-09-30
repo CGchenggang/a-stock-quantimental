@@ -62,6 +62,9 @@ from .quality import (
 from .reconciliation import (
     DEFAULT_POLICY, ReconciliationPolicy, reconcile, reconcile_pair,
 )
+from .expected_contract import (
+    ExpectedContract, build_expected_contracts,
+)
 from .source_health import source_health
 from .research_boundary_guard import select_asof
 
@@ -77,6 +80,7 @@ __all__ = [
     "to_information_record",
     "freshness_status", "freshness_summary", "has_valid_provenance",
     "is_admissible", "is_registered", "normalize", "parse_boundary",
+    "ExpectedContract", "build_expected_contracts",
     "provenance_issues", "provenance_summary", "select_asof",
     "spec_for", "to_research_record", "visible_revisions",
 ]

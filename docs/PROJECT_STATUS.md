@@ -1211,3 +1211,37 @@ The Golden standard is now frozen against the accepted Contract Repair. P14-C Pr
 Only **P14-C Production Implementation** may proceed next. The implementation must be graded against the frozen Golden fixtures and must not modify the Contract, Matrix, Golden standard answers, P13-T/U boundary, or production factor/policy/calibration/recommendation semantics without a separately authorized contract change.
 
 Last independently updated: 2026-10-01.
+
+## P14-C Production Implementation — 2026-10-01
+
+Production implementation of the independently accepted P14-C Contract (`c217f6b9…167b`) + Harness + Golden layer (`349c6b2`, accepted `bb7c8c2`). Every change traces directly to frozen Contract/Matrix/Golden requirements.
+
+### Production architecture
+
+New canonical module `src/astock_v2/information/expected_contract.py` (exported via the information package):
+
+- `ExpectedContract` — validated view of one `EXPECTED_CONTRACT[source]` entry per Contract §8.2: `expected_entities` / `expected_dates` / `expected_absence_pairs` (sole authoritative EXPECTED_ABSENCE channel, §8.3).
+- Fail-fast structural rejection (anti-cheat as production code): the fixture-control fields (`expected_empty` / `broken_source` / `force_source_error` / `fixture_mode`) and the banned boolean key (`expected_absence`) raise on construction; declared pairs outside E × D raise (§8.3 rule 3). Production never interprets control fields.
+- §9.2 completeness on the required set: `R = P − X`, `expected_count = |R|`, `actual_count = |A_pair ∩ R|`, coverage = actual/expected (1.0 when R empty); entity/date/pair granularities all reported (COMP-004); canonical sorted ordering, JSON-friendly lists.
+- §7.1 classification: `classify_pairs` (OBSERVED / EXPECTED_ABSENCE / UNEXPECTED_MISSING) and `source_missingness_class` driven by the pair-level required set (a granularity gap consisting solely of declared-absent pairs is EXPECTED_ABSENCE evidence, never UNEXPECTED_MISSING).
+- §16.4 Type C Contract Declaration Provenance: `declaration_provenance()` emits exactly `source_id / expected_contract_id / entity_date_pair_scope / declaration_reference`; observation-only fields structurally absent.
+
+Audit runner `scripts/run_p14c_quality_audit.py` migrated onto the canonical module: `EXPECTED_CONTRACT` control fields removed; `_compute_completeness` rebuilt on `ExpectedContract` with the frozen classification priority (observation evidence SOURCE_EMPTY / SOURCE_ERROR / PARSE_FAILURE takes precedence; then UNEXPECTED_MISSING on missing required pairs; then EXPECTED_ABSENCE on unobserved declared pairs; NONE when nothing is missing — EXPECTED_ABSENCE is never a label for "all fine"). `us_index_daily` now declares `(SPX, 2026-03-03)` via `expected_absence_pairs`, exercising the full production absence path (pair classification, denominator exclusion, Type C evidence).
+
+### Tests
+
+- `tests/test_p14c_production.py` (22 cases): mandate Cases A–F through the production path; D/E/F proven not reinterpreted as EXPECTED_ABSENCE; structural control-field rejection; Type C provenance shape; determinism; and the frozen Golden fixtures (G-006/007/009/010/012/015..020) consumed as read-only oracles through the production implementation — golden layer untouched.
+- `tests/test_p14cr4_audit_e2e.py`: three pins updated to the canonical semantics (boolean flag assertions → `expected_absence_pairs`/coverage per §9.2; complete-source class NONE; us_index_daily EXPECTED_ABSENCE), each traceable to Contract §8.3/§7.1/§9.2.
+
+### Validation (all executed)
+
+- Contract audit: PASS, 0 hard + 0 soft, 61/61/61; Contract/Matrix SHAs unchanged (`c217f6b9…167b` / `fc99637a…636`)
+- Golden: 76 passed ×2 (identical); p14c dir: 90 passed; canonical golden report byte-identical double-run
+- P13-M: 3 passed
+- Full pytest: **459 passed, 0 failed**, 2 warnings (was 437; +22 production tests)
+
+Boundaries: `research_end = 2026-09-22`, `virgin_start = 2026-09-23` unchanged; P13-T STOPPED / NOT EXECUTED; P13-U protected; no real virgin data used. No factor/policy/calibration/recommendation/alpha changes. P14-D NOT started.
+
+Stopping here; awaiting independent acceptance.
+
+P14-D remains blocked.

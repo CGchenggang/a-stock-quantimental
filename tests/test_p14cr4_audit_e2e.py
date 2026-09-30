@@ -32,24 +32,32 @@ def test_audit_runs_successfully_from_clean_directory(tmp_path):
         assert (out / f).exists(), f
 
 
-# R4/R5: expected absence vs unexpected missing are distinguished
+# R4/R5/Production: expected absence vs unexpected missing are distinguished
 def test_expected_absence_and_unexpected_missing(tmp_path):
     out = _run_audit(tmp_path)
     comp = json.load(open(out / "completeness.json"))
-    # broken_source fetch always raises -> SOURCE_ERROR; the contract
-    # declares expected_absence=True (it requires no data by design)
+    # broken_source fetch always raises -> SOURCE_ERROR; its contract entry
+    # declares no required pairs (R empty) so coverage is 1.0 per §9.2 and
+    # the banned boolean flag is gone (Contract §8.3 rule 1: the sole
+    # declaration channel is expected_absence_pairs)
     assert comp["broken_source"]["missingness_class"] == "SOURCE_ERROR"
-    assert comp["broken_source"]["expected_absence"] is True
+    assert comp["broken_source"]["expected_absence_pairs"] == []
+    assert comp["broken_source"]["expected_count"] == 0
+    assert comp["broken_source"]["coverage_ratio"] == 1.0
     # company_announcement has an extra expected date (2026-03-04) that the
     # fixture does not provide -> UNEXPECTED_MISSING with coverage < 1
     assert comp["company_announcement"]["missingness_class"] == "UNEXPECTED_MISSING"
     assert "2026-03-04" in comp["company_announcement"]["missing_dates"]
     assert comp["company_announcement"]["coverage_ratio"] < 1.0
-    # other real sources: EXPECTED_ABSENCE (coverage complete) or
-    # UNEXPECTED_MISSING if entities/dates are missing
+    # other real sources: NONE when complete, EXPECTED_ABSENCE when the only
+    # unobserved expected-universe pairs are contract-declared absences
+    # (us_index_daily declares (SPX, 2026-03-03) absent — Contract §8.3),
+    # UNEXPECTED_MISSING if required entities/dates are missing
+    assert comp["cn_index_daily"]["missingness_class"] == "NONE"
+    assert comp["macro_pmi_cn"]["missingness_class"] == "NONE"
+    assert comp["us_index_daily"]["missingness_class"] == "EXPECTED_ABSENCE"
     for source in ("cn_index_daily", "macro_pmi_cn", "us_index_daily"):
         c = comp[source]
-        assert c["missingness_class"] in ("EXPECTED_ABSENCE", "UNEXPECTED_MISSING")
         assert "expected_entities" in c and "actual_entities" in c
         assert "expected_dates" in c and "actual_dates" in c
         assert "missing_entities" in c and "missing_dates" in c
@@ -199,7 +207,10 @@ def test_source_empty_end_to_end(tmp_path):
     comp = json.load(open(out / "completeness.json"))
     se = comp["source_empty_source"]
     assert se["missingness_class"] == "SOURCE_EMPTY"
-    assert se["expected_absence"] is False
+    # Contract §8.3: declarations live only in expected_absence_pairs; the
+    # boolean control key is gone
+    assert se["expected_absence_pairs"] == []
+    assert "expected_absence" not in se
     # 2. source health evidence: health is UNRESOLVED (no attempts observed)
     sh = json.load(open(out / "source_health.json"))
     assert sh["source_empty_source"]["health"] in ("UNRESOLVED", "EMPTY")
