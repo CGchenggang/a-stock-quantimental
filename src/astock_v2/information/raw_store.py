@@ -231,6 +231,11 @@ def to_information_record(record: RawIngestRecord) -> RawInformationRecord:
     quality = record.quality_status
     if not available:
         quality = "UNRESOLVED"
+    # Preserve the source's freshness policy so P14-C quality audits can
+    # compute real FRESH/STALE/UNRESOLVED evidence from P14-A policies.
+    from .registry import spec_for
+    spec = spec_for(record.source)
+    policy_id = spec.freshness_policy_id if spec else None
     return RawInformationRecord(
         source=record.source,
         source_id=record.source_id,
@@ -247,7 +252,7 @@ def to_information_record(record: RawIngestRecord) -> RawInformationRecord:
         unit=record.unit,
         currency=record.currency,
         quality_status=quality,
-        freshness_policy_id=None,
+        freshness_policy_id=policy_id,
         metadata={
             "raw_payload_hash": record.raw_payload_hash,
             "ingestion_id": record.ingestion_id,

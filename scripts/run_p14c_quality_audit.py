@@ -23,7 +23,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from astock_v2.information import (
+    FRESH,
     FRESHNESS_POLICIES,
+    MISSING_POLICY,
+    STALE,
+    UNKNOWN,
     RawInformationRecord,
     classify_missingness,
     detect_conflicts,
@@ -241,6 +245,8 @@ def _compute_completeness(
             missingness = "EXPECTED_ABSENCE"
             missing_entities = []
             missing_dates = []
+            expected_count = 0
+            actual_count = 0
             coverage = 1.0
         else:
             missing_entities = sorted(set(expected_entities) - set(actual_entities))
@@ -260,7 +266,7 @@ def _compute_completeness(
             elif report.get("status") == "PARSE_ERROR":
                 missingness = "PARSE_FAILURE"
             elif report.get("attempted", 0) > 0 and report.get("accepted", 0) == 0 \
-                    and not payloads and not expected_entities:
+                    and not expected_entities and not expected_dates:
                 missingness = "SOURCE_EMPTY"
             elif missing_entities or missing_dates:
                 missingness = "UNEXPECTED_MISSING"
