@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Golden Tests / Fixtures Design & Freeze — implementation complete — awaiting independent acceptance** (previous stage: P14-C Acceptance Harness Reset — PASS, independently accepted 2026-10-01)
+**P14-C Golden Tests / Fixtures Design & Freeze — FAIL / REPAIR REQUIRED** (independent acceptance 2026-10-01; do not advance to P14-C Production Implementation)
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -42,7 +42,7 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 
 ## Current Commit
 
-`1961773d6af4e742d2c05a662a34d1d91b9ccf29`
+`447a2b4a54f2a1575e3cc3a3547d152fd9606558`
 
 Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd` (P14-B baseline); `1961773d` is the current documentation-synchronized HEAD for the independently accepted P14-C Acceptance Harness Reset. The functional submission tree was independently verified at `3144a695`; `1961773d` adds only the acceptance-state documentation sync.
 
@@ -880,5 +880,48 @@ Determinism: full suite run #1 = run #2 = **437 passed, 2 warnings, 0 failed**; 
 Boundaries: `research_end = 2026-09-22`, `virgin_start = 2026-09-23` unchanged; P13-T STOPPED / NOT EXECUTED; P13-U protection intact; all fixture dates are synthetic, deterministic, pre-virgin (the single sanctioned virgin date, BND-003's `violating_decision_date=2026-09-24`, exists only to prove the guard rejects it). No production alpha/policy/calibration/recommendation changes. FACTOR_REGISTRY hash-pinned (`689d7463…8601b`, 8 factors).
 
 No P14-C production implementation was started. Awaiting independent acceptance.
+
+P14-D remains blocked.
+
+
+## P14-C Golden Tests / Fixtures Design & Freeze — Independent Acceptance — 2026-10-01
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-C Production Implementation.**
+
+Independently inspected against exact HEAD `447a2b4a54f2a1575e3cc3a3547d152fd9606558`, with P14-C Acceptance Harness Reset accepted baseline `a8104e755cbaf6fa6909b26cae343b66877c0ab3` / functional harness tree `3144a6951d33281af38e8663d394115148bb00d1`.
+
+### Positive acceptance evidence
+
+- GitHub Actions exact-HEAD run: `36748661777`, workflow `tests`, push event, completed / **success**.
+- `pytest` job `110001285110`: all workflow steps succeeded; Full pytest reported **437 passed, 2 warnings, 0 failed**.
+- `p13m` job `110001285269`: dedicated P13-M regression succeeded (**3 passed**).
+- HEAD diff from `3144a695` contains only Golden fixtures/tests/docs plus `PROJECT_STATUS.md`; no `src/**`, `data/**`, Acceptance Harness, Contract, workflow, P13-U/T or production factor/policy/calibration/recommendation changes.
+- 64 Golden fixtures cover all 61 canonical Contract IDs; fixture IDs are dense and unique.
+- RECON-001 and RECON-006 are demonstrably distinct in the submitted Golden layer.
+- Contract/Matrix bytes are hash-pinned; banned fixture-control tokens are mechanically scanned; expected sets are tested with actual data different from expected sets.
+- P13-T remains STOPPED / NOT EXECUTED and the protected research boundary is not used for research/holdout evaluation.
+
+### Blocking findings
+
+1. **CONTRACT_BLOCKER — EXPECTED_ABSENCE has no legal frozen contract representation.**
+
+   The frozen Design Contract §8.2 defines `EXPECTED_CONTRACT[source_id]` with only `expected_entities` and `expected_dates`. Yet MISS-004 and COMP-005 require domain-declared EXPECTED_ABSENCE and require those pairs to be excluded from the completeness denominator. The Golden implementation invents a new field `intentional_absence_pairs` inside the fixture's expected-contract entry to make this executable. That field is not part of the frozen Contract schema. Therefore the Golden layer has silently extended the Contract instead of freezing a standard answer derived from it. This is a genuine contract/schema gap, not a test-only issue.
+
+   Required resolution: **do not modify the Golden tests to bless this invented field and do not start production implementation.** Return to Contract Repair and explicitly define the legal representation/authority for EXPECTED_ABSENCE, then re-run the Acceptance Harness before re-freezing Golden fixtures. Preserve the existing MISS-002 distinction between SOURCE_EMPTY and EXPECTED_ABSENCE.
+
+2. **Virgin-zone fixture violation — G-061 uses an actual protected virgin date.**
+
+   `tests/contracts/p14c/fixtures/G-061_bnd.json` uses `violating_decision_date = 2026-09-24`, which is inside the protected P13-U virgin zone beginning `2026-09-23`. Although the test uses the date only to prove that the guard rejects it, the Golden task explicitly required synthetic, deterministic, non-holdout fixtures and preservation of the virgin boundary. The guard can be tested with an arbitrary synthetic date after the boundary (for example a far-future synthetic date) without referring to an observed virgin date. The fixture must therefore be changed to a synthetic post-boundary date that is not an actual holdout observation/date.
+
+### Determination
+
+The 437-test green CI result is valid evidence of internal consistency, but it cannot override the frozen-contract and virgin-zone violations above. **P14-C Golden Tests / Fixtures Design & Freeze is not accepted.** Do not proceed to P14-C Production Implementation.
+
+Repair sequence:
+1. Contract Repair: explicitly freeze EXPECTED_ABSENCE representation and authority; do not edit Golden fixtures merely to make them pass.
+2. Re-run the Acceptance Harness and obtain independent PASS.
+3. Re-freeze the Golden fixtures against the repaired contract.
+4. Replace G-061's actual virgin date with a synthetic post-boundary date.
+5. Re-run exact-HEAD CI, Golden tests, full pytest, P13-M regression and deterministic double-run.
 
 P14-D remains blocked.
