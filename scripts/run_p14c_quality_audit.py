@@ -38,6 +38,7 @@ from astock_v2.information import (
     timestamp_issues,
     to_information_record,
 )
+from astock_v2.information.adapters import AdapterMetadata
 from astock_v2.information.adapters_fixture import (
     CNIndexDailyAdapter,
     CompanyAnnouncementAdapter,
@@ -156,66 +157,115 @@ EXPECTED_CONTRACT = {
     },
 }
 
+# R1-2/R3-2: adapters that exercise failure paths (deterministic)
+class BrokenSourceAdapter(MacroPMICNAdapter):
+    """Always raises a fetch error -> SOURCE_ERROR in the audit chain."""
+
+    metadata = AdapterMetadata(
+        source="broken_source",
+        source_category="MACRO",
+        adapter_version="broken_source_adapter@1",
+        timestamp_semantics="N/A (always fails)",
+        revision_semantics="N/A",
+        provenance_requirements=("source", "source_id", "ingested_at"),
+    )
+
+    def fetch(self):
+        raise RuntimeError("deterministic fixture: source is broken")
+
+
+class ParseFailureAdapter(MacroPMICNAdapter):
+    """Returns a payload that passes fetch but fails parse (missing source_id)."""
+
+    metadata = AdapterMetadata(
+        source="parse_failure_source",
+        source_category="MACRO",
+        adapter_version="parse_failure_adapter@1",
+        timestamp_semantics="N/A (parse always fails)",
+        revision_semantics="N/A",
+        provenance_requirements=("source", "source_id", "ingested_at"),
+    )
+
+    def fetch(self):
+        return [{"entity_id": "CN", "event_time": "2026-03-01T09:00:00+08:00",
+                 "available_time": "2026-03-01T10:00:00+08:00",
+                 "ingested_at": "2026-03-01T10:00:00+08:00", "value": 51.0}]
+
+    def parse(self, payload):
+        raise ValueError("deterministic fixture: missing source_id triggers parse failure")
+
+
 # R1-2: adapters that exercise failure paths
 def _payload_adapters():
-    return {
+    adapters = {
         source: adapter_cls(list(FIXTURE_PAYLOADS.get(source, [])))
         for source, adapter_cls in (
             ("cn_index_daily", CNIndexDailyAdapter),
             ("company_announcement", CompanyAnnouncementAdapter),
             ("macro_pmi_cn", MacroPMICNAdapter),
             ("us_index_daily", USIndexDailyAdapter),
+            ("broken_source", BrokenSourceAdapter),
+            ("parse_failure_source", ParseFailureAdapter),
         )
     }
+    return adapters
 
 
 def _compute_completeness(
-    fixture_payloads: dict[str, list[dict]],
+    contract: dict[str, dict],
     raw_records: list,
     audit_out: dict[str, dict],
 ) -> dict:
-    """R1-1: real completeness with expected/actual entities and dates.
+    """R3-1: completeness from INDEPENDENT expected contract.
 
-    For each source:
-      expected_entities/dates come from the fixture contract.
-      actual_entities/dates come from successfully ingested raw records.
-      missing_entities/dates are the delta (never forward-filled).
-      coverage_ratio = actual / expected (0.0 when expected is empty).
-      missingness_class uses classify_missingness to explain WHY.
+    expected_entities/expected_dates come from EXPECTED_CONTRACT (frozen
+    a priori), NOT from the actual fixture payloads. If a payload fails
+    to ingest, the expected set still includes it, so the delta reveals
+    the gap. This is the fundamental fix for R3 finding #1.
     """
     completeness: dict[str, dict] = {}
-    for source in sorted(set(list(fixture_payloads) + list(audit_out))):
-        payloads = fixture_payloads.get(source, [])
+    all_sources = sorted(set(list(contract) + list(audit_out)))
+    for source in all_sources:
+        contract_entry = contract.get(source, {})
+        expected_entities = sorted(contract_entry.get("expected_entities", []))
+        expected_dates = sorted(contract_entry.get("expected_dates", []))
+        expected_absence = contract_entry.get("expected_absence", False)
         report = audit_out.get(source, {})
-        expected_entities = sorted({
-            p["entity_id"] for p in payloads if p.get("entity_id")
-        })
-        expected_dates = sorted({
-            p["event_time"][:10] for p in payloads if p.get("event_time")
-        })
         actual_entities = sorted({
             r.entity_id for r in raw_records if r.source == source
         })
         actual_dates = sorted({
             r.event_time[:10] for r in raw_records if r.source == source
         })
-        missing_entities = sorted(set(expected_entities) - set(actual_entities))
-        missing_dates = sorted(set(expected_dates) - set(actual_dates))
-        expected_count = len(expected_entities) * max(len(expected_dates), 1)
-        actual_count = len(actual_entities) * max(len(actual_dates), 1)
-        coverage = actual_count / expected_count if expected_count > 0 else 1.0
-        # missingness classification per source
-        if report.get("status") == "SOURCE_ERROR":
-            missingness = "SOURCE_ERROR"
-        elif report.get("status") == "PARSE_ERROR":
-            missingness = "PARSE_FAILURE"
-        elif report.get("attempted", 0) > 0 and report.get("accepted", 0) == 0 \
-                and not payloads:
-            missingness = "SOURCE_EMPTY"
-        elif missing_entities or missing_dates:
-            missingness = "UNEXPECTED_MISSING"
-        else:
+        if expected_absence:
             missingness = "EXPECTED_ABSENCE"
+            missing_entities = []
+            missing_dates = []
+            coverage = 1.0
+        else:
+            missing_entities = sorted(set(expected_entities) - set(actual_entities))
+            missing_dates = sorted(set(expected_dates) - set(actual_dates))
+            # entity-date pair coverage
+            expected_pairs = {(e, d) for e in expected_entities for d in expected_dates}
+            actual_pairs = {
+                (r.entity_id, r.event_time[:10])
+                for r in raw_records if r.source == source
+            }
+            missing_pairs = sorted(expected_pairs - actual_pairs)
+            expected_count = len(expected_pairs) if expected_pairs else len(expected_entities)
+            actual_count = len(expected_pairs) - len(missing_pairs) if expected_pairs else 0
+            coverage = (actual_count / expected_count) if expected_count > 0 else 1.0
+            if report.get("status") == "SOURCE_ERROR":
+                missingness = "SOURCE_ERROR"
+            elif report.get("status") == "PARSE_ERROR":
+                missingness = "PARSE_FAILURE"
+            elif report.get("attempted", 0) > 0 and report.get("accepted", 0) == 0 \
+                    and not payloads and not expected_entities:
+                missingness = "SOURCE_EMPTY"
+            elif missing_entities or missing_dates:
+                missingness = "UNEXPECTED_MISSING"
+            else:
+                missingness = "EXPECTED_ABSENCE"
         completeness[source] = {
             "expected_entities": expected_entities,
             "actual_entities": actual_entities,
@@ -227,6 +277,7 @@ def _compute_completeness(
             "actual_count": actual_count,
             "coverage_ratio": round(coverage, 4),
             "missingness_class": missingness,
+            "expected_absence": expected_absence,
         }
     return completeness
 
@@ -411,7 +462,7 @@ def run_quality_audit(out_dir: Path) -> dict:
     conflicts = detect_conflicts(research)
 
     # R1-1: real completeness
-    completeness = _compute_completeness(FIXTURE_PAYLOADS, raw_records, audit_out)
+    completeness = _compute_completeness(EXPECTED_CONTRACT, raw_records, audit_out)
 
     # R1-3: freshness per source from real records + P14-A policy
     fresh_per_source = _compute_freshness_per_record(research, RESEARCH_END_T)

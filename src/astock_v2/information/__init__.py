@@ -40,6 +40,7 @@ from .provenance import (
     provenance_summary,
     to_research_record,
 )
+from .raw_store import RawStore, to_information_record
 from .registry import (
     FRESHNESS_POLICIES,
     SOURCE_REGISTRY,
@@ -72,7 +73,8 @@ __all__ = [
 "SourceCategory", "SourceSpec",
     "RESEARCH_END", "VIRGIN_START",
     "admissible_records", "annotate_conflict_status", "assert_research_zone",
-    "dedup_key", "deduplicate", "detect_conflicts",
+    "RawStore", "dedup_key", "deduplicate", "detect_conflicts",
+    "to_information_record",
     "freshness_status", "freshness_summary", "has_valid_provenance",
     "is_admissible", "is_registered", "normalize", "parse_boundary",
     "provenance_issues", "provenance_summary", "select_asof",
