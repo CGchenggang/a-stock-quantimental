@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-C Contract Repair — EXPECTED_ABSENCE representation frozen — PASS / INDEPENDENTLY ACCEPTED** (Golden Re-freeze is the next gated stage)
+**P14-C Golden Re-freeze — PASS / INDEPENDENTLY ACCEPTED** (P14-C Production Implementation is the next gated stage)
 
 P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
 
@@ -37,13 +37,14 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 | P13-U | PASS | Independently accepted virgin-holdout integrity gate; currently ACCUMULATING |
 | P14-A | PASS | Information contract, provenance, PIT, freshness, revision, dedup/conflict infrastructure |
 | P14-B | PASS | Independently accepted after durable ingestion-audit repair (P14-B-R1) |
-| P14-C Contract Repair | PASS | EXPECTED_ABSENCE representation frozen; exact-head CI evidence independently verified; Golden Re-freeze is next |
+| P14-C Contract Repair | PASS | EXPECTED_ABSENCE representation frozen; exact-head CI evidence independently verified |
+| P14-C Golden Re-freeze | PASS | Independently accepted; 64 deterministic Golden fixtures; 61/61/61 closure; Production Implementation remains separately gated |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`38bbf82340fd22fd196ea97639ce014e2bf15033`
+`349c6b274b6b72f89bc4db35e5b1961f719011ed`
 
 Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd` (P14-B baseline); `1961773d` is the current documentation-synchronized HEAD for the independently accepted P14-C Acceptance Harness Reset. The functional submission tree was independently verified at `3144a695`; `1961773d` adds only the acceptance-state documentation sync.
 
@@ -1179,3 +1180,34 @@ Note for the next documentation pass (outside this round's allowed scope): `docs
 Stopping here; awaiting independent acceptance.
 
 P14-D remains blocked.
+
+## P14-C Golden Re-freeze — Independent Acceptance — 2026-10-01
+
+**Decision: PASS. Golden Re-freeze is independently accepted. Do not treat this as P14-C Production Implementation acceptance.**
+
+Independent acceptance target:
+- Golden Re-freeze HEAD: `349c6b274b6b72f89bc4db35e5b1961f719011ed`
+- Parent / independently accepted Contract Repair state: `441e3fa8e8ab5c7a5b2451e1f2ff5ca385a60e99`
+- Accepted Contract SHA-256: `c217f6b984a27cfb6e54322e731f1fe6a381a868e319755191a68290c922167b`
+- Matrix SHA-256 remains pinned and unchanged: `fc99637a74b6fb08fea977a6edcb6245c3bce1c2636d9736380da4b5599a3636`
+
+### Independent verification
+
+1. **Scope is clean.** Compare `441e3fa8..349c6b2` contains only `docs/PROJECT_STATUS.md`, the allowed Golden fixtures `G-007_miss.json`, `G-020_comp.json`, `G-061_bnd.json`, and `tests/contracts/p14c/golden/core.py`. No `src/**`, `data/**`, Contract, Matrix, Harness, P13-T/U, factor/policy/calibration/recommendation or alpha changes were introduced.
+2. **Contract was not modified.** Golden pin matches the independently accepted repaired Contract hash above; Matrix pin remains unchanged.
+3. **EXPECTED_ABSENCE is canonicalized.** G-007/G-020 use `expected_absence_pairs`; completeness uses `R = P - X); anti-cheat rejects the forbidden control forms while allowing the canonical declaration channel. G-007's declared pair is now in `E × D` and the new absence-scope check enforces that invariant mechanically.
+4. **Virgin-zone integrity is preserved.** G-061 uses synthetic `2099-01-01T09:00:00+08:00`; no real `2026-09-23+` fixture input is consumed. `research_end = 2026-09-22`, `virgin_start = 2026-09-23`; P13-T remains STOPPED / NOT EXECUTED and P13-U remains protected.
+5. **Golden closure and determinism are complete.** 64 fixtures, dense unique IDs; Contract/Matrix/Golden coverage is 61/61/61; no orphan/duplicate/undefined IDs. Golden tests pass twice at 76/76; P14-C tests 90/90; full pytest 437 passed, 0 failed, 2 warnings; P13-M regression 3 passed. Canonical report is byte-identical on double-run with SHA-256 `09cca5b0985265deddb42672b770efd88f82152a46b473acec7d1bb8970438f4`.
+6. **Exact-head CI is independently verified.** GitHub Actions workflow `tests`, run `36784963333`, has HEAD `349c6b274b6b72f89bc4db35e5b1961f719011ed`. Pytest job `110124063122` and P13-M job `110124063357` both succeeded. The checkout log explicitly fetched `349c6b274b6b72f89bc4db35e5b1961f719011ed` and `git log -1 --format=%H` returned the same SHA. Harness audit, all test groups, P13-M regression and full pytest steps are green; full pytest reports 437 passed, 0 failed.
+
+### Determination
+
+**P14-C Golden Re-freeze — PASS / ACCEPTED.**
+
+The Golden standard is now frozen against the accepted Contract Repair. P14-C Production Implementation is the next gated stage; P14-D remains blocked until the implementation stage and its independent acceptance are complete.
+
+### Next gate
+
+Only **P14-C Production Implementation** may proceed next. The implementation must be graded against the frozen Golden fixtures and must not modify the Contract, Matrix, Golden standard answers, P13-T/U boundary, or production factor/policy/calibration/recommendation semantics without a separately authorized contract change.
+
+Last independently updated: 2026-10-01.
