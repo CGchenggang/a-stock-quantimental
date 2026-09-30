@@ -24,6 +24,8 @@ jobs:
           python -m pip --version
           python -m pytest --version
           python -m pytest --collect-only -q -ra
+      - name: Contract Harness audit (P14-C)
+        run: python scripts/audit_p14c_contract.py
       - name: Core data and model tests
         run: |
           python -m pytest -q -ra \
