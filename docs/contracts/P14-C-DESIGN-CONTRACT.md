@@ -1,189 +1,388 @@
-# P14-C Design Contract
+# P14-C Design Contract — Revised
 
 > 本文档是 P14-C（Data Quality / Reconciliation / Source Health）的行为契约。
-> 一经独立验收冻结，后续修改须通过正式 contract change 流程。
+> 由 P14-C-R3 独立验收发现的 7 项阻塞点驱动重建。
 >
 > 状态：DRAFT — awaiting independent contract review
+>
+> 修订历史：
+> v1: 初始版本（P14-C-R1 前）
+> v2: R3 修复——增加 Revision Integrity / Nine Dimensions / Provenance split /
+>     SOURCE_EMPTY durable evidence / completeness denominator / bidirectional traceability
 
-## 1. Scope
+---
 
-### 1.1 P14-C 负责
+## 1. Purpose
 
-| 职责 | 说明 |
-|------|------|
-| Data quality | 对 raw/normalized information 逐条评估质量 |
-| Missingness | 对缺失数据按原因分类（六类） |
-| Completeness | 对 expected vs actual entity/date/pair 做 coverage 审计 |
+P14-C 对 P14-B raw/normalized information 逐条评估质量、按来源一致性校验、
+并输出可审计的 quality/reconciliation/health 报告。P14-C 只消费证据，不产生信号。
+
+## 2. Scope
+
+### 2.1 P14-C 负责
+
+| 职责 | dimension_id |
+|------|-------------|
+| Data quality | COMP / VAL / TIME / FRESH / CONS / REV / PROV / PIT / SH |
+| Missingness | 按原因分六类（见 §6） |
+| Completeness | expected vs actual entity/date/pair coverage 审计 |
 | Freshness | 消费 P14-A freshness policy，按 record 计算 FRESH/STALE |
-| Revision integrity | 检测 revision gap / duplicate revision / payload mutation / available_time regression |
-| Cross-source reconciliation | 对同一事实的多个来源做一致性比较（保留全部 provenance，不裁决） |
-| Source health | 从可观测 ingestion 证据 deterministic 聚合 per-source 健康状态 |
-| Quality decision | 逐条输出 ADMISSIBLE / ADMISSIBLE_WITH_WARNING / REJECTED / UNRESOLVED + quality_reasons |
-| Audit evidence | 输出结构化 quality_report.json / source_health.json / completeness.json / reconciliation.json |
+| Revision integrity | gap / duplicate revision / payload mutation / available_time regression |
+| Cross-source reconciliation | 一致性比较（保留全部 provenance，不裁决） |
+| Source health | 从可观测 ingestion 证据 deterministic 聚合 |
+| Quality decision | ADMISSIBLE / ADMISSIBLE_WITH_WARNING / REJECTED / UNRESOLVED + quality_reasons |
+| Audit evidence | quality_report / source_health / completeness / reconciliation JSON |
 
-### 1.2 P14-C 不负责
+### 2.2 P14-C 不负责
 
-| 排除项 | 原因 |
-|--------|------|
-| Alpha generation | P14-C 是 quality gate，不产生投资信号 |
-| Factor selection / weighting | 属于 P13 研究 / P14-E production |
-| Portfolio policy | 属于 Recommendation Engine（P13-R） |
-| Trading decision | 属于 production trading path |
-| Calibration | 属于 P13-Q probability layer |
-| P13-T holdout evaluation | 独立阶段，数据条件未满足 |
-| LLM stock selection | 属于后续 Agent 阶段 |
-| PIT 判断 | P14-A `pit.is_admissible` 是唯一 authority |
-| Freshness policy 定义 | P14-A `FRESHNESS_POLICIES` 是唯一来源 |
+alpha generation, factor selection/weighting, portfolio policy, trading
+decision, calibration, P13-T holdout, LLM stock selection, PIT 判断,
+freshness policy 定义。
 
-## 2. Missingness Taxonomy（冻结）
+## 3. Boundary
 
-六类互斥（按优先级降序排列）：
+### 3.1 P14-A remains authoritative for
 
-| Class | 定义 | 触发条件 | 不属于该类别的情况 | Durable evidence | Source health 影响 | Completeness 影响 | Research layer |
-|-------|------|---------|-------------------|-----------------|-------------------|------------------|---------------|
-| SOURCE_ERROR | source fetch/transport/auth/timeout 失败 | adapter.fetch() 抛出异常 | parse 失败（→PARSE_FAILURE）；contract 声明不需要数据（→EXPECTED_ABSENCE） | adapter.error → durable audit_event | ERROR | 0 records counted | 不可进入 |
-| PARSE_FAILURE | source 成功返回数据但解析失败 | adapter.parse() 抛出异常 | fetch 失败（→SOURCE_ERROR）；返回零 payload（→SOURCE_EMPTY） | audit_event(REJECTED) | ERROR 或 DEGRADED | 0 records counted | 不可进入 |
-| SOURCE_EMPTY | source 请求成功、无 fetch/parse 失败、返回合法空结果 | adapter.fetch() 返回 `[]` | fetch/parse 失败；contract 声明不需要数据 | IngestionReport(status=EMPTY_SUCCESS) | EMPTY | 0 records counted | 无记录可进入 |
-| EXPECTED_ABSENCE | 根据独立 expected contract，该 entity/date 不要求存在数据 | EXPECTED_CONTRACT 显式声明 `expected_absence=true` 或 expected_entities/dates 为空 | contract 要求存在但实际缺失（→UNEXPECTED_MISSING）；source 失败（→SOURCE_ERROR） | EXPECTED_CONTRACT 声明本身 | 不影响（合法缺失） | expected=0, coverage=1.0（by definition） | N/A |
-| UNEXPECTED_MISSING | contract 要求该 entity/date 存在，但实际没有可接受记录 | expected_entities/dates 非空但 actual 为空 | contract 未要求（→EXPECTED_ABSENCE）；source 失败（→SOURCE_ERROR） | completeness delta（expected−actual） | DEGRADED 或 STALE | coverage<1.0 | 不可进入（缺失本身是 gap） |
-| UNRESOLVED_AVAILABILITY | available_time 无法确定（缺失/格式错误） | record.available_time 为 None 或空 | source 明确声明 available_time（→正常 PIT 判断） | to_information_record 抛出 ValueError | UNRESOLVED 或 DEGRADED | 该 record 不计入 coverage | 不可进入 |
+PIT (available_time <= decision_time), available_time 语义, freshness policy
+authority, provenance 基础语义, normalization, dedup/conflict 基础语义,
+research boundary 常量。
 
-**规则**：
-- EXPECTED_ABSENCE **不能**由"实际没数据"自动推导。
-- SOURCE_EMPTY **不能**与 EXPECTED_ABSENCE 混淆——前者是"请求成功但返回空"，
-  后者是"contract 声明不需要请求"。
-- PARSE_FAILURE **不能**与 SOURCE_ERROR 混淆——前者是"数据到了但解析失败"，
-  后者是"数据根本没到"。
+### 3.2 P14-B remains authoritative for
 
-## 3. Expected Contract（冻结）
+raw immutability, raw ingestion audit (raw_records.jsonl +
+raw_ingestion_audit.jsonl), ingestion_id, adapter metadata, durable
+ingestion attempt semantics.
 
-### 3.1 Authority 来源
+### 3.3 P14-C may
 
-EXPECTED_CONTRACT 是 P14-C 的 expected universe 唯一事实来源。它定义
-每个 source 应该交付哪些 entity/date。
+consume evidence, classify quality, compute completeness, reconcile, derive
+source health. P14-C 不得重新定义 P14-A/P14-B 已冻结的底层事实。
 
-**绝对禁止**从 actual payload 推导 expected set。
+---
 
-### 3.2 结构
+## 4. Terminology
+
+| 术语 | 定义 |
+|------|------|
+| EXPECTED_CONTRACT | 冻结的 a priori 集合，定义每个 source 应该交付哪些 entity/date。独立于 actual payload。 |
+| Source Observation | adapter.fetch() + adapter.parse() 对一次 source 调用的实际返回 |
+| Ingestion Attempt | 一次 store.put() 或 store.audit_event() 的调用 |
+| Canonical Raw Record | 成功通过 store.put(ACCEPTED) 的不可变记录 |
+| Durable Audit Event | 写入 raw_ingestion_audit.jsonl 的一条不可变事件 |
+| Research Information Record | 通过 P14-A to_information_record 投影的记录 |
+| Virgin Zone | decision_time >= VIRGIN_START (2026-09-23) |
+| Research Zone | decision_time < VIRGIN_START |
+
+---
+
+## 5. Source Observation Contract
+
+每次 adapter.ingest() 产生一种 Source Observation：
+
+| Observation Type | 条件 | 产出 |
+|-----------------|------|------|
+| ACCEPTED | parse 成功且 store.put 返回 ACCEPTED | RawIngestRecord + RawInformationRecord |
+| DUPLICATE | store.put 返回 DUPLICATE | 不产生新 canonical record |
+| RAW_MUTATION_DETECTED | store.put 返回 RAW_MUTATION_DETECTED | 不产生新 canonical record |
+| REJECTED (PARSE_FAILURE) | adapter.parse() 抛出异常 | 不产生 canonical record |
+| REJECTED (UNRESOLVED) | available_time 缺失 | 不产生 canonical record |
+| SOURCE_ERROR | adapter.fetch() 抛出异常 | 不产生任何 record |
+| SOURCE_EMPTY | adapter.fetch() 返回 `[]` | 不产生任何 record |
+
+**冻结规则**：
+
+- SOURCE_EMPTY observation 由 adapter.fetch() 返回零 payload 产生。
+- SOURCE_EMPTY observation **不生成** canonical raw record。
+- SOURCE_EMPTY observation **不生成** raw_payload_hash（没有 payload 可 hash）。
+- SOURCE_EMPTY observation **不生成** ingestion_id。
+- SOURCE_EMPTY observation **写入** raw_ingestion_audit.jsonl 作为 durable evidence。
+- 禁止用一个 source 同时承载 SOURCE_ERROR + SOURCE_EMPTY + EXPECTED_ABSENCE。
+
+---
+
+## 6. Durable Evidence Contract
+
+### 6.1 存储文件
+
+| 文件 | 内容 | 格式 |
+|------|------|------|
+| raw_records.jsonl | 仅 ACCEPTED 的 canonical record | JSONL, 每行一条 |
+| raw_ingestion_audit.jsonl | **每一次** ingestion attempt 的事件 | JSONL, 每行一条 |
+
+### 6.2 Audit Event Schema
+
+每个 durable audit event 必须包含以下字段：
+
+| 字段 | 类型 | Mandatory | 说明 |
+|------|------|-----------|------|
+| outcome | str | ✅ | ACCEPTED / DUPLICATE / RAW_MUTATION_DETECTED / SOURCE_ERROR / REJECTED / SOURCE_EMPTY / AUTH_ERROR / TIMEOUT |
+| source | str | ✅ | 来源标识 |
+| source_id | str | ⚠️ | SOURCE_ERROR 时可能为 null |
+| revision | int | ⚠️ | SOURCE_ERROR 时可能为 null |
+| incoming_raw_payload_hash | str / null | ⚠️ | SOURCE_ERROR 时 null |
+| stored_raw_payload_hash | str / null | ⚠️ | DUPLICATE / MUTATION 时为已有 hash |
+| ingestion_id | str / null | ⚠️ | SOURCE_ERROR 时 null |
+| adapter_version | str | ✅ | |
+| error | str / null | 可选 | 失败原因 |
+
+### 6.3 SOURCE_EMPTY 事件的特殊语义
+
+SOURCE_EMPTY observation：
+- **属于** durable audit event（写入 raw_ingestion_audit.jsonl）。
+- **不是** canonical raw record（不进入 raw_records.jsonl）。
+- **不生成** raw_payload_hash（没有 payload 可 hash）。
+- **不生成** ingestion_id（没有 canonical record 可标识）。
+- restart 后 evidence **仍然存在**（JSONL 文件持久化）。
+- replay 时**不会重新生成** canonical raw record（因为本来就没有 payload）。
+
+### 6.4 不变量
+
+- **INV-EVID-001**: 每一次 ingestion attempt 必须在 raw_ingestion_audit.jsonl 中有一条事件。
+- **INV-EVID-002**: raw_ingestion_audit.jsonl 重启后必须完整恢复。
+- **INV-EVID-003**: SOURCE_ERROR / PARSE_FAILURE / SOURCE_EMPTY 的 evidence 不得仅存在于进程内存。
+- **INV-EVID-004**: SOURCE_EMPTY observation 不产生 canonical raw record、raw_payload_hash 或 ingestion_id。
+- **INV-EVID-005**: source failure (SOURCE_ERROR) 和 parse failure (REJECTED) 在 audit 中的 outcome 字段必须可区分。
+
+---
+
+## 7. Missingness Contract
+
+### 7.1 六类互斥分类（冻结）
+
+| Class | event_type / 来源 | 定义 | 不属于该类别的情况 |
+|-------|-----------------|------|-------------------|
+| SOURCE_ERROR | adapter.fetch() 抛出异常 | source fetch/transport/auth/timeout 失败 | parse 失败 → PARSE_FAILURE |
+| PARSE_FAILURE | adapter.parse() 抛出异常 | source 成功返回数据但解析失败 | fetch 失败 → SOURCE_ERROR |
+| SOURCE_EMPTY | adapter.fetch() 返回 `[]` | source 请求成功且返回合法空结果 | fetch/parse 失败；contract 声明不需要数据 |
+| EXPECTED_ABSENCE | EXPECTED_CONTRACT 声明 | entity/date 不要求存在数据 | contract 要求存在但实际缺失 |
+| UNEXPECTED_MISSING | expected contract 要求存在但 actual 缺失 | expected_entities/dates 非空但 actual 为空 | contract 未要求 |
+| UNRESOLVED_AVAILABILITY | available_time 为 None 或格式错误 | 无法确定 available_time | source 明确声明了 available_time |
+
+### 7.2 Expected Absence vs Source Empty
+
+```text
+EXPECTED_ABSENCE
+  = according to domain expectation, this entity/date pair
+    is intentionally not required
+
+SOURCE_EMPTY
+  = the source returned zero observations for a request
+```
+
+**这两个概念完全分离。**
+
+### 7.3 不变量
+
+- **INV-MISS-001**: 六类互斥，任何 observation 只能属于一类。
+- **INV-MISS-002**: SOURCE_EMPTY 不能被重新解释为 EXPECTED_ABSENCE。
+- **INV-MISS-003**: PARSE_FAILURE 不能被重新解释为 SOURCE_ERROR。
+- **INV-MISS-004**: EXPECTED_ABSENCE 不能由"实际没数据"自动推导。
+
+---
+
+## 8. Expected Contract
+
+### 8.1 Authority 来源
+
+EXPECTED_CONTRACT 是 expected universe 的唯一事实来源。它**独立于** actual
+payload 定义。
+
+**禁止**从 actual payload 推导 expected set。
+
+**禁止**在 EXPECTED_CONTRACT 中包含测试控制字段
+（expected_empty / broken_source / force_source_error / fixture_mode）。
+
+### 8.2 结构
 
 ```python
 EXPECTED_CONTRACT = {
     source_id: {
-        "expected_entities": [str, ...],   # 应交付的 entity_id 列表
-        "expected_dates": [str, ...],      # 应交付的 event date 列表
-        "expected_absence": bool,          # True = contract 声明不需要数据
-        "expected_empty": bool,            # True = deliberate SOURCE_EMPTY fixture
+        "expected_entities": [str, ...],
+        "expected_dates": [str, ...],
     }
 }
 ```
 
-### 3.3 不变量
+### 8.3 不变量
 
-- **INV-EXP-001**: EXPECTED_CONTRACT 必须在 audit 运行前定义，不从 actual payload 推导。
-- **INV-EXP-002**: 如果 ingestion 失败导致某 entity/date 的 payload 消失，EXPECTED_CONTRACT 仍然包含它。
+- **INV-EXP-001**: EXPECTED_CONTRACT 在 audit 运行前定义。
+- **INV-EXP-002**: ingestion 失败不改变 EXPECTED_CONTRACT。
 - **INV-EXP-003**: 每个 source 在 EXPECTED_CONTRACT 中最多出现一次。
-- **INV-EXP-004**: expected_pairs = {(entity, date) for entity in expected_entities for date in expected_dates}。
+- **INV-EXP-004**: expected_pairs 由 expected_entities × expected_dates 的
+  笛卡尔积构成。
 
-## 4. Completeness Contract（冻结）
+---
 
-### 4.1 计算方式
+## 9. Completeness Contract
+
+### 9.1 集合定义
 
 ```text
-expected_entities  ← EXPECTED_CONTRACT[source].expected_entities
-expected_dates     ← EXPECTED_CONTRACT[source].expected_dates
-expected_pairs     ← {(entity, date) for entity in expected_entities
-                                  for date in expected_dates}
-
-actual_entities    ← {r.entity_id for r in successfully ingested records
-                                  if r.source == source}
-actual_dates       ← {r.event_time[:10] for r in successfully ingested records
-                                  if r.source == source}
-actual_pairs       ← {(r.entity_id, r.event_time[:10]) for r in ...}
-
-missing_entities   ← expected_entities − actual_entities
-missing_dates      ← expected_dates − actual_dates
-missing_pairs      ← expected_pairs − actual_pairs
-
-expected_count     ← len(expected_pairs)
-actual_count       ← expected_count − len(missing_pairs)
-coverage_ratio     ← actual_count / expected_count  (1.0 if expected_count == 0)
+E  = expected entity set         ← EXPECTED_CONTRACT[source].expected_entities
+D  = expected date set           ← EXPECTED_CONTRACT[source].expected_dates
+P  = expected pair set           ← {(e, d) for e in E for d in D}
+A_entity = actual entity set     ← from successfully ingested records
+A_date   = actual date set       ← from successfully ingested records
+A_pair   = actual pair set       ← from successfully ingested records
 ```
 
-### 4.2 状态定义
+### 9.2 计算公式
+
+```text
+missing_entities = E − A_entity
+missing_dates    = D − A_date
+missing_pairs    = P − A_pair
+
+expected_count   = |P|
+actual_count     = |P| − |missing_pairs|
+coverage_ratio   = actual_count / expected_count
+                   (1.0 if expected_count == 0)
+```
+
+### 9.3 状态定义
 
 | 状态 | 条件 |
 |------|------|
 | 完整 | missing_entities = ∅ 且 missing_dates = ∅ 且 missing_pairs = ∅ |
-| 部分完整 | 某些 entity/date 缺失但非全部 |
+| 部分完整 | 某些 entity/date/pair 缺失但非全部 |
 | 完全缺失 | actual_entities = ∅ 且 expected_entities ≠ ∅ |
 | 合法预期缺失 | EXPECTED_CONTRACT 声明 expected_absence = True |
 
-### 4.3 不变量
+### 9.4 不变量
 
-- **INV-COMP-001**: coverage_ratio 由 expected_pairs 与 actual_pairs 的集合差计算，不得手工填写。
-- **INV-COMP-002**: missing_entities/dates **不得**被 forward-fill、默认值填充或静默删除。
+- **INV-COMP-001**: coverage_ratio 由 |P| 和 |P ∩ A| 计算，不得手工填写。
+- **INV-COMP-002**: missing data **不得**被 forward-fill / 默认值填充 / 静默删除。
 - **INV-COMP-003**: expected set 独立于 actual ingestion 结果。
-- **INV-COMP-004**: entity/date/pair 三种粒度的 missing 集合必须分别报告。
+- **INV-COMP-004**: entity / date / pair 三种粒度的 missing 集合必须分别报告。
+- **INV-COMP-005**: expected contract 中明确声明 expected_absence 的 entity/date
+  **不计入** coverage denominator。
 
-## 5. Freshness Contract（冻结）
+---
 
-### 5.1 唯一来源
+## 10. Timestamp Quality Contract
 
-P14-A `freshness_status(record, decision_time, policies)` 是 freshness 的唯一判断函数。
+### 10.1 检查项
 
-P14-C **不定义**第二套 freshness policy 或 threshold。
+| Check | 条件 | 分类 |
+|-------|------|------|
+| {field}_malformed | 字段无法解析为 ISO 8601 | VIOLATION |
+| timezone_missing | 字段不含 timezone | VIOLATION |
+| ingested_before_available | ingested_at < available_time | VIOLATION |
+| available_before_event | available_time < event_time（当 contract 声明 available_after_event） | VIOLATION |
+| available_vs_event_unprovable | source contract 无法证明顺序 | UNKNOWN |
+| {field}_in_future | 字段 > reference_time | VIOLATION |
 
-### 5.2 报告键
+### 10.2 不变量
 
-P14-C 将 P14-A 的小写状态（fresh/stale/unknown/missing_policy）规范化为大写
-（FRESH/STALE/UNKNOWN/MISSING_POLICY），并追加 UNRESOLVED（available_time 缺失）。
+- **INV-TS-001**: 三个时间字段语义分离（event_time / available_time / ingested_at）。
+- **INV-TS-002**: 不得用 event_time 替代 available_time。
+- **INV-TS-003**: 不得用 ingested_at 替代 available_time。
+- **INV-TS-004**: source contract 无法证明顺序时报告 UNKNOWN，不猜测。
 
-### 5.3 不变量
+---
+
+## 11. Revision Integrity Contract
+
+### 11.1 REV-001: Revision sequence
+
+revision 不要求连续（允许 gap）。gap 被检测并报告为 ANOMALY 但不影响 quality status。
+
+### 11.2 REV-002: Duplicate revision
+
+```text
+duplicate revision
+  = same (source, source_id, revision) + same canonical JSON
+```
+
+如果 canonical JSON 不同 → same_revision_different_payload ANOMALY。
+
+### 11.3 REV-003: Payload mutation
+
+```text
+same (source, source_id, revision) + different canonical JSON
+  = RAW_MUTATION_DETECTED
+```
+
+P14-B RawStore 已负责检测。P14-C 消费检测结果并统计。
+
+### 11.4 REV-004: available_time regression
+
+如果 revision N+1 的 available_time 早于 revision N：
+- classification = revision_available_time_regression
+- severity = ANOMALY
+- research handling = 报告但保留，不删除
+
+### 11.5 REV-005: PIT visibility
+
+revision anomaly 不得破坏 P14-A `available_time <= decision_time`。
+P14-A 仍然是 PIT authority。
+
+---
+
+## 12. Duplicate / Conflict Contract
+
+### 12.1 Duplicate
+
+```text
+duplicate = same (source, source_id) + same canonical JSON
+```
+
+由 RawStore 幂等 put 自动处理。audit event 记录 outcome=DUPLICATE。
+
+### 12.2 Payload mutation
+
+```text
+same (source, source_id, revision) + different canonical JSON
+  = RAW_MUTATION_DETECTED
+```
+
+P14-B RawStore 已负责检测和报告。
+
+### 12.3 Cross-source conflict
+
+```text
+same (entity_id, event_time, unit, currency)
++ >= 2 sources
++ >= 2 distinct non-null values
+  = CONFLICT
+```
+
+P14-A `detect_conflicts` 已负责检测。P14-C 消费检测结果并统计。
+
+### 12.4 不变量
+
+- **INV-DUP-001**: 不得自动选择 source winner。
+- **INV-DUP-002**: 不得自动平均。
+- **INV-DUP-003**: 不得静默 resolution。
+- **INV-DUP-004**: 不同 source 的 value 都必须保留。
+
+---
+
+## 13. Freshness Contract
+
+### 13.1 唯一来源
+
+P14-A `freshness_status(record, decision_time, policies)` 是 freshness 的
+唯一判断函数。P14-C 不定义第二套 freshness policy 或 threshold。
+
+### 13.2 报告键
+
+P14-C 将 P14-A 的小写状态（fresh/stale/unknown/missing_policy）规范化为
+大写（FRESH/STALE/UNKNOWN/MISSING_POLICY），并追加 UNRESOLVED
+（available_time 缺失）。
+
+### 13.3 不变量
 
 - **INV-FRESH-001**: freshness 判断必须调用 P14-A `freshness_status`。
 - **INV-FRESH-002**: 不得硬编码 stale 计数。
 - **INV-FRESH-003**: freshness policy 是 infrastructure 配置，不是 alpha threshold。
+- **INV-FRESH-004**: FRESH / STALE / UNRESOLVED 三种证据必须在 audit 中产生。
 
-## 6. Evidence Contract（冻结）
+---
 
-### 6.1 Evidence chain
+## 14. Reconciliation Contract
 
-```text
-source adapter
-    ↓ fetch() / parse()
-ingestion attempt
-    ↓ store.put() → ACCEPTED / DUPLICATE / RAW_MUTATION_DETECTED
-    ↓ store.audit_event() → SOURCE_ERROR / AUTH_ERROR / TIMEOUT / REJECTED
-durable audit file (raw_ingestion_audit.jsonl)
-    ↓ audit_event 读取
-quality classification (record_quality_decision)
-    ↓
-source_health (from observable metrics)
-    ↓
-completeness (from EXPECTED_CONTRACT vs actual)
-    ↓
-final quality_report.json
-```
-
-### 6.2 每种异常的 evidence 来源与消费
-
-| 异常 | Evidence 产生位置 | Durable 持久化位置 | 消费位置 |
-|------|-----------------|-------------------|---------|
-| SOURCE_ERROR | adapter.fetch() 抛出异常 | raw_ingestion_audit.jsonl `outcome=SOURCE_ERROR` | source_health(health=ERROR), quality_report(source_health dim) |
-| PARSE_FAILURE | adapter.parse() 抛出异常 | raw_ingestion_audit.jsonl `outcome=REJECTED` | source_health(health=ERROR/DEGRADED), quality_report(validity dim) |
-| SOURCE_EMPTY | adapter.fetch() 返回 `[]` | IngestionReport(status=EMPTY_SUCCESS) | completeness(missingness=SOURCE_EMPTY), source_health(health=EMPTY) |
-| EXPECTED_ABSENCE | EXPECTED_CONTRACT 声明 expected_absence=true | EXPECTED_CONTRACT 本身 | completeness(missingness=EXPECTED_ABSENCE) |
-| UNEXPECTED_MISSING | completeness delta（expected − actual） | completeness.json missing_entities/dates | completeness(missingness=UNEXPECTED_MISSING), source_health(health=DEGRADED) |
-
-### 6.3 不变量
-
-- **INV-EVID-001**: 每一次 ingestion attempt（无论成功或失败）必须在 durable audit file 中有一条事件。
-- **INV-EVID-002**: durable audit file 重启后必须完整恢复。
-- **INV-EVID-003**: SOURCE_ERROR / PARSE_FAILURE / SOURCE_EMPTY 的 evidence 不得仅存在于进程内存。
-
-## 7. Reconciliation Contract（冻结）
-
-### 7.1 必须保留的字段
+### 14.1 必须保留的字段
 
 每个 reconciliation group 中的每个 contributing source 必须保留：
 
@@ -198,7 +397,7 @@ ingestion_id, raw_payload_hash, provenance
 difference, relative_difference, policy_id, policy_version, status
 ```
 
-### 7.2 不变量
+### 14.2 不变量
 
 - **INV-RECON-001**: 不得自动选择 source winner。
 - **INV-RECON-002**: 不得自动平均。
@@ -206,13 +405,43 @@ difference, relative_difference, policy_id, policy_version, status
 - **INV-RECON-004**: 不同 source 的 value 都必须保留。
 - **INV-RECON-005**: tolerance policy 必须版本化（policy_id + policy_version）。
 
-## 8. Provenance Contract（冻结）
+---
 
-所有最终质量判断必须能追溯到：source / source_id / raw_payload / raw_payload_hash / ingestion_id / available_time / ingested_at / adapter_version。
+## 15. Provenance Contract
 
-**INV-PROV-001**: quality_status = UNRESOLVED 的 record（available_time 缺失）不得进入 research layer。
+### 15.1 Record Provenance（Type A）
 
-## 9. Source Health Contract（冻结）
+适用于：canonical raw record, accepted record, rejected record with payload,
+revision, reconciliation record。
+
+```text
+source, source_id, raw_payload_hash, ingestion_id, adapter_version,
+event_time, available_time, ingested_at
+```
+
+引用 P14-A provenance contract：`astock_v2.information.provenance`。
+
+### 15.2 Observation / Completeness Provenance（Type B）
+
+适用于：SOURCE_EMPTY, SOURCE_ERROR, PARSE_FAILURE, EXPECTED_ABSENCE,
+UNEXPECTED_MISSING, missing entity/date/pair。
+
+```text
+source, source_id, observation_type, observed_at, adapter_version,
+expected_contract_id, entity_date_pair_scope, evidence_reference
+```
+
+**不应**强制要求不存在的 raw_payload_hash 或 canonical record id。
+
+### 15.3 不变量
+
+- **INV-PROV-A-001**: Record provenance 必须包含 raw_payload_hash。
+- **INV-PROV-B-001**: Observation provenance 不得包含 raw_payload_hash
+  （该字段对 observation 无意义）。
+
+---
+
+## 16. Source Health Contract
 
 | 状态 | 条件 | 优先级 |
 |------|------|--------|
@@ -227,33 +456,86 @@ difference, relative_difference, policy_id, policy_version, status
 **INV-SH-002**: 不得硬编码 stale 计数。
 **INV-SH-003**: 不得引入 ML health score。
 
-## 10. Quality Decision Contract（冻结）
+---
 
-| Decision | 条件 |
-|----------|------|
-| REJECTED | provenance issues 存在 或 PIT 不通过 |
-| UNRESOLVED | available_time 缺失 |
-| ADMISSIBLE_WITH_WARNING | PIT 通过但存在 stale/timestamp warning |
-| ADMISSIBLE | 全部检查通过 |
+## 17. Nine Quality Dimensions（冻结）
 
-**INV-QD-001**: REJECTED 的 record 不得静默删除——必须保留在 quality report 中并说明原因。
-**INV-QD-002**: quality_reasons[] 不得被清空或缩短。
+| # | dimension_id | 名称 | 输入 evidence | status domain |
+|---|-------------|------|--------------|--------------|
+| 1 | completeness | expected vs actual entity/date coverage | completeness.json | PASS / WARN / FAIL |
+| 2 | validity | provenance / content validity | quality_report validity dim | PASS / WARN / FAIL |
+| 3 | timeliness | timestamp ordering / freshness | quality_report timeliness dim | PASS / WARN / FAIL |
+| 4 | freshness | P14-A freshness_status per record | quality_report freshness dim | PASS / WARN / FAIL |
+| 5 | consistency | cross-source value consistency | reconciliation.json | PASS / WARN / FAIL |
+| 6 | revision_integrity | revision gap / duplicate / regression | quality_report rev dim | PASS / WARN / FAIL |
+| 7 | provenance_integrity | provenance completeness | quality_report prov dim | PASS / WARN / FAIL |
+| 8 | pit_admissibility | PIT counts per record | quality_report pit dim | PASS / WARN / FAIL |
+| 9 | source_health | per-source ingestion health | source_health.json | PASS / WARN / FAIL |
 
-## 11. Determinism Contract（冻结）
+每个 dimension 的 schema：
+
+```json
+{
+  "dimension_id": "string",
+  "status": "PASS | WARN | FAIL | UNRESOLVED",
+  "reasons": ["string", ...],
+  "metrics": { "key": numeric_or_string },
+  "evidence": [ { ... }, ... ]
+}
+```
+
+---
+
+## 18. Quality Report Contract
+
+最终 `quality_report.json` 必须包含：
+
+```json
+{
+  "schema_version": "...",
+  "decision_time": "...",
+  "dimensions": {
+    "completeness": { "status": "...", "reasons": [...], "metrics": {...}, "evidence": [...] },
+    "validity": { ... },
+    "timeliness": { ... },
+    "freshness": { ... },
+    "consistency": { ... },
+    "revision_integrity": { ... },
+    "provenance_integrity": { ... },
+    "pit_admissibility": { ... },
+    "source_health": { ... }
+  }
+}
+```
+
+---
+
+## 19. Determinism Contract
 
 - **INV-DET-001**: 相同输入 → byte-identical 输出（从两个独立空目录运行）。
 - **INV-DET-002**: 禁止 runtime timestamp / random UUID / unordered iteration / machine path 进入 deterministic output。
 - **INV-DET-003**: manifest 不含动态 timestamp。
 
-## 12. Research Boundary Contract（冻结）
+---
+
+## 20. Restart / Replay Contract
+
+- **INV-RR-001**: process restart 后 durable audit file 必须完整恢复。
+- **INV-RR-002**: 重复 replay 同一 payload 不得产生新的 canonical record。
+- **INV-RR-003**: replay 的 audit event 必须标记为 DUPLICATE。
+
+---
+
+## 21. Research Boundary Contract
 
 - RESEARCH_END = 2026-09-22, VIRGIN_START = 2026-09-23。
 - P14-C fixture 日期必须 < 2026-09-23。
 - P13-U virgin protection 不得削弱。
 - P13-T = STOPPED / NOT EXECUTED。
+- P14-C 不得使用 virgin zone 调参 / 做 calibration / 做 factor selection /
+  做 policy selection / 将 P13-R validation 重新标记为 holdout。
 
-## 13. Scope Exclusions
+## 22. Invariant Registry
 
-P14-C 不负责：alpha generation, factor selection, factor weighting,
-portfolio policy, recommendation, trading decision, calibration,
-P13-T holdout evaluation, LLM stock selection.
+全部 INV-* 编号在本文件 §6-§21 中定义，此处不再重复列举。
+每个 INV-* 在 Acceptance Matrix 中至少对应一行。
