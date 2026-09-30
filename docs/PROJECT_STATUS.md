@@ -414,3 +414,43 @@ Required R3 repair:
 - remove generated test artifacts from the repository and extend .gitignore as needed;
 - preserve P13-U/P13-T boundaries and make no factor/policy/calibration/recommendation/production-alpha changes;
 - stop after R3 and await independent acceptance. Do not start P14-D.
+
+
+## P14-C-R3 Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-D.**
+
+Independently audited the latest P14-C implementation HEAD `868b729ae862b750fb8c6a834b80596553be6fea` against accepted P14-B baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Blocking findings
+
+1. `run_p14c_quality_audit.py` is not executable as written: the `expected_absence` branch of `_compute_completeness()` does not initialize `expected_count` and `actual_count`, but both are emitted later. The declared `broken_source` case therefore cannot produce a valid completeness artifact.
+2. `_compute_freshness_per_record()` references `FRESH` and `STALE` without importing those constants. This is a second direct execution blocker.
+3. `parse_failure_source` is not included in `EXPECTED_CONTRACT`, so the parse-failure path lacks an independent expected entity/date contract.
+4. SOURCE_ERROR / PARSE_FAILURE / SOURCE_EMPTY are not locked by an end-to-end regression test covering adapter failure → durable `raw_ingestion_audit.jsonl` → quality classification → source health → final `quality_report.json`.
+5. `tests/test_p14c_reconciliation.py` only tests `reconcile()` directly; it does not execute `run_quality_audit(tmp_path)` and assert the final `reconciliation.json` fields required by the R3 contract.
+6. GitHub Actions evidence is absent for latest HEAD: `fetch_commit_workflow_runs` returns `workflow_runs: []` and combined commit status is empty. Final CI therefore cannot be independently verified.
+7. `docs/P14C_ACCEPTANCE.md` is stale relative to the latest implementation and lacks current-head CI evidence; its fixture/diff claims cannot be used as acceptance evidence.
+
+### Positive findings
+
+- An explicit `EXPECTED_CONTRACT` now exists and completeness consumes it rather than deriving expected sets from normal fixture payloads.
+- Deterministic BrokenSourceAdapter and ParseFailureAdapter implementations now exist.
+- Freshness is intended to reuse the P14-A freshness policy rather than a hard-coded stale count.
+- No factor, calibration, recommendation, or P13-T promotion was observed; P13-T remains STOPPED and the documented virgin boundary remains `research_end=2026-09-22`, `virgin_start=2026-09-23`.
+
+### Required R4 repair
+
+- Make the audit script execute successfully from a clean directory and add direct smoke coverage for it.
+- Fix expected-absence count/coverage semantics deterministically.
+- Correctly import/use P14-A freshness constants; no second freshness policy and no hard-coded stale count.
+- Add parse-failure source to the independent contract where required and prove SOURCE_ERROR/PARSE_FAILURE/SOURCE_EMPTY through the durable evidence chain and final artifacts.
+- Add end-to-end audit regression tests, including reload of durable audit evidence.
+- Add `reconciliation.json` end-to-end assertions for source, source_id, value, difference, relative_difference, event_time, available_time, ingested_at, ingestion_id, raw_payload_hash, provenance, policy_id, policy_version and status.
+- Run clean double-run determinism checks.
+- Keep the P14-C diff bounded to relevant source/tests/scripts/docs/.gitignore; remove generated artifacts.
+- Push the repair and obtain independently inspectable GitHub Actions evidence for pytest, P13-M and full pytest; inspect run/job/step results.
+- Preserve P13-U/P13-T boundaries and do not modify factor/policy/calibration/recommendation/production-alpha logic.
+- Stop after repair and await independent acceptance. Do not start P14-D.
+
+P14-D remains blocked.
