@@ -648,3 +648,44 @@ Independently reviewed Repair HEAD `9a5d399750eba4fbbd472f55e6a5f9a15fc43e7e` ag
 - After repair, stop and await independent acceptance again.
 
 P14-D remains blocked.
+
+## P14-C Contract Repair R3 Independent Acceptance — 2026-09-30
+
+**Decision: FAIL / REPAIR REQUIRED. Contract is NOT frozen. Do not start Golden Tests or advance to P14-D.**
+
+Independently reviewed R3 implementation HEAD `1a6178a3e090b7509eeacfcb99161d2498ff815d` against the accepted P14-B baseline `84021d6c9039582cfa831e1e3a85f1141fb87efd`.
+
+### Positive findings
+
+- R3 is the actual latest implementation commit and its delta from the R3 repair base is documentation-only: `docs/PROJECT_STATUS.md`, `docs/contracts/P14-C-DESIGN-CONTRACT.md`, and `docs/contracts/P14-C-ACCEPTANCE-MATRIX.md`.
+- EXPECTED_CONTRACT remains limited to `expected_entities` / `expected_dates`; fixture-specific `expected_empty`, `broken_source`, `force_source_error`, and `fixture_mode` are not reintroduced.
+- SOURCE_EMPTY is explicitly defined as a durable `raw_ingestion_audit.jsonl` observation and is separated from canonical raw records.
+- The Design Contract and Acceptance Matrix contain the same 61 unique canonical `P14C-*` IDs; there are no contract-only or matrix-only IDs.
+- P13-U/P13-T boundaries remain unchanged; no Golden Tests or production implementation changes were introduced by R3.
+
+### Blocking findings
+
+1. **Acceptance Matrix contains duplicate Contract IDs.** Mechanical extraction found 61 unique IDs in the Design Contract and 61 unique IDs in the Matrix, but the Matrix contains 64 ID occurrences because `P14C-SH-004`, `P14C-SH-005`, and `P14C-SH-006` each appear twice. R3 explicitly requires `duplicate_matrix_ids = 0`; therefore the bidirectional registry is not closed.
+2. **R3 self-reported count is incorrect.** The commit message claims 57 unique Contract IDs, while the independent extraction finds 61 unique IDs in each document. This must be corrected so the acceptance evidence is auditable and mechanically reproducible.
+3. **The Matrix/Contract wording has at least one redundant normative requirement:** `P14C-RECON-001` and `P14C-RECON-006` both prohibit automatic source-winner selection. This is not by itself the primary mechanical blocker, but the final repair should verify that each canonical ID represents one distinct invariant and that duplicate semantics are not hidden behind different IDs.
+4. **No GitHub Actions run/status is independently available for R3 HEAD.** `fetch_commit_workflow_runs` and combined status both return empty for `1a6178a...`. This is secondary to the direct registry failure, but current-head CI evidence must be obtained before final acceptance if the repository workflow requires it.
+
+### Required R4 repair
+
+- Keep the repair documentation-only.
+- Remove the duplicate Matrix rows for `P14C-SH-004/005/006`; retain exactly one row for each canonical ID.
+- Re-run a mechanical audit and require exactly:
+  - `contract_unique_ids = matrix_unique_ids`
+  - `orphan_contract_invariants = 0`
+  - `orphan_matrix_rows = 0`
+  - `duplicate_contract_ids = 0`
+  - `duplicate_matrix_ids = 0`
+  - `undefined_matrix_ids = 0`
+- Reconcile the reported ID count with the actual extracted count; do not claim 57 if the registry contains 61.
+- Review whether `P14C-RECON-001` and `P14C-RECON-006` should be merged or otherwise made semantically distinct; do not delete a normative requirement merely to make counts match.
+- Preserve the current EXPECTED_ABSENCE model and all P14-A/P14-B authority boundaries.
+- Do not create Golden Tests, modify `src/`, `tests/`, `data/`, `scripts/`, P13-T/U, factors, policy, calibration, recommendation logic, or production alpha logic.
+- Obtain inspectable CI evidence for the final repair HEAD if the workflow is available.
+- Stop after the documentation-only repair and await independent acceptance.
+
+P14-D remains blocked.
