@@ -5,22 +5,11 @@
 
 ## Current Phase
 
-**P14-C Golden Re-freeze — PASS / INDEPENDENTLY ACCEPTED** (P14-C Production Implementation is the next gated stage)
+**P14-D — FAIL / REPAIR REQUIRED** (independent acceptance 2026-10-01)
 
-P13-U has been independently accepted as PASS. P13-T remains a future data-condition gate and is **STOPPED / NOT EXECUTED** until a genuine virgin temporal holdout reaches the frozen execution threshold.
+P14-D implementation was submitted at `3ec4837e63df8c668f1057f78e7f9dce0f5702ab`, but independent acceptance is blocked. The Contract remains DRAFT, production implementation was delivered in the same submission before Contract/Golden independent freeze, exact-head GitHub Actions evidence is not independently retrievable for this commit through the available workflow-run evidence, and a version-selection tie semantic mismatch was found (see P14-D Independent Acceptance section).
 
-Current P13-U gate state at the last verified data run remains **ACCUMULATING**.
-
-- `research_end = 2026-09-22`
-- `virgin_start = 2026-09-23`
-- last independently documented virgin trading days: **2** (2026-09-23, 2026-09-24)
-- P13-T minimum execution condition: **20 trading days**
-- P13-T recommended execution condition: **60 trading days**
-- contamination detected in the last verified P13-U run: **False**
-
-P14-A has been independently accepted as **PASS**.
-
-P14 remains infrastructure/research-only. It must not consume the protected virgin zone or promote new information into production factors, policy, or calibration.
+P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Accepted Phases
 
@@ -44,46 +33,9 @@ P14 remains infrastructure/research-only. It must not consume the protected virg
 
 ## Current Commit
 
-`349c6b274b6b72f89bc4db35e5b1961f719011ed`
+`3ec4837e63df8c668f1057f78e7f9dce0f5702ab` — P14-D submission under independent acceptance review. This is **not an accepted P14-D head**.
 
-Latest independently accepted implementation remains `84021d6c9039582cfa831e1e3a85f1141fb87efd` (P14-B baseline); `1961773d` is the current documentation-synchronized HEAD for the independently accepted P14-C Acceptance Harness Reset. The functional submission tree was independently verified at `3144a695`; `1961773d` adds only the acceptance-state documentation sync.
-
-Independent review state: the latest independent verdict on the P14-C contract line is **Acceptance Harness Reset FAIL / REPAIR REQUIRED** (2026-10-01, `e881b09`, see its section at the end of this file); the CI/documentation repair it requires is delivered in this round and **awaits independent acceptance**.
-
-Current accepted-head CI:
-- workflow: `tests`
-- run: `36650601210`
-- HEAD: `84021d6c9039582cfa831e1e3a85f1141fb87efd`
-- pytest job: success
-- p13m job: success
-- Full pytest: **all tests passed / 0 failed** (P14-B-R1 repair included)
-- Full pytest step executed `python -m pytest -q -ra`
-- P13-M regression step: success
-- P14-A/P14-B tests are included in the full suite.
-
-Current submission-head CI (P14-C Acceptance Harness + R4 repair, `3144a6951d33281af38e8663d394115148bb00d1`, awaiting independent acceptance):
-
-- workflow: `tests`
-- run: `36739506965` (event: push, completed / success, started 2026-09-30T15:48:16Z)
-  - https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36739506965
-- pytest job (id `109969874122`): success — all steps green, including
-  "Environment diagnostics" (`pytest --collect-only -q -ra`), "Full pytest suite"
-  (`python -m pytest -q -ra`), and "P13-M pooled industry regression"
-- p13m job (id `109969874447`): success — "P13-M pooled industry regression" step green
-- Full pytest on the identical tree locally: **361 passed, 2 warnings, 0 failed**
-  (includes the 14 harness meta-tests in `tests/contracts/p14c/`); the CI step's
-  success conclusion is the machine-verifiable result for the same command on the
-  same commit (job-log download requires admin rights and is not part of this record)
-- Contract Harness executed via the pytest suite (characterization test
-  `test_real_docs_characterization` runs `scripts/audit_p14c_contract.py::run_harness`
-  against the real contract/matrix and asserts the counts below); direct script run
-  on the same tree: `python scripts/audit_p14c_contract.py` → exit 0, status PASS
-  - `contract_unique_ids = 61`, `matrix_unique_ids = 61`, `matrix_rows = 61`
-  - `orphan_contract_invariants = 0`, `orphan_matrix_rows = 0`
-  - `duplicate_contract_ids = 0`, `duplicate_matrix_ids = 0`, `undefined_matrix_ids = 0`
-  - `hard_findings = 0`, `soft_findings = 0`
-
-The immediately preceding documentation commit CI `36641360624` failed because a P14-A production-snapshot test incorrectly depended on a gitignored local calibration artifact. ZCODE fixed that test in the next commit; the current-head run `36642731938` is green. This failure/fix is retained as audit history rather than hidden.
+Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118`, with acceptance-state documentation commit `ad032a0e7ada2b83a697601c79c5ed7b6e526592`.
 
 ## Current Research Boundary
 
@@ -1323,3 +1275,45 @@ Workflow: added "Contract Harness audit (P14-D)" step. No P13-T/U, factor, calib
 Stopping here; awaiting independent acceptance.
 
 P14-D remains P14-D — do not proceed to P14-E until independent acceptance is granted.
+
+## P14-D Independent Acceptance — 2026-10-01
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E.**
+
+Independently inspected submission HEAD `3ec4837e63df8c668f1057f78e7f9dce0f5702ab` against the independently accepted P14-C state `ad032a0e7ada2b83a697601c79c5ed7b6e526592`.
+
+### Blocking findings
+
+1. **Contract freeze / governance violation.** `docs/contracts/P14-D-DESIGN-CONTRACT.md` is explicitly marked `DRAFT — awaiting independent contract review`, while the same submission already contains production implementation, Golden fixtures, behavioral Harness, and CI wiring. Under the project's frozen workflow, Contract must be independently accepted before Golden/production implementation is accepted. The submission therefore cannot be accepted as a completed P14-D stage.
+
+2. **Version-selection semantic mismatch.** P14-D Contract §8 states that within one `(source, source_id)` lineage, when revisions tie, the earliest `available_time` must win. The production path delegates to P14-A `visible_revisions()`, whose tuple comparison selects the maximum `(revision, available_time, canonical_json)`; therefore equal-revision records select the later `available_time`, contrary to the P14-D Contract. Existing P14-D tests/Gol​den cover differing revisions but do not lock the equal-revision tie case.
+
+3. **Exact-head CI evidence not independently verified.** The repository-side `fetch_commit_workflow_runs` result for `3ec4837e63df8c668f1057f78e7f9dce0f5702ab` returned no workflow runs. ZCODE's commit message reports local validation, but that is not a substitute for independently inspectable exact-HEAD GitHub Actions evidence. The final acceptance gate therefore remains open.
+
+### Positive findings
+
+- P14-D scope is correctly constrained to PIT-safe information retrieval; no production alpha/factor/policy/calibration/recommendation/trading implementation was observed in the submission diff.
+- Production query uses `available_time <= as_of` and does not use `event_time` for visibility.
+- P13-U `assert_research_zone` is wired into the query entry point.
+- P14-D introduces deterministic canonical serialization and a result SHA-256.
+- Ten P14-D contract IDs, ten matrix rows, and ten Golden fixtures are present with mechanical closure.
+- Tests exercise the production `run_query` path rather than a test-only implementation.
+- No real P13-T virgin-zone dates were introduced into the P14-D fixture set; the future-date tests use synthetic dates.
+- P14-C Contract/Matrix/Golden assets were not modified by the P14-D submission.
+
+### Required narrow repair
+
+**P14-D-REPAIR-001 — Contract Freeze + Version-Tie + CI Gate**
+
+Do not redesign P14-D.
+
+1. First freeze the P14-D Contract through the normal independent contract gate. The frozen Contract must no longer be DRAFT and must preserve the accepted semantics.
+2. Add a Golden/Harness case for two admissible records with identical `(source, source_id, revision)` but different `available_time`; enforce the Contract's declared tie rule. If the intended authoritative P14-A behavior is different, STOP and perform a Contract repair first rather than silently changing production semantics.
+3. Repair the production/P14-A tie behavior so implementation and frozen Contract agree. Keep the repair narrow and deterministic.
+4. Do not modify P14-C Contract/Matrix/Golden, P13-T/P13-U, factor, alpha, calibration, policy, recommendation, portfolio, or trading logic.
+5. Produce an exact-final-HEAD GitHub Actions run and provide independently inspectable run → job → step → log evidence, including checkout SHA == final HEAD.
+6. Re-run the complete P14-D Harness/Golden, P14-C regression, P13-M regression, and full pytest suite.
+
+Do not proceed to P14-E until P14-D is independently accepted.
+
+Last independently updated: 2026-10-01.
