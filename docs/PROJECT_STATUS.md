@@ -1518,3 +1518,30 @@ Harness/Golden-layer repair of the four independent-acceptance blockers on P14-E
 P13-T STOPPED / NOT EXECUTED; P13-U PROTECTED; P14-D PASS untouched; P14-E production implementation **NOT AUTHORIZED** (src file pin re-verified).
 
 P14-F not started. Awaiting independent acceptance.
+
+## P14-E-003-REPAIR-001 — Independent Acceptance — 2026-10-01
+
+**Decision: PASS / INDEPENDENTLY ACCEPTED.**
+
+Independent acceptance inspected actual GitHub main HEAD `6e0303bdddb884ddabb6513f70f69d36da645215` against the failed P14-E-003 submission `8b8f2c182f9f6bc95628a558159f3fed49aa07ce`.
+
+### Acceptance findings
+
+1. **P14E-017 reverse traceability — PASS.** The Harness now parses the authoritative P14-B `raw_records.jsonl` and resolves each Evidence `(ingestion_id, raw_payload_hash)` to exactly one raw record, then verifies `source/source_id/revision/event_time/available_time`. G-001 also contains a negative mismatched-pair case that must fail.
+2. **P14E-013 reload authority — PASS.** `reload_verify()` checks bundle hash integrity and, when the P14-B authority rows are supplied, resolves every Evidence back to that authority. G-009 recomputes the tampered bundle hash before reload, proving the failure comes from provenance authority rather than bundle-hash mismatch.
+3. **P14E-006 mapping closure — PASS.** G-005 now exercises both as-of bundles and asserts exact one-to-one `result.records ↔ bundle.evidence` identity, counts equality, and `result_id` linkage.
+4. **Golden expected-consumption closure — PASS.** Every declared expected leaf is mechanically tracked. The audit reports **12/12 fixtures fully consumed**, and the meta-test proves that an injected unused expected key causes failure. G-006 prose was correctly moved from `expected` to `notes`.
+5. **Scope / production boundary — PASS.** The repair is one commit from the failed submission and contains no `src/**` changes. The P14-E production Evidence/Provenance/Bundle runtime remains absent and the source-file pin remains enforced. P14-A/B/C/D semantics are untouched.
+6. **Contract / Matrix / Golden closure — PASS.** P14-E Contract remains independently accepted; Matrix remains frozen; all 17 Contract IDs remain covered; G-001..G-012 remain present.
+7. **Virgin-zone integrity — PASS.** No real P13-T virgin-zone data was introduced. P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+8. **Exact-head CI — PASS.** GitHub Actions run `36851919169` is a successful push run for exact HEAD `6e0303bdddb884ddabb6513f70f69d36da645215`. Pytest job `110335324915` and P13-M job `110335325411` both succeeded. Checkout logs explicitly fetched and checked out the exact HEAD SHA. The P14-C, P14-D and P14-E contract audits all passed; P13-M passed; full pytest reported **530 passed / 0 failed / 2 warnings**. All required workflow steps completed successfully.
+
+### Independent acceptance result
+
+**P14-E-003-REPAIR-001 is independently accepted.**
+
+This closes the P14-E-003 Harness/Golden acceptance blockers. The next authorized stage is **P14-E production implementation Contract/Design Gate** only; implementation must still proceed through a separate Contract → Matrix → Golden Design → Harness → Production → CI → independent acceptance sequence. P14-F is not authorized yet.
+
+P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
+
+Last independently updated: 2026-10-01.
