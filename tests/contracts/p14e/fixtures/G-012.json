@@ -1,0 +1,20 @@
+{
+ "golden_id": "P14E-G-012",
+ "title": "virgin protection: synthetic future date fails fast",
+ "contract_ids": [
+  "P14E-015"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2099-01-01T09:00:00+08:00"
+  },
+  "records": []
+ },
+ "expected": {
+  "raises": true,
+  "match": "VIRGIN HOLDOUT",
+  "synthetic_date_only": true
+ }
+}

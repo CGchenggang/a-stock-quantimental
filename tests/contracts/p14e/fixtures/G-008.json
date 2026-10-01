@@ -1,0 +1,103 @@
+{
+ "golden_id": "P14E-G-008",
+ "title": "provenance completeness: missing field fails fast",
+ "contract_ids": [
+  "P14E-002",
+  "P14E-011"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "R-ok",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "close": 10.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ],
+  "defective_records": [
+   {
+    "record": {
+     "source": "cn_stock_quote",
+     "source_id": "R-no-hash",
+     "source_category": "A_SHARE_MARKET",
+     "entity_id": "600000",
+     "entity_type": "stock",
+     "event_time": "2026-03-02T15:00:00+08:00",
+     "available_time": "2026-03-02T16:00:00+08:00",
+     "revision": 0,
+     "ingested_at": "2026-03-02T16:00:00+08:00",
+     "raw_payload": {
+      "close": 10.0
+     },
+     "value": 1.0,
+     "adapter_version": "fixture-adapter-v1"
+    },
+    "remove_metadata": "raw_payload_hash"
+   },
+   {
+    "record": {
+     "source": "cn_stock_quote",
+     "source_id": "R-no-ingid",
+     "source_category": "A_SHARE_MARKET",
+     "entity_id": "600000",
+     "entity_type": "stock",
+     "event_time": "2026-03-02T15:00:00+08:00",
+     "available_time": "2026-03-02T16:00:00+08:00",
+     "revision": 0,
+     "ingested_at": "2026-03-02T16:00:00+08:00",
+     "raw_payload": {
+      "close": 10.0
+     },
+     "value": 1.0,
+     "adapter_version": "fixture-adapter-v1"
+    },
+    "remove_metadata": "ingestion_id"
+   },
+   {
+    "record": {
+     "source": "cn_stock_quote",
+     "source_id": "R-no-adapter",
+     "source_category": "A_SHARE_MARKET",
+     "entity_id": "600000",
+     "entity_type": "stock",
+     "event_time": "2026-03-02T15:00:00+08:00",
+     "available_time": "2026-03-02T16:00:00+08:00",
+     "revision": 0,
+     "ingested_at": "2026-03-02T16:00:00+08:00",
+     "raw_payload": {
+      "close": 10.0
+     },
+     "value": 1.0,
+     "adapter_version": "fixture-adapter-v1"
+    },
+    "remove_metadata": "adapter_version"
+   }
+  ]
+ },
+ "expected": {
+  "valid_evidence_field_count": 11,
+  "defects": [
+   "raw_payload_hash",
+   "ingestion_id",
+   "adapter_version"
+  ],
+  "raises": true,
+  "no_bundle": true,
+  "no_silent_default": true
+ }
+}

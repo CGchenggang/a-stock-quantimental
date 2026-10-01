@@ -1,0 +1,61 @@
+{
+ "golden_id": "P14E-G-002",
+ "title": "ingestion separation: duplicate attempt never forks identity",
+ "contract_ids": [
+  "P14E-001",
+  "P14E-014"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-i1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:05:00+08:00",
+    "raw_payload": {
+     "close": 10.0
+    },
+    "value": 10.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-i1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-03T09:00:00+08:00",
+    "raw_payload": {
+     "close": 10.0
+    },
+    "value": 10.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ],
+  "raw_store": true
+ },
+ "expected": {
+  "put_outcomes": [
+   "ACCEPTED",
+   "DUPLICATE"
+  ],
+  "evidence_count": 1,
+  "stored_ingested_at": "2026-03-02T16:05:00+08:00",
+  "evidence_id_forks": false,
+  "duplicate_attempt_absent_from_bundle": true,
+  "bundle_over_stored_record_only": true
+ }
+}

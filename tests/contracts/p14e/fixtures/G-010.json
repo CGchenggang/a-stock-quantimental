@@ -1,0 +1,86 @@
+{
+ "golden_id": "P14E-G-010",
+ "title": "duplicate evidence: idempotent, never a new revision",
+ "contract_ids": [
+  "P14E-008"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-dup",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "close": 10.0
+    },
+    "value": 10.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-dup",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "close": 10.0
+    },
+    "value": 10.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-dup",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "close": 10.0
+    },
+    "value": 10.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "m-dup",
+    "source_category": "MACRO",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "evidence_count": 2,
+  "unique_evidence_ids": true,
+  "trace_entries_unique": true,
+  "duplicate_not_new_revision": true
+ }
+}

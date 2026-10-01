@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E — Acceptance Matrix FROZEN + Golden Design (implementation NOT AUTHORIZED)**; previous stage: P14-E Contract ACCEPTED (repair HEAD `712faf9`); before that: P14-D — PASS / INDEPENDENTLY ACCEPTED (2026-10-01)
+**P14-E — Harness + Golden IMPLEMENTED (production implementation NOT AUTHORIZED)**; previous stages: P14-E Contract / Matrix / Golden Design — ACCEPTED; P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -1445,3 +1445,29 @@ Independently inspected against the actual GitHub `main` HEAD `13fcd47267c479ff6
 This acceptance closes the two blockers from P14-E-002. The next authorized stage is **P14-E Harness / Golden execution design implementation**, but P14-E production implementation, factor/policy/calibration/recommendation promotion, and P14-F remain unauthorized until their own gates are independently passed.
 
 Last independently updated: 2026-10-01.
+
+## P14-E-003 — Harness + Golden Test Implementation — 2026-10-01
+
+The frozen P14-E Contract + Acceptance Matrix (FROZEN) + Golden Design converted into an executable Harness + Golden layer. **No P14-E production runtime was created** — `src/` file set is pinned (mechanically asserted) and no evidence/bundle/provenance runtime module exists.
+
+### Delivered
+
+- `tests/contracts/p14e/fixtures/G-001..G-012.json` — frozen fixtures with hand-written expected values (synthetic dates only: research-zone 2026-03 or 2099-01-01; real virgin window [2026-09-23, 2028-01-01) mechanically excluded).
+- `tests/contracts/p14e/golden/core.py` — the standard-answer engine: evidence identity per Contract §4 (evidence_id over the 8 Identity fields; ingested_at Audit-only), §7.1 bundle assembly from P14-D `run_query` + frozen §6 selection chain via P14-A `visible_revisions` semantics, P14-B `RawStore` authority replay (DUPLICATE / RAW_MUTATION_DETECTED), mutation fail-fast (P14E-012), provenance-completeness fail-fast (P14E-011), durable JSONL persistence with idempotent append + reload verification (P14E-013), determinism, source-scan / file-pin / anti-cheat scans (P14E-016), virgin scan (P14E-015), closure 17/17 (contract ↔ matrix ↔ goldens).
+- `tests/contracts/p14e/test_p14e_contract.py` / `test_p14e_matrix.py` / `test_p14e_golden.py` — 34 pytest cases.
+- `scripts/audit_p14e_contract.py` — machine-readable audit (`phase/status/contract_ids/matrix_ids/golden_ids/closures/p13_t/p13_u/production_implementation`), exit-code gated.
+- Workflow: added "Contract Harness audit (P14-E)" step.
+
+### Validation (all executed)
+
+- `python scripts/audit_p14e_contract.py` → PASS, closures PASS/PASS, 0 failures
+- `python -m pytest -q -ra tests/contracts/p14e/` → **34 passed** (deterministic double-run of the canonical report byte-identical)
+- `python -m pytest -q -ra tests/contracts/p14c/` → 90 passed (P14-C regression intact)
+- `python -m pytest -q -ra tests/test_industry_relative.py` → 3 passed
+- `python -m pytest -q -ra` → **529 passed / 0 failed**, 2 warnings
+
+### Status
+
+P14-E: Contract ACCEPTED / Matrix ACCEPTED / Golden Design ACCEPTED / Harness IMPLEMENTED / Golden IMPLEMENTED / **Production Implementation NOT AUTHORIZED**. P13-T STOPPED / NOT EXECUTED; P13-U PROTECTED; P14-D PASS untouched.
+
+P14-F not started. Awaiting independent acceptance.

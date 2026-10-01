@@ -1,0 +1,57 @@
+{
+ "golden_id": "P14E-G-005",
+ "title": "independent as-of bundles",
+ "contract_ids": [
+  "P14E-005",
+  "P14E-006"
+ ],
+ "input": {
+  "query": {
+   "entity": "CN",
+   "information_type": "macro",
+   "as_of": "2026-03-03T16:00:00+08:00"
+  },
+  "second_query_as_of": "2026-03-05T09:00:00+08:00",
+  "records": [
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "pmi-m01",
+    "source_category": "MACRO",
+    "entity_id": "CN",
+    "entity_type": "macro",
+    "event_time": "2026-02-28T09:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:05:00+08:00",
+    "raw_payload": {
+     "pmi": 50.1
+    },
+    "value": 50.1,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "pmi-m01",
+    "source_category": "MACRO",
+    "entity_id": "CN",
+    "entity_type": "macro",
+    "event_time": "2026-02-28T09:00:00+08:00",
+    "available_time": "2026-03-05T09:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-05T09:05:00+08:00",
+    "raw_payload": {
+     "pmi": 50.9
+    },
+    "value": 50.9,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "bundle1_selected_revision": 0,
+  "bundle2_selected_revision": 1,
+  "evidence_id_sets_disjoint": true,
+  "bundle_ids_differ": true,
+  "result_id_linked": true
+ }
+}

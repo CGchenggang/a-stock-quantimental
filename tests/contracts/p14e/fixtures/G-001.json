@@ -1,0 +1,89 @@
+{
+ "golden_id": "P14E-G-001",
+ "title": "evidence identity stability and reverse traceability",
+ "contract_ids": [
+  "P14E-001",
+  "P14E-017"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-e1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "close": 10.0
+    },
+    "value": 10.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-e1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "close": 10.0
+    },
+    "value": 10.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-e1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "close": 11.0
+    },
+    "value": 11.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ],
+  "raw_store": true
+ },
+ "expected": {
+  "evidence_count": 1,
+  "ab_evidence_id_equal": true,
+  "c_evidence_id_differs": true,
+  "identity_fields": [
+   "source",
+   "source_id",
+   "revision",
+   "event_time",
+   "available_time",
+   "adapter_version",
+   "raw_payload_hash",
+   "ingestion_id"
+  ],
+  "audit_fields_present": [
+   "ingested_at"
+  ],
+  "reverse_trace_fields": [
+   "ingestion_id",
+   "raw_payload_hash"
+  ],
+  "reverse_trace_resolves_in_raw_store": true
+ }
+}

@@ -1,0 +1,109 @@
+{
+ "golden_id": "P14E-G-003",
+ "title": "PIT visibility boundary: <, ==, > plus scope miss",
+ "contract_ids": [
+  "P14E-003",
+  "P14E-010"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-03T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "R1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-03T15:59:59+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-03T15:59:59+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "R2",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-03T15:00:00+08:00",
+    "available_time": "2026-03-03T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-03T16:00:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "R3",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-03T15:00:00+08:00",
+    "available_time": "2026-03-03T16:00:01+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-03T16:00:01+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "R4",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600001",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "visible_source_ids": [
+   "R1",
+   "R2"
+  ],
+  "exclusions": [
+   {
+    "source_id": "R3",
+    "reason": "NOT_YET_AVAILABLE"
+   },
+   {
+    "source_id": "R4",
+    "reason": "OUTSIDE_AS_OF"
+   }
+  ],
+  "exclusion_field_set": [
+   "source",
+   "source_id",
+   "reason",
+   "available_time"
+  ],
+  "counts": {
+   "evidence": 2,
+   "candidates": 0,
+   "exclusions": 2,
+   "examined": 4
+  }
+ }
+}

@@ -1,0 +1,81 @@
+{
+ "golden_id": "P14E-G-009",
+ "title": "deterministic bundle: order-invariant, persistent, replay-stable",
+ "contract_ids": [
+  "P14E-007",
+  "P14E-009",
+  "P14E-013",
+  "P14E-014"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-06T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "us_index_daily",
+    "source_id": "u-1",
+    "source_category": "OVERSEAS_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "cn_stock_quote",
+    "source_id": "c-1",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   },
+   {
+    "source": "macro_pmi_cn",
+    "source_id": "m-1",
+    "source_category": "MACRO",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:00:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ],
+  "raw_store": true
+ },
+ "expected": {
+  "input_orders": 3,
+  "bundle_ids_equal": true,
+  "byte_identical": true,
+  "reload_bundle_id_equal": true,
+  "duplicate_append_rejected": true,
+  "result_id_stable": true,
+  "no_runtime_fields": [
+   "generated_at",
+   "uuid",
+   "machine_path"
+  ]
+ }
+}
