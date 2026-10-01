@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E — Harness + Golden IMPLEMENTED (production implementation NOT AUTHORIZED)**; previous stages: P14-E Contract / Matrix / Golden Design — ACCEPTED; P14-D — PASS / INDEPENDENTLY ACCEPTED
+**P14-E-004 — Production Contract / Design Gate COMPLETE (production implementation NOT AUTHORIZED)**; previous stages: P14-E Contract / Matrix / Golden Design / Harness+Golden — ACCEPTED; P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -1545,3 +1545,15 @@ This closes the P14-E-003 Harness/Golden acceptance blockers. The next authorize
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 Last independently updated: 2026-10-01.
+
+
+## P14-E-004 — Production Implementation Contract / Design Gate — 2026-10-01
+
+Docs-only gate: the accepted P14-E semantics frozen into an implementable production blueprint. **No src/**, no data/, no tests/ changes; P14-E-003 Harness/Golden untouched (semantic acceptance authority).
+
+- `docs/contracts/P14-E-PRODUCTION-DESIGN-CONTRACT.md` (STATUS: DRAFT, `P14-E Production Contract v1.0`, SHA-256 `347261cb437e7dac473c489847af47c543881c4edcfc3d68ad2db83535d976ea`): module layout (evidence.py + evidence_store.py only; src file set pinned), identity classes (Evidence Identity 8 fields / Content / Provenance / Ingestion — P14-B `ingestion_id` formula verbatim), ingested_at four-dimension semantics (audit-only for identity; DUPLICATE -> no fork -> bundle_id unchanged because the rejected attempt never enters the stored record set), PIT inheritance, selection chain + frozen enums, candidate-trace leak prohibition (four-field exclusion; knowing existence != leaking content), mapping_key 1:1 closure, bundle model with field-participation table, canonical serialization spec, persistence (evidence_bundles.jsonl append-only/idempotent/reload with P14-B authority verification), reverse-trace API with five-class error taxonomy (refines Golden's raise-only assertions — compatibility note N3), tamper matrix Cases A-F, missing/failure state semantics, reproducibility boundary, contract versioning/freeze rule, anti-cheat, infrastructure-only scope.
+- `docs/contracts/P14-E-PRODUCTION-ACCEPTANCE-MATRIX.md` (STATUS: DRAFT): 23 rows (P14E-P-M-001..023), 8 columns each, closure 23/23, Golden/Test binding to P14-E-003 fixtures or future production Harness checks.
+
+Dependency audit executed against actual implementations: ingestion_id formula MATCH, PIT boundary MATCH, exclusion field set MATCH, evidence_id formula consistent with Golden engine, selection chain frozen, persistence/duplicate/adapter_version semantics compatible. Compatibility notes N1 (P14-B DUPLICATE collapses same-key same-payload candidates at storage), N2 (canonical tiebreak reachable only across merged record sets), N3 (reverse-trace taxonomy refinement) frozen into the contract. **DEPENDENCY_CONTRACT_CONFLICT: NONE.**
+
+Verification: consistency checks PASS (23 unique dense contract IDs, 23 unique matrix rows, closure 23/23, no vague invariant wording, boundary/taxonomy tokens complete); full regression untouched. Production Implementation = NOT AUTHORIZED; P14-F = NOT AUTHORIZED; P13-T STOPPED; P13-U PROTECTED.
