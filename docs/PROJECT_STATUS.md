@@ -1626,3 +1626,68 @@ Changes: `P14-E Production Contract` bumped to **v1.1** per its own versioning r
 Final repaired HEAD pushed; workflow run on the exact HEAD verified with checkout SHA == final HEAD (coordinates in the completion report).
 
 Status: P14-E-004-REPAIR-001 COMPLETE — WAITING FOR INDEPENDENT ACCEPTANCE. P14-E Production Implementation = NOT AUTHORIZED; P14-F = NOT AUTHORIZED; P13-T = STOPPED / NOT EXECUTED; P13-U = PROTECTED.
+
+
+## P14-E-004 Independent Acceptance — 2026-10-01
+
+**Status: PASS / INDEPENDENTLY ACCEPTED** (Design Gate acceptance recorded by the Acceptance Owner)
+
+**Decision: Independent Acceptance Passed.** This is a Design Gate acceptance — it accepts the Production Implementation Contract and its acceptance blueprint. It is **not** a Production Implementation Authorization.
+
+### Baseline
+
+- HEAD: `a72502f98a1da6aaa39ce8e048b180a0e074b466`
+- Commit: `docs: P14-E-004-REPAIR-001 four-class taxonomy + exact-head CI`
+- Both REPAIR-001 blockers (exact-head CI evidence; reverse-trace taxonomy closure) verified repaired.
+
+### CI Evidence
+
+- Workflow Run: `36895900955` (workflow `tests`, push event, completed / success)
+- Pytest Job: `110482698199` — success (P14-C / P14-D / P14-E Contract Harness audit steps, P13-M pooled industry regression step, Full pytest suite step all success)
+- P13-M Job: `110482697635` — success
+- Checkout SHA: `a72502f98a1da6aaa39ce8e048b180a0e074b466`
+- Exact-head match: **YES** (workflow checkout SHA == accepted HEAD)
+
+### Acceptance Scope — Verified
+
+P14-E Production Design Contract; P14-E Production Acceptance Matrix; Contract IDs P14E-P-001..023; Matrix IDs P14E-P-M-001..023; reverse-trace taxonomy; exact-head CI; regression tests; boundary constraints.
+
+### Contract Acceptance
+
+```text
+P14E-P-001 ~ P14E-P-023: PASS
+closure:  23/23
+orphan:   0
+duplicate: 0
+undefined: 0
+```
+
+### Reverse Trace Acceptance
+
+Final frozen semantics: **FOUR-CLASS taxonomy**
+
+1. `REVERSE_TRACE_NOT_FOUND`
+2. `REVERSE_TRACE_AMBIGUOUS`
+3. `REVERSE_TRACE_IDENTITY_MISMATCH`
+4. `RAW_RECORD_CORRUPTED`
+
+Note: hash mismatch remains classified as `REVERSE_TRACE_NOT_FOUND`, because the authoritative RawStore lookup has zero matching identity — not because of independent hash-mismatch semantics.
+
+### Test Acceptance
+
+```text
+python -m pytest -q -ra: 530 passed / 0 failed
+P14-C: PASS      P14-D: PASS
+P14-E: PASS      P13-M: PASS
+```
+
+### Boundary Freeze
+
+```text
+P13-T: STOPPED / NOT EXECUTED
+P13-U: PROTECTED
+P14-E Production Implementation: NOT AUTHORIZED
+P14-F: NOT AUTHORIZED
+```
+
+Next allowed phase: **P14-E-005 Production Implementation** (waiting for separate authorization).
