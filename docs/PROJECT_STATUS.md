@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E-004 — Production Contract / Design Gate COMPLETE (production implementation NOT AUTHORIZED)**; previous stages: P14-E Contract / Matrix / Golden Design / Harness+Golden — ACCEPTED; P14-D — PASS / INDEPENDENTLY ACCEPTED
+**P14-E-004 — FAIL / REPAIR REQUIRED (production implementation NOT AUTHORIZED)**; previous stages: P14-E Contract / Matrix / Golden Design / Harness+Golden — ACCEPTED; P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -156,7 +156,7 @@ PIT-safe research information query layer:
 - provenance records + `result_id`;
 - virgin-zone entry guard.
 
-### P14-E — CONTRACT DRAFT / IMPLEMENTATION NOT AUTHORIZED
+### P14-E — ACCEPTED / PRODUCTION IMPLEMENTATION NOT AUTHORIZED
 
 Research information evidence / provenance layer:
 - evidence identity (content-addressed via P14-B raw_payload_hash / ingestion_id);
@@ -1557,3 +1557,56 @@ Docs-only gate: the accepted P14-E semantics frozen into an implementable produc
 Dependency audit executed against actual implementations: ingestion_id formula MATCH, PIT boundary MATCH, exclusion field set MATCH, evidence_id formula consistent with Golden engine, selection chain frozen, persistence/duplicate/adapter_version semantics compatible. Compatibility notes N1 (P14-B DUPLICATE collapses same-key same-payload candidates at storage), N2 (canonical tiebreak reachable only across merged record sets), N3 (reverse-trace taxonomy refinement) frozen into the contract. **DEPENDENCY_CONTRACT_CONFLICT: NONE.**
 
 Verification: consistency checks PASS (23 unique dense contract IDs, 23 unique matrix rows, closure 23/23, no vague invariant wording, boundary/taxonomy tokens complete); full regression untouched. Production Implementation = NOT AUTHORIZED; P14-F = NOT AUTHORIZED; P13-T STOPPED; P13-U PROTECTED.
+
+
+## P14-E-004 Independent Acceptance — 2026-10-01
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E production implementation.**
+
+Independently inspected against submitted production-design HEAD `f3230c1f743794be0d2c8869042b6800012e6350` and the prior accepted P14-E-003 state.
+
+Verified positive:
+- Production-design submission is docs-only: exactly `docs/contracts/P14-E-PRODUCTION-DESIGN-CONTRACT.md`, `docs/contracts/P14-E-PRODUCTION-ACCEPTANCE-MATRIX.md`, and the `PROJECT_STATUS.md` status update changed from the accepted baseline.
+- No `src/**`, data, production runtime, Golden, or Harness changes were introduced.
+- Contract IDs P14E-P-001..023 and Matrix IDs P14E-P-M-001..023 are dense and claimed 23/23 closure.
+- The design preserves P14-B RawStore authority, P14-A/P14-D PIT/version-selection authority, P13-U protection, and explicitly keeps production implementation NOT AUTHORIZED.
+- The production blueprint covers Evidence identity, PIT, version/restatement provenance, result↔evidence mapping, bundle identity, persistence, reverse trace, tamper detection, failure states, reproducibility, and anti-cheat scope.
+
+### Blocking finding 1 — exact-head CI evidence missing
+
+The submitted HEAD `f3230c1f743794be0d2c8869042b6800012e6350` has no independently retrievable GitHub Actions workflow run through the available commit-run evidence. The workflow lookup returned an empty run set for this commit. The P14-E-004 task explicitly required final-head CI evidence and exact checkout verification.
+
+Therefore the claimed local “full regression untouched” statement cannot substitute for independent GitHub CI verification.
+
+**Required repair:** expose a GitHub Actions run for the final repaired HEAD, verify the workflow checkout SHA equals that exact HEAD, and inspect the required jobs/steps. Do not rely on a nearby commit's CI.
+
+### Blocking finding 2 — reverse-trace taxonomy is internally incomplete
+
+P14E-P-014 and P14E-P-M-014 repeatedly state a **five-class** reverse-trace taxonomy, but §11 actually defines only four named classes:
+
+- REVERSE_TRACE_NOT_FOUND
+- REVERSE_TRACE_AMBIGUOUS
+- REVERSE_TRACE_IDENTITY_MISMATCH
+- RAW_RECORD_CORRUPTED
+
+The accompanying Matrix row also lists only four negative cases. The text “hash mismatch = NOT_FOUND” does not create a fifth class, while the contract explicitly claims five classes.
+
+This is a contract/matrix semantic closure defect, not merely wording.
+
+**Required repair:** reconcile P14E-P-014 and its Matrix row to one authoritative taxonomy. Either define the genuinely intended fifth class with precise trigger/semantics and corresponding Matrix coverage, or change all references from five-class to four-class if four is the actual intended frozen taxonomy. Do not invent a fifth error merely to satisfy the count.
+
+### Non-blocking but required cleanup
+
+`PROJECT_STATUS.md` contained contradictory historical roadmap wording saying P14-E was still “CONTRACT DRAFT / IMPLEMENTATION NOT AUTHORIZED” while the new P14-E-004 section declared the Design Gate COMPLETE. The roadmap label has been normalized to “ACCEPTED / PRODUCTION IMPLEMENTATION NOT AUTHORIZED”; the original P14-E Contract remains historically accepted and production implementation remains separately gated.
+
+### Boundary
+
+- P13-T: STOPPED / NOT EXECUTED.
+- P13-U: PROTECTED.
+- P14-F: NOT AUTHORIZED.
+- P14-E production runtime: NOT AUTHORIZED.
+- No factor / alpha / calibration / policy / recommendation / portfolio / trading changes are authorized by this repair.
+
+**Do not proceed to P14-E production implementation until the two blocking findings are independently rechecked and accepted.**
+
+Last independently updated: 2026-10-01.
