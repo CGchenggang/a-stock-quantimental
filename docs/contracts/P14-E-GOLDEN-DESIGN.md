@@ -67,15 +67,23 @@
 - **Contract Coverage**: P14E-001, P14E-014
 - **Input**: 同一 fact（同 8 Identity fields）的两个 ingestion event：
   ingested_at 分别为 `2026-03-02T16:05:00+08:00` 与
-  `2026-03-03T09:00:00+08:00`；RawStore 幂等（第二次 attempt 为
-  DUPLICATE），stored record 仅一份（首 attempt 的 ingested_at）。
-- **Expected Evidence**: 恰一个 evidence_id；该 ID 与 ingested_at 无关
-  （§4.1 Audit-only）；evidence.ingested_at == 首次 ACCEPTED attempt 的
-  ingested_at（provenance 可追踪到具体入库事件）。
-- **Expected Bundle**: bundle 唯一，bundle_id 与 G-001 同输入构造一致
-  （ingested_at 差异不改变身份）。
-- **Expected Failure**: ingested_at 差异导致 evidence_id 分叉；或
-  DUPLICATE attempt 覆盖 stored record。
+  `2026-03-03T09:00:00+08:00`。
+- **Expected Evidence**（语义链，REPAIR-001 冻结）：第二次 attempt 因
+  P14-B 判定 **DUPLICATE** → 不覆盖 canonical stored record → Evidence
+  使用**最终 canonical stored record**（其 ingested_at 为首次 ACCEPTED
+  attempt 的值，provenance 可追踪到具体入库事件）→ **evidence_id 不因
+  duplicate attempt 分叉**（ingested_at 不参与 evidence_id，§4.1
+  Audit-only）。恰一个 evidence_id。
+- **Expected Bundle**: bundle 唯一；**bundle_id 不因被拒绝的 duplicate
+  attempt 而改变**——原因是该 attempt 未进入 stored record set，而非
+  "ingested_at 不参与 bundle_id"：bundle_id 是完整 bundle canonical
+  content 的 hash，evidence 携带 audit-only `ingested_at`（最终 stored
+  record 的值），因此 bundle_id 由最终 stored record 决定。被拒绝的
+  duplicate attempt 不出现在 bundle 任何字段。
+- **Expected Failure**: duplicate attempt 导致 evidence_id 分叉；
+  DUPLICATE 覆盖 stored record；duplicate attempt 的 ingested_at 泄入
+  bundle；或实现/文档把 "ingested_at 不参与 evidence_id" 错误扩展为
+  "ingested_at 不参与 bundle_id"（bundle 内容与 hash 将不一致）。
 - **Contract Coverage 断言**: P14E-M-001、P14E-M-014。
 
 ## G-003 PIT Visibility Boundary
@@ -102,16 +110,24 @@
   rev0 available T1=`2026-03-02T16:00:00+08:00`，rev1 available
   T2=`2026-03-05T09:00:00+08:00`。以 as_of=T1+1d
   （`2026-03-03T16:00:00+08:00`）生成 bundle(T1)。
-- **Expected Evidence**: bundle(T1) 的 evidence 选中 rev0；
-  candidate_trace 含 rev1 吗——**不含**：rev1 在该 as_of 下
-  NOT_YET_AVAILABLE，属 exclusions（reason=NOT_YET_AVAILABLE），不进入
-  candidate_trace（trace 仅含本 as_of admissible 候选，§6.2）。
-- **Expected Bundle**: bundle(T1) 内不存在任何
-  available_time > as_of(T1) 的记录或候选；由 bundle(T1) 无法得到
-  rev1 的存在信息（rev1 仅以 P14-D exclusion 的 available_time 字段
-  出现，不构成可推演 payload/身份）。
-- **Expected Failure**: 任何实现从 bundle(T1) 重建 Bundle(T2) 的信息状态
-  （未来 revision 进入更早 bundle）；或单 bundle 给出跨 as_of 结论。
+- **Expected Evidence**: bundle(T1) 的 evidence 选中 rev0；rev1 **不进入
+  evidence**；rev1 **不进入 candidate_trace**（trace 仅含本 as_of 下
+  admissible 的候选，§6.2）；rev1 的 **payload、raw_payload_hash、
+  ingestion_id 不出现在 bundle 的任何字段**。
+- **Expected Bundle**: bundle(T1) 对 rev1 的唯一呈现是 P14-D exclusion
+  条目，且该条目恰含 P14-D 冻结的四个字段
+  `{source, source_id, reason=NOT_YET_AVAILABLE, available_time=T2}`。
+  语义边界（REPAIR-001 冻结）：**"知道存在一个未来尚不可用记录"不等于
+  "泄露未来 Evidence 内容"**——exclusion 的存在与 available_time 是
+  P14-D 已冻结的 observation 事实，允许进入早于 T2 的 bundle；被禁止的
+  是把 post-as-of record 的 payload / raw_payload_hash / ingestion_id /
+  future Evidence / future candidate_trace / future revision-selection
+  state 带入更早 as_of 的 Evidence Bundle。bundle(T1) 内不存在任何
+  post-as-of 的 record（evidence）或 candidate。
+- **Expected Failure**: rev1 的 payload、raw_payload_hash 或
+  ingestion_id 出现在早于 T2 的 bundle 任何字段；rev1 进入
+  candidate_trace 或 evidence；bundle(T1) 被用于生成 Bundle(T2) 的信息
+  状态；单 bundle 给出跨 as_of 结论。
 - **Contract Coverage 断言**: P14E-M-005。
 
 ## G-005 Independent As-of Bundle
@@ -154,8 +170,11 @@
   restated 记录以 exclusion（NOT_YET_AVAILABLE）出现；query(as_of >= T2)
   → evidence 仅 rev1。
 - **Expected Bundle**: 两个 bundle 各自 PIT-safe、各自可由内容重推
-  （方案 A）；restated 的 payload 数值不泄露进早于 T2 的任何 bundle
-  字段（exclusion 仅携带 available_time，不携带 payload/身份）。
+  （方案 A）。restated（rev1）在早于 T2 的 bundle 中**仅以 P14-D
+  exclusion 四字段**出现：`{source, source_id,
+  reason=NOT_YET_AVAILABLE, available_time=T2}`——其 payload 数值、
+  raw_payload_hash、ingestion_id **不进入**早于 T2 的 bundle 任何字段；
+  as_of >= T2 的 bundle 才包含 rev1 的完整 evidence（含 payload 身份）。
 - **Expected Failure**: as_of < T2 时 rev1 数值可见；restated 进入更早
   bundle 的 candidate_trace。
 - **Contract Coverage 断言**: P14E-M-005。

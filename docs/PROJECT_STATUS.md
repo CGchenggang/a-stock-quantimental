@@ -1417,3 +1417,12 @@ Last independently updated: 2026-10-01.
 - No pytest / Harness / `tests/contracts/p14e/` created; no src/data changes; P14-D ACCEPTED untouched; P13-T STOPPED; P13-U PROTECTED.
 
 P14-E implementation remains NOT AUTHORIZED. Next gated stage: Harness.
+
+## P14-E-002-REPAIR-001 — Golden Design Semantic Repair — 2026-10-01
+
+Docs-only repair to `docs/contracts/P14-E-GOLDEN-DESIGN.md` (+ one Matrix row sync). No src/tests/data changes; no Harness/pytest created.
+
+- **G-004 / G-007 exclusion semantics corrected**: the P14-D exclusion entry carries exactly `{source, source_id, reason, available_time}` (verified against `research_query.py`); the design no longer claims "exclusion 仅携带 available_time" or that the bundle cannot know a future unavailable record exists. Frozen semantics: an earlier-as_of bundle MAY contain the four-field P14-D exclusion for a post-as-of record, but MUST NOT carry that record's payload / raw_payload_hash / ingestion_id / future Evidence / future candidate_trace / future revision-selection state. G-004 now states explicitly: rev1 不进入 evidence、不进入 candidate_trace、payload/raw_payload_hash/ingestion_id 不出现在 bundle 任何字段；"知道存在一个未来尚不可用记录" ≠ "泄露未来 Evidence 内容"。
+- **G-002 evidence_id vs bundle_id distinction**: the chain is frozen as second attempt → P14-B DUPLICATE → canonical stored record not overwritten → evidence uses the final stored record → evidence_id does not fork → bundle_id does not change because the rejected attempt never enters the stored record set (NOT because "ingested_at 不参与 bundle_id" — bundle_id hashes the full bundle content including audit-only ingested_at). The wrong extension appears only as a negation or a banned failure mode (mechanically asserted). Matrix P14E-M-014 row synced.
+
+Consistency checks: closure 17/17, goldens dense, coverage 17/17, old wrong claims absent (mechanically asserted). Regression evidence: p14d+p14c 122 tests unchanged and green. P13-T STOPPED; P13-U PROTECTED; P14-E implementation NOT AUTHORIZED.
