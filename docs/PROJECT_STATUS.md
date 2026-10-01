@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E — CONTRACT DRAFT (implementation NOT AUTHORIZED)**; previous stage: P14-D — PASS / INDEPENDENTLY ACCEPTED (2026-10-01)
+**P14-E — Acceptance Matrix FROZEN + Golden Design (implementation NOT AUTHORIZED)**; previous stage: P14-E Contract ACCEPTED (repair HEAD `712faf9`); before that: P14-D — PASS / INDEPENDENTLY ACCEPTED (2026-10-01)
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -1408,3 +1408,12 @@ Last independently updated: 2026-10-01.
 - P14-E implementation = NOT AUTHORIZED until the contract passes independent Contract acceptance. No Golden / Harness / src changes were created.
 - Consistency checks executed: 17 unique Contract IDs, 17 unique Matrix rows, Contract-Matrix closure 17/17, boundary constants present, authority references (P14-A/B/C/D, visible_revisions, raw_payload_hash, ingestion_id, P14-C/D taxonomy) verified.
 - Potential dependency conflicts: NONE (P14-E consumes P14-D results and P14-B identity primitives read-only; no upstream semantic change required by the draft).
+
+
+## P14-E-002 — Acceptance Matrix Freeze + Golden Test Design — 2026-10-01
+
+- `docs/contracts/P14-E-ACCEPTANCE-MATRIX.md` → **STATUS: FROZEN** (v2): 17 rows, 7 columns each (Matrix ID / Contract ID / Requirement / Verification Method / Golden Fixture / Expected Result / Failure Condition), bound to Golden G-001..G-012; P14E-M-016's Golden column is `N/A (source scan)` by design. FROZEN is explicitly not PASS/ACCEPTED — PASS awaits Harness execution.
+- `docs/contracts/P14-E-GOLDEN-DESIGN.md` → **STATUS: DESIGN ONLY**: G-001..G-012 each with Input / Expected Evidence / Expected Bundle / Expected Failure / Contract Coverage; plus a mechanical source-scan design (P14E-016). Coverage 17/17 contract IDs; all timestamps synthetic (research-zone March 2026 or 2099); real virgin window excluded by construction.
+- No pytest / Harness / `tests/contracts/p14e/` created; no src/data changes; P14-D ACCEPTED untouched; P13-T STOPPED; P13-U PROTECTED.
+
+P14-E implementation remains NOT AUTHORIZED. Next gated stage: Harness.
