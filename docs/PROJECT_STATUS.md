@@ -7,7 +7,7 @@
 
 **P14-D — PASS / INDEPENDENTLY ACCEPTED** (independent acceptance 2026-10-01)
 
-P14-D implementation was submitted at `3ec4837e63df8c668f1057f78e7f9dce0f5702ab`, but independent acceptance is blocked. The Contract remains DRAFT, production implementation was delivered in the same submission before Contract/Golden independent freeze, exact-head GitHub Actions evidence is not independently retrievable for this commit through the available workflow-run evidence, and a version-selection tie semantic mismatch was found (see P14-D Independent Acceptance section).
+P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
