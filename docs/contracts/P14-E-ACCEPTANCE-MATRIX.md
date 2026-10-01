@@ -8,11 +8,11 @@
 
 | Matrix ID | Contract ID | Requirement | Verification method | Expected evidence |
 |-----------|------------|-------------|---------------------|-------------------|
-| P14E-M-001 | P14E-001 | evidence_id 内容寻址、确定、顺序无关 | 未来 Golden（同内容异序构造 → 同 ID；改 payload hash → 异 ID） | 双构造 evidence_id 相等；payload 变体 ID 不等 |
+| P14E-M-001 | P14E-001 | evidence_id 内容寻址、确定、顺序无关；同 payload 异 ingestion event → 同 ID（ingested_at 不参与） | 未来 Golden（同内容异序构造 → 同 ID；改 payload hash → 异 ID；同键同 payload 二次入库（DUPLICATE 路径）→ 仍同 ID） | 三断言全部成立 |
 | P14E-M-002 | P14E-002 | provenance 字段完整（§4.1 九字段） | 未来 Harness（缺字段构造 raise） | 缺任一字段 ValueError |
 | P14E-M-003 | P14E-003 | 可见性继承 available_time <= as_of | 未来 Golden（event_time 早 + available 晚 → 不可见） | 记录不进入 evidence |
 | P14E-M-004 | P14E-004 | 选择理由与落选 trace 枚举冻结 | 未来 Harness（多版本 lineage 断言 trace） | 枚举值与 §6 完全一致 |
-| P14E-M-005 | P14E-005 | 反事实可机械重推 | 未来 Golden（rev1@T1/rev2@T2，双 as_of 断言） | as_of<T2 选 rev1；>=T2 选 rev2 |
+| P14E-M-005 | P14E-005 | 本 as_of 的版本选择由 bundle 内容 + 冻结规则机械重推；跨 as_of 需新查询/新 bundle（方案 A） | 未来 Golden（rev1@T1/rev2@T2：as_of<T2 生成 bundle A 选 rev1，as_of>=T2 生成 bundle B 选 rev2；两 bundle 各自 PIT-safe 且各自可由内容重推） | 两 bundle 断言各自成立；单 bundle 不承载跨 as_of 结论 |
 | P14E-M-006 | P14E-006 | result.records ↔ evidence 一一对应 + result_id 链接 | 未来 Harness | 数量相等且 bundle.result_id == result_id |
 | P14E-M-007 | P14E-007 | 三类列表排序键冻结 | 未来 Golden（乱序输入 → 同序 bundle） | canonical 顺序一致 |
 | P14E-M-008 | P14E-008 | bundle 内 ID 唯一、重复输入不重复 | 未来 Harness（重复记录注入） | evidence 数不变 |

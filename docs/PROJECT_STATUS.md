@@ -135,7 +135,7 @@ Build the controlled ingestion boundary:
 
 Representative sources only; no broad source-count optimization.
 
-### P14-C — IN PROGRESS / NEXT
+### P14-C — PASS (independently accepted)
 
 Data quality/reconciliation and source health:
 - completeness;
@@ -147,24 +147,24 @@ Data quality/reconciliation and source health:
 - source health;
 - deterministic quality reports.
 
-### P14-D — planned
+### P14-D — PASS (independently accepted)
 
-Research information query layer:
-- as-of information retrieval;
-- entity/time indexing;
-- cross-market alignment;
-- PIT-safe joins;
-- research-only information snapshots.
+PIT-safe research information query layer:
+- as-of information retrieval (`available_time <= as_of`, inclusive);
+- exclusion accounting (NOT_YET_AVAILABLE / OUTSIDE_AS_OF / UNRESOLVED_AVAILABILITY);
+- deterministic per-lineage version selection (restatement-safe);
+- provenance records + `result_id`;
+- virgin-zone entry guard.
 
-### P14-E — planned
+### P14-E — CONTRACT DRAFT / IMPLEMENTATION NOT AUTHORIZED
 
-Representative multi-market source coverage:
-- A-share market;
-- company/public information;
-- macro;
-- overseas market.
+Research information evidence / provenance layer:
+- evidence identity (content-addressed via P14-B raw_payload_hash / ingestion_id);
+- evidence bundle per query (result linkage, candidate trace, exclusions);
+- deterministic bundle_id + durable JSONL persistence;
+- reverse traceability bundle → evidence → raw record.
 
-Only after the P14-B/C contracts are stable.
+`docs/contracts/P14-E-DESIGN-CONTRACT.md` is STATUS: DRAFT (v1.1, REPAIR-001). Implementation, Golden, and Harness are not authorized until independent Contract acceptance.
 
 ### P14-F — planned
 

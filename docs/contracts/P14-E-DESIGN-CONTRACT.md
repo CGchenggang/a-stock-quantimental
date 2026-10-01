@@ -12,6 +12,11 @@
 > 修订历史：
 > v1: Contract Draft（P14-E-001 任务；未经独立 Contract Acceptance，
 >     本文件不得作为实现依据）
+> v1.1: REPAIR-001 语义修复——§6.3 重写（方案 A：Bundle 只证明其自身
+>       as_of 的版本选择；跨 as_of 必须新查询/新 Bundle，删除"任意
+>       as_of 可重推"）；§4 重构（Identity/Content/Audit-only 字段
+>       分类，消除 §4.2 与 §13 的 ingested_at 歧义；同 payload 异
+>       ingestion event → 相同 evidence_id）
 
 ---
 
@@ -81,37 +86,43 @@ virgin-zone 入口守卫。P14-E 消费 P14-D 结果，不修改 P14-D 冻结语
 
 ## 4. Evidence Identity（P14E-001 / P14E-002）
 
-### 4.1 身份字段
+### 4.1 字段分类（REPAIR-001 冻结）
 
-一个 Evidence 由以下字段完全决定：
-
-```text
-source, source_id, revision,
-event_time, available_time, ingested_at,
-adapter_version, raw_payload_hash, ingestion_id
-```
-
-`raw_payload_hash` 与 `ingestion_id` 直接取自 P14-B 权威值，P14-E 不另算
-第二套 payload hash。
+| 类别 | 字段 | 参与 evidence_id |
+|------|------|------------------|
+| Identity fields | source, source_id, revision, event_time, available_time, adapter_version, raw_payload_hash, ingestion_id | **是** |
+| Content fields | raw payload 的语义内容——仅以其内容地址 `raw_payload_hash` 表示；payload 本体留在 P14-B `raw_records.jsonl`，不复制进 Evidence | 经 raw_payload_hash 参与 |
+| Audit-only fields | ingested_at（本系统入库时间） | **否**（仅审计） |
 
 ### 4.2 evidence_id
 
 ```text
-evidence_id = sha256(canonical_json(身份字段 + 实体字段 + 载荷值字段))
+evidence_id = sha256(canonical_json(全部 Identity fields))
 ```
 
 冻结性质（P14E-001）：
 
-1. 确定性：相同语义内容 → 相同 evidence_id。
-2. 内容寻址：payload 身份变化 → evidence_id 变化。
+1. 确定性：相同 Identity fields → 相同 evidence_id。
+2. 内容寻址：`raw_payload_hash` 参与 ID，payload 语义内容变化 → ID 变化。
 3. 与插入顺序无关、与 Python 对象序无关、与运行环境无关。
 4. canonical serialization 使用 sort_keys + 紧凑分隔符（与 P14-D
    `result_id` 同一序列化规范）。
+5. **相同 raw payload 在不同 ingestion event 下得到相同 evidence_id**：
+   P14-B 的 `ingestion_id` = sha256(source | source_id | revision |
+   raw_payload_hash | adapter_version) 确定且不含 ingested_at；RawStore
+   幂等——同键同 payload 的后续 attempt 为 DUPLICATE，仅首次 ACCEPTED
+   成为 stored record。因此不存在"同 payload 分叉出多个 evidence"。
+6. 与 P14-B 的关系：`raw_payload_hash` 与 `ingestion_id` 原样取自 P14-B
+   权威值；P14-E 不另算第二套 payload hash，不重定义 P14-B 身份语义。
+7. `ingested_at` 属 Audit-only：它随 Evidence 携带供审计（本系统何时
+   入库），不参与 evidence_id；已存储记录的 ingested_at 不可能变化
+   （P14-B immutability + DUPLICATE 语义），故 ID 在重放间稳定。
 
 ### 4.3 Provenance 完整性（P14E-002）
 
-每个 Evidence 必须携带 §4.1 全部字段。任何字段缺失 → 构造失败
-（fail-fast），不允许生成"部分 provenance"的 Evidence（P14E-011）。
+每个 Evidence 必须携带 §4.1 全部三类字段（含 Audit-only 的
+`ingested_at`）。任何字段缺失 → 构造失败（fail-fast），不允许生成
+"部分 provenance"的 Evidence（P14E-011）。
 
 ## 5. PIT 继承（P14E-003）
 
@@ -148,7 +159,8 @@ SELECTED_CANONICAL_TIEBREAK        revision 与 available_time 都并列
 
 ### 6.2 落选者（candidate trace）
 
-每个未胜出的 admissible 候选记录进 trace，落选原因枚举冻结：
+在**本 bundle 的 as_of 下 admissible** 且未胜出的候选记录进 trace，落选
+原因枚举冻结：
 
 ```text
 REJECTED_LOWER_REVISION              存在更高 admissible revision
@@ -157,20 +169,26 @@ REJECTED_CANONICAL_TIEBREAK          revision 与 available_time 都相同，
                                      canonical_json 更大
 ```
 
-### 6.3 反事实可回答性（P14E-005）
+### 6.3 选择可重推性——仅限本 Bundle 的 as_of（P14E-005，REPAIR-001 方案 A 冻结）
 
-Evidence 必须使审计者无需重放实现即可回答：
+Evidence Bundle 只证明**其自身 as_of** 下的版本选择：由 bundle 内容
+（candidate trace 的 `(revision, available_time)` + §2.1 冻结选择规则）
+即可机械重推"为什么 revision N 在该 as_of 被选中、revision N-1 为什么
+落选"，无需重放实现代码。
 
-```text
-为什么 revision N 被选中？
-revision N-1 为什么没有被选中？
-在另一个 as_of 下是否会选中 revision N-1？
-```
+**跨 as_of 的问题不在单个 bundle 的语义范围内。** 例如"在更早的 as_of
+下是否会选中 revision N-1"，必须以该 as_of 重新执行 P14-D query 并生成
+新的 Evidence Bundle（新 bundle 自身仍是 PIT-safe 的）。
 
-由于 trace 携带每个候选的 `(revision, available_time)`，任何 as_of 下的
-选择结果都可以按 §2.1 冻结规则机械重推（restatement 语义：T1 <= as_of <
-T2 只见 original；as_of >= T2 才见 restated——P14-D 已冻结，P14-E 继承并
-使其在 evidence 中可验证）。
+冻结理由：candidate_trace 只包含本 as_of 下 admissible 的候选；若要求
+单个 bundle 回答"任意 as_of"，则 bundle 必须掌握 post-as-of 的候选信息，
+这直接违反 P14E-015（禁止 future / post-as-of evidence 进入过去
+Evidence）并动摇 P14-D/P14-A 冻结的 PIT 边界。三个原始要求中，与 PIT
+边界冲突的"任意 as_of 可重推"被删除（REPAIR-001）。
+
+Restatement 语义不变：T1 <= as_of < T2 只见 original，as_of >= T2 才见
+restated（P14-D 冻结）；其验证方式是"两个 as_of → 两个各自 PIT-safe、
+各自可重推的 bundle"。
 
 ## 7. Query Result → Evidence Bundle Mapping（P14E-006 / P14E-007 / P14E-008）
 
@@ -183,7 +201,7 @@ EvidenceBundle:
     as_of                   同 query.as_of（显式冗余，便于单独审计）
     result_id               该 bundle 派生自的 P14-D result_id
     evidence[]              每条可见记录一个 Evidence（§4）
-    candidate_trace[]       §6.2 落选候选记录
+    candidate_trace[]       §6.2 落选候选（仅本 as_of 下 admissible）
     exclusions[]            P14-D excluded 原样携带（reason 分类不合并）
     counts                  {evidence, candidates, exclusions, examined}
     bundle_id               §8
@@ -284,9 +302,10 @@ reload      重载后逐行重算 bundle_id 必须与行内 bundle_id 一致；
 
 给定相同 (query, as_of, records snapshot)，未来重新执行必须得到相同的
 `result_id` 与 `bundle_id`。Bundle 内不允许任何外部环境变量字段。
-`ingested_at` 是记录的既有事实字段，参与 evidence 身份但不参与可见性
-判定（§5）；更新某记录的 ingested_at 属于新 evidence 身份，不改变既有
-as_of 下的可见性结论。
+`ingested_at` 是记录的既有事实字段，**不参与 evidence_id**（§4.1
+Audit-only），也不参与可见性判定（§5）。已存储记录的 ingested_at 不可能
+变化（P14-B immutable + DUPLICATE 语义）；ingested_at 的任何差异不改变
+evidence 身份，也不改变任何 as_of 下的可见性结论。
 
 ## 14. Boundary / Security / Anti-Cheat（P14E-015 / P14E-016）
 
@@ -337,16 +356,21 @@ source record 的设计。
 全部 Contract ID 在本文件 §4-§15 定义；Acceptance Matrix（DRAFT）每条
 至少一行。
 
-- **P14E-001**: evidence_id 为内容寻址确定性 ID；相同语义内容产生相同
-  ID，与插入顺序/对象序/环境无关；payload 身份变化则 ID 变化。
-- **P14E-002**: 每个 Evidence 携带 §4.1 全部 provenance 字段；缺任一
-  字段即构造失败。
+- **P14E-001**: evidence_id 为内容寻址确定性 ID，由 Identity fields
+  （§4.1 八字段，含 P14-B raw_payload_hash 与 ingestion_id）完全决定；
+  相同 raw payload 在不同 ingestion event 下得到相同 evidence_id
+  （P14-B 幂等 + DUPLICATE 语义）；payload 语义内容变化则 ID 变化；
+  与插入顺序/对象序/环境无关；ingested_at 为 Audit-only，不参与 ID。
+- **P14E-002**: 每个 Evidence 携带 §4.1 全部三类字段（含 Audit-only 的
+  ingested_at）；缺任一字段即构造失败。
 - **P14E-003**: 可见性判定完全继承 P14-D/P14-A（available_time <= as_of，
   含边界相等）；event_time 与 ingested_at 不参与可见性。
 - **P14E-004**: bundle 为每个 lineage 记录选择理由与全部落选候选，理由
   与落选原因枚举冻结（§6）。
-- **P14E-005**: 由 bundle 的 candidate trace 可机械重推任意 as_of 下的
-  lineage 选择结果（restatement 反事实可回答）。
+- **P14E-005**: bundle 的版本选择可由 bundle 内容（candidate trace +
+  §2.1 冻结规则）就**其自身 as_of** 机械重推；跨 as_of 问题不在单个
+  bundle 语义范围内，必须以新 as_of 重新执行 P14-D query 生成新 bundle
+  （REPAIR-001 方案 A；与 P14E-015 PIT 边界严格一致）。
 - **P14E-006**: result.records 与 bundle.evidence 一一对应；bundle 携带
   result_id 链接。
 - **P14E-007**: evidence[] / candidate_trace[] / exclusions[] 的排序键
@@ -364,7 +388,8 @@ source record 的设计。
 - **P14E-013**: durable evidence artifact（JSONL append-only、bundle_id
   幂等、reload 全量校验）为必需；schema 冻结（§12）。
 - **P14E-014**: 相同 (query, as_of, records) 重放产生相同 result_id 与
-  bundle_id；bundle 无环境字段；ingested_at 更新不改变既有可见性结论。
+  bundle_id；bundle 无环境字段；ingested_at 不参与 evidence 身份
+  （§4.1）与可见性（§5），已存储记录的 ingested_at 不可变。
 - **P14E-015**: as_of >= virgin_start fail-fast；禁止 future evidence /
   post-as-of payload / hidden state 重建过去 evidence；测试仅用合成
   未来日期。
