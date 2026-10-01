@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D — PASS / INDEPENDENTLY ACCEPTED** (independent acceptance 2026-10-01)
+**P14-E — CONTRACT DRAFT (implementation NOT AUTHORIZED)**; previous stage: P14-D — PASS / INDEPENDENTLY ACCEPTED (2026-10-01)
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -1399,3 +1399,12 @@ Independent acceptance inspected the actual GitHub repository state at implement
 P14-D-REPAIR-001 is independently accepted. The previous three blockers are closed. P14-E is **not automatically authorized by this status entry**; it requires a separate phase contract / acceptance process and must preserve the existing P13-T STOPPED and P13-U PROTECTED boundaries.
 
 Last independently updated: 2026-10-01.
+
+
+## P14-E — Contract Draft — 2026-10-01
+
+- P14-D = PASS / INDEPENDENTLY ACCEPTED (repair `7a5b29c`, acceptance recorded above).
+- P14-E = CONTRACT DRAFT: `docs/contracts/P14-E-DESIGN-CONTRACT.md` (STATUS: DRAFT, `P14-E is not implementation-authorized`) + `docs/contracts/P14-E-ACCEPTANCE-MATRIX.md` (STATUS: DRAFT, 17 rows, verification methods are plans only).
+- P14-E implementation = NOT AUTHORIZED until the contract passes independent Contract acceptance. No Golden / Harness / src changes were created.
+- Consistency checks executed: 17 unique Contract IDs, 17 unique Matrix rows, Contract-Matrix closure 17/17, boundary constants present, authority references (P14-A/B/C/D, visible_revisions, raw_payload_hash, ingestion_id, P14-C/D taxonomy) verified.
+- Potential dependency conflicts: NONE (P14-E consumes P14-D results and P14-B identity primitives read-only; no upstream semantic change required by the draft).
