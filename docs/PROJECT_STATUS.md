@@ -1691,3 +1691,15 @@ P14-F: NOT AUTHORIZED
 ```
 
 Next allowed phase: **P14-E-005 Production Implementation** (waiting for separate authorization).
+
+
+## P14-E-005 — Production Implementation Contract Draft — 2026-10-01
+
+Docs-only design gate: the accepted P14-E-004 Production Contract (v1.1) refined into an implementable engineering blueprint. **No src/**, no data/, no tests/ changes; P14-E-003 Harness/Golden untouched.**
+
+- `docs/contracts/P14-E-IMPLEMENTATION-CONTRACT.md` (STATUS: DRAFT, SHA-256 `cf05cd3b1912ca5cec0db4c0fcb00b709ef48310c0bbd4430d013986d9457ad4`): implementation boundary (included/excluded); authority model (P14-B -> P14-D -> P14-E with three prohibitions); six runtime components frozen as seven-tuples (CMP-EVIDENCE / CMP-STORE / CMP-MANAGER / CMP-TRACE / CMP-AUDIT / CMP-VALIDATION — Responsibility/Input/Output/Authority/Failure/Persistence/Test); evidence identity inheritance (8 fields; ingested_at stays audit-only); bundle lifecycle state machine CREATE -> VALIDATE -> FREEZE -> STORED with read-only QUERY/TRACE/AUDIT (allowed/forbidden transitions, required metadata, failure modes per state); reverse-trace FOUR-CLASS frozen (HASH_MISMATCH named only as a forbidden fifth class); persistence rules (frozen JSONL constraint takes precedence over any new store choice); six-layer failure model with Detection/Response/Audit triples; six API interface semantics without implementation code; compatibility conclusions; determinism/anti-cheat/boundary inheritance. Invariants P14E-I-001..024.
+- `docs/contracts/P14-E-IMPLEMENTATION-ACCEPTANCE-MATRIX.md` (STATUS: DRAFT): 24 rows (P14E-I-M-001..024), 8 columns each, closure 24/24, bindings to P14-E-003 Golden fixtures or future implementation Harness.
+
+Compatibility: PASS against live implementations (ingestion_id formula, PIT boundary, exclusion field set, result_id re-verified) and against accepted contracts (P14-A/B/C/D, P14-E Design Contract v1.1, Production Contract v1.1, Acceptance Record 144b38f). **DEPENDENCY_CONTRACT_CONFLICT: NONE.**
+
+Verification: consistency checks PASS (24 unique dense contract IDs, 24 unique matrix rows, closure 24/24, FOUR-CLASS preserved with no fifth REVERSE_TRACE_* class, no vague invariant wording). Full regression untouched. P14-E Production Implementation = NOT AUTHORIZED; P14-F = NOT AUTHORIZED; P13-T STOPPED; P13-U PROTECTED.
