@@ -1,0 +1,52 @@
+{
+ "golden_id": "P14D-G-011",
+ "title": "same-revision tie: earliest available_time wins",
+ "contract_ids": [
+  "P14D-004"
+ ],
+ "input": {
+  "query": {
+   "entity": "R-TIE-001",
+   "information_type": "indicator",
+   "as_of": "2026-03-01T11:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "TEST",
+    "source_id": "R-TIE-001",
+    "source_category": "MARKET_STATE",
+    "entity_id": "R-TIE-001",
+    "entity_type": "indicator",
+    "event_time": "2026-02-28T18:00:00+08:00",
+    "available_time": "2026-03-01T09:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-01T09:05:00+08:00",
+    "value": 10.0,
+    "quality_status": "OK",
+    "freshness_policy_id": null,
+    "metadata": {}
+   },
+   {
+    "source": "TEST",
+    "source_id": "R-TIE-001",
+    "source_category": "MARKET_STATE",
+    "entity_id": "R-TIE-001",
+    "entity_type": "indicator",
+    "event_time": "2026-02-28T18:00:00+08:00",
+    "available_time": "2026-03-01T10:00:00+08:00",
+    "revision": 1,
+    "ingested_at": "2026-03-01T10:05:00+08:00",
+    "value": 10.0,
+    "quality_status": "OK",
+    "freshness_policy_id": null,
+    "metadata": {}
+   }
+  ]
+ },
+ "expected": {
+  "visible_source_ids": ["R-TIE-001"],
+  "visible_count": 1,
+  "selected_available_time": "2026-03-01T09:00:00+08:00",
+  "selected_revision": 1
+ }
+}

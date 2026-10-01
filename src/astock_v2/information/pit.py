@@ -32,15 +32,24 @@ def visible_revisions(
 
     A revision only becomes visible when its own available_time has passed,
     so a later revision can never rewrite history before its availability.
-    Ties on revision resolve to the record available earliest (then by
-    canonical text) to stay deterministic.
+    Ties on revision resolve to the record available EARLIEST (then by the
+    smallest canonical text) to stay deterministic — the same revision is
+    the same information, so the survivor is the copy that was knowable
+    first (P14-D-REPAIR-001: the comparison previously preferred the latest
+    available_time, contradicting this documented rule).
     """
     best: dict[tuple[str, str], RawInformationRecord] = {}
+
+    def _wins(candidate: RawInformationRecord, current: RawInformationRecord) -> bool:
+        if candidate.revision != current.revision:
+            return candidate.revision > current.revision
+        if candidate.available_time != current.available_time:
+            return candidate.available_time < current.available_time
+        return candidate.canonical_json() < current.canonical_json()
+
     for record in admissible_records(records, decision_time):
         key = (record.source, record.source_id)
         current = best.get(key)
-        if current is None or (record.revision, record.available_time, record.canonical_json()) > (
-            current.revision, current.available_time, current.canonical_json()
-        ):
+        if current is None or _wins(record, current):
             best[key] = record
     return best

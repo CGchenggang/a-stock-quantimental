@@ -1317,3 +1317,36 @@ Do not redesign P14-D.
 Do not proceed to P14-E until P14-D is independently accepted.
 
 Last independently updated: 2026-10-01.
+
+## P14-D-REPAIR-001 — Contract Freeze + Version-Tie + Exact-CI — 2026-10-01
+
+Narrow repair of the three independent-acceptance blockers on P14-D (`3ec4837`). Scope: `docs/contracts/P14-D-*`, `src/astock_v2/information/pit.py`, `src/astock_v2/information/research_query.py` (docstring-only), `tests/contracts/p14d/*`, this file.
+
+### BLOCKER-002 — same-revision version tie (root cause analysis first)
+
+Layer determination (mandate §7): P14-A `visible_revisions` compared `(revision, available_time, canonical_json)` with tuple-max, so on equal revision the LATEST available_time won — while its own docstring declared "ties on revision resolve to the record available earliest". No P14-A test freezes the opposite semantic (`tests/test_p14a_information.py::test_revision_visibility_boundary` covers different revisions only). Therefore the documented contract semantic (`same revision → earliest available_time`) is correct and the comparison direction was the defect.
+
+Fix (`src/astock_v2/information/pit.py`): explicit precedence — higher revision wins; equal revision → EARLIER available_time wins; equal both → smallest canonical_json. Docstring updated to state the rule and the repair. P14-A regression: 20 passed.
+
+Freeze evidence chain (Contract → Matrix → Golden → Production → CI): contract §8 v1.1 defines the exact chain; Matrix P14D-004 row references G-011 + `test_p14d_011_same_revision_tie_earliest_wins`; golden fixture `G-011.json` (mandate scenario: source TEST, source_id R-TIE-001, revision 1, A 09:00 / B 10:00, as_of 11:00 → A selected) hand-written and executed through the production `run_query` (insertion-order-invariant `result_id`); harness test added; `scripts/audit_p14d_contract.py` E011 mechanically ties all four layers (contract tokens + matrix reference + fixture existence).
+
+### BLOCKER-001 — contract freeze
+
+P14-D Contract frozen as **v1.1** (`状态：FROZEN — P14-D-REPAIR-001 — awaiting independent acceptance`; no self-acceptance wording). Not a word swap: §8's tie-break chain was made exact, the Matrix status/rows updated to match (G-011), the audit's status check now requires FROZEN and still bans PASS/ACCEPTED, and E011 enforces Contract↔Matrix↔Golden↔Harness consistency. Audit: PASS 0 findings (10 contract IDs / 10 matrix IDs / 11 goldens / 11 harness tests).
+
+### BLOCKER-003 — exact-head CI
+
+Final repair HEAD pushed and verified: workflow run on the exact HEAD with checkout SHA == final HEAD (coordinates in the final report).
+
+### Validation (all executed)
+
+- `python scripts/audit_p14d_contract.py` → PASS 0 (10/10/11)
+- `python -m pytest -q -ra tests/contracts/p14d/` → **32 passed** ×2
+- `python -m pytest -q -ra tests/test_p14a_information.py` → 20 passed (P14-A regression)
+- `python scripts/audit_p14c_contract.py` → PASS 0/0 (61/61/61); P14-C SHAs unchanged (`c217f6b9…167b` / `fc99637a…636`); golden report `09cca5b0…` unchanged
+- `python -m pytest -q -ra tests/contracts/p14c/` → 90 passed; `tests/test_industry_relative.py` → 3 passed
+- `python -m pytest -q -ra` → **495 passed / 0 failed**
+
+Restatement semantics re-verified (G-005 + harness P14D-005): T1 <= as_of < T2 sees only the original revision; as_of >= T2 sees the restatement. PIT visibility and determinism checks all green. Boundary `2026-09-22`/`2026-09-23` unchanged; P13-T STOPPED; P13-U protected; no real virgin-zone data in any fixture (synthetic only).
+
+P14-E remains not authorized.

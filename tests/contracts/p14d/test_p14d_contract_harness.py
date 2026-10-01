@@ -34,14 +34,21 @@ def test_contract_audit_pass():
     assert result["hard_count"] == 0
     assert result["stats"]["contract_ids"] == 10
     assert result["stats"]["matrix_ids"] == 10
-    assert result["stats"]["golden_ids"] == 10
-    assert result["stats"]["harness_tests"] == 10
+    assert result["stats"]["golden_ids"] == 11
+    assert result["stats"]["harness_tests"] == 11
+
+
+def test_contract_status_frozen_not_self_accepted():
+    header = audit.CONTRACT.read_text(encoding="utf-8").splitlines()[:10]
+    status = next(line for line in header if "状态" in line)
+    assert "FROZEN" in status
+    assert "PASS" not in status and "ACCEPTED" not in status
 
 
 def test_golden_fixture_ids_dense():
     paths = sorted(FIXTURE_DIR.glob("G-*.json"))
     ids = [json.loads(p.read_text(encoding="utf-8"))["golden_id"] for p in paths]
-    assert ids == [f"P14D-G-{i:03d}" for i in range(1, 11)]
+    assert ids == [f"P14D-G-{i:03d}" for i in range(1, 12)]
     for path in paths:
         fx = json.loads(path.read_text(encoding="utf-8"))
         assert set(fx) >= {"golden_id", "title", "contract_ids", "input", "expected"}

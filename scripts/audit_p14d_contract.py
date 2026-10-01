@@ -38,7 +38,7 @@ GOLDEN_REF = re.compile(r"\bG-\d{3}\b")
 HARNESS_TEST = re.compile(r"test_p14d_\d+_[a-z_]+")
 
 EXPECTED_IDS = [f"P14D-{i:03d}" for i in range(1, 11)]
-EXPECTED_GOLDENS = [f"G-{i:03d}" for i in range(1, 11)]
+EXPECTED_GOLDENS = [f"G-{i:03d}" for i in range(1, 12)]
 BOUNDARY = ["2026-09-22", "2026-09-23", "VIRGIN_START", "assert_research_zone"]
 FORBIDDEN = ["fixture_mode", "expected_result_override", "golden_override",
              "test_only", "skip_validation", "force_visible", "force_hidden",
@@ -119,13 +119,15 @@ def run_harness(contract_path: Path, matrix_path: Path) -> dict:
         if constant not in contract_text:
             add("E007", f"contract missing boundary element {constant!r}")
 
-    # E008 governance status
+    # E008 governance status: the contract is FROZEN (P14-D-REPAIR-001);
+    # self-acceptance wording is still banned
     status_line = next((l for l in contract_text.splitlines()[:10] if "状态" in l), "")
-    if "DRAFT" not in status_line:
-        add("E008", f"contract status is not DRAFT: {status_line.strip()!r}")
+    if "FROZEN" not in status_line:
+        add("E008", f"contract status is not FROZEN: {status_line.strip()!r}")
+    if any(marker in status_line for marker in ("PASS", "ACCEPTED")):
+        add("E008", f"contract status self-declares acceptance: {status_line.strip()!r}")
 
-    # E009 golden coverage: G-001..G-010 all referenced in matrix; every
-    # golden reference in the matrix corresponds to a matrix row
+    # E009 golden coverage: G-001..G-011 all referenced in matrix
     goldens_in_matrix = sorted(set(GOLDEN_REF.findall(matrix_text)))
     missing = [g for g in EXPECTED_GOLDENS if g not in goldens_in_matrix]
     if missing:
@@ -135,6 +137,19 @@ def run_harness(contract_path: Path, matrix_path: Path) -> dict:
     tests = sorted(set(HARNESS_TEST.findall(matrix_text)))
     if len(tests) < 10:
         add("E010", f"matrix references only {len(tests)} harness tests")
+
+    # E011 same-revision tie semantics (P14-D-REPAIR-001): the frozen
+    # tie-break chain must be present in the contract, referenced by the
+    # matrix P14D-004 row (G-011), and the fixture must exist
+    tie_row = next((line for line in matrix_text.splitlines()
+                    if line.startswith("| P14D-004")), "")
+    for token in ("earliest", "canonical_json"):
+        if token not in contract_text:
+            add("E011", f"contract tie-break chain missing {token!r}")
+    if "G-011" not in tie_row:
+        add("E011", "matrix P14D-004 row does not reference the tie fixture G-011")
+    if not (REPO_ROOT / "tests" / "contracts" / "p14d" / "fixtures" / "G-011.json").exists():
+        add("E011", "tie fixture tests/contracts/p14d/fixtures/G-011.json missing")
 
     # semantic keyword spot-checks (whole-document presence)
     for cid, keywords in REQUIRED_KEYWORDS.items():

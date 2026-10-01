@@ -4,10 +4,16 @@
 > 建立在已独立验收的 P14-A/B/C 之上；不回退、不重构、不重新定义任何
 > P14-C 已冻结语义。
 >
-> 状态：DRAFT — awaiting independent contract review
+> 状态：FROZEN — P14-D-REPAIR-001 — awaiting independent acceptance
 >
 > 修订历史：
 > v1: 初始版本（P14-D 实现前）
+> v1.1: REPAIR-001 冻结——§8 tie-breaking 链精确化（同 lineage 内：
+>       最大 revision → 最早 available_time → 最小 canonical_json），
+>       与 Matrix / Golden (G-011) / Harness / 生产实现五层一致；
+>       P14-A visible_revisions 的同 revision 比较符据此修正
+>       （其 docstring 本已声明 earliest，实现与之矛盾，且无任何
+>       P14-A 测试冻结相反语义）
 
 ---
 
@@ -110,10 +116,19 @@ UNRESOLVED_AVAILABILITY   available_time 缺失（复用 P14-C 分类，不新�
 
 ## 8. Version Selection / Restatement（冻结）
 
-- 同一 lineage（`(source, source_id)`）内多个 admissible 版本：选择
-  **最大 revision** 的版本（P14-A `visible_revisions` authority；
-  revision 相同则取最早 `available_time`，再按 canonical json，
-  全程确定性，P14D-004）。
+- 同一 lineage（`(source, source_id)`）内多个 admissible 版本的确定性
+  选择链（P14D-004）：
+
+```text
+1. 最大 revision 胜出；
+2. revision 相同 → 最早 available_time 胜出（same revision = 同一信息，
+   幸存者是“最早可被知晓”的那份拷贝）；
+3. revision 与 available_time 都相同 → 最小 canonical_json 胜出。
+```
+
+  该链由 P14-A `visible_revisions` authority 实现（P14-D-REPAIR-001
+  修正了其同 revision 比较方向，修正依据：docstring 既有意图 + 无
+  相反语义的测试冻结 + 本合同 §8 冻结规则）。
 - Restatement：original `available_time = T1`，restated
   `available_time = T2`。查询 `as_of < T2` **不得**返回 restated
   版本；`as_of >= T2` 才可见（P14D-005）。

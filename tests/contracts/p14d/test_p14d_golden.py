@@ -32,7 +32,7 @@ def _load_fixtures():
         assert fx["golden_id"].endswith(path.stem.split("_")[0])
         fixtures.append(fx)
     ids = [f["golden_id"] for f in fixtures]
-    assert ids == [f"P14D-G-{i:03d}" for i in range(1, 11)]
+    assert ids == [f"P14D-G-{i:03d}" for i in range(1, 12)]
     return fixtures
 
 

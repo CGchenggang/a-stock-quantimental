@@ -76,6 +76,32 @@ def test_p14d_003_event_time_never_grants_visibility():
     assert result["excluded"][0]["reason"] == EXCLUSION_NOT_YET_AVAILABLE
 
 
+def test_p14d_011_same_revision_tie_earliest_wins():
+    """P14-D-REPAIR-001: same (source, source_id, revision) with different
+    available_time — the EARLIEST available_time wins once both are
+    admissible. Driven through the production run_query."""
+    a = _record("TEST", "R-TIE-001", entity="R-TIE-001",
+                entity_type="indicator",
+                event="2026-02-28T18:00:00+08:00",
+                available="2026-03-01T09:00:00+08:00", revision=1)
+    b = _record("TEST", "R-TIE-001", entity="R-TIE-001",
+                entity_type="indicator",
+                event="2026-02-28T18:00:00+08:00",
+                available="2026-03-01T10:00:00+08:00", revision=1)
+    result = run_query([a, b], _query(as_of="2026-03-01T11:00:00+08:00",
+                                      entity="R-TIE-001",
+                                      information_type="indicator"))
+    assert _visible_source_ids(result) == ["R-TIE-001"]
+    assert result["counts"]["visible"] == 1
+    assert result["records"][0]["available_time"] == "2026-03-01T09:00:00+08:00"
+    assert result["records"][0]["revision"] == 1
+    # insertion order must not matter
+    result_reversed = run_query([b, a], _query(as_of="2026-03-01T11:00:00+08:00",
+                                               entity="R-TIE-001",
+                                               information_type="indicator"))
+    assert result_reversed["result_id"] == result["result_id"]
+
+
 def test_p14d_004_deterministic_version_selection():
     records = [_record("macro_pmi_cn", "q-100", revision=0),
                _record("macro_pmi_cn", "q-100",
