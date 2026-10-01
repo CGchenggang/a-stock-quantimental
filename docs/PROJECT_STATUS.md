@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D — FAIL / REPAIR REQUIRED** (independent acceptance 2026-10-01)
+**P14-D — PASS / INDEPENDENTLY ACCEPTED** (independent acceptance 2026-10-01)
 
 P14-D implementation was submitted at `3ec4837e63df8c668f1057f78e7f9dce0f5702ab`, but independent acceptance is blocked. The Contract remains DRAFT, production implementation was delivered in the same submission before Contract/Golden independent freeze, exact-head GitHub Actions evidence is not independently retrievable for this commit through the available workflow-run evidence, and a version-selection tie semantic mismatch was found (see P14-D Independent Acceptance section).
 
@@ -28,12 +28,14 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-B | PASS | Independently accepted after durable ingestion-audit repair (P14-B-R1) |
 | P14-C Contract Repair | PASS | EXPECTED_ABSENCE representation frozen; exact-head CI evidence independently verified |
 | P14-C Golden Re-freeze | PASS | Independently accepted; 64 deterministic Golden fixtures; 61/61/61 closure; Production Implementation remains separately gated |
+| P14-C Production Implementation | PASS | Independently accepted at `06250722e5660975733695c1ffd956cde9a8c118`; completeness required-universe repair |
+| P14-D | PASS | Independently accepted after P14-D-REPAIR-001; PIT-safe information query layer; P14-E remains not authorized |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`3ec4837e63df8c668f1057f78e7f9dce0f5702ab` — P14-D submission under independent acceptance review. This is **not an accepted P14-D head**.
+`7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` — P14-D-REPAIR-001 implementation head independently accepted. Status documentation is maintained separately.
 
 Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118`, with acceptance-state documentation commit `ad032a0e7ada2b83a697601c79c5ed7b6e526592`.
 
@@ -1350,3 +1352,50 @@ Final repair HEAD pushed and verified: workflow run on the exact HEAD with check
 Restatement semantics re-verified (G-005 + harness P14D-005): T1 <= as_of < T2 sees only the original revision; as_of >= T2 sees the restatement. PIT visibility and determinism checks all green. Boundary `2026-09-22`/`2026-09-23` unchanged; P13-T STOPPED; P13-U protected; no real virgin-zone data in any fixture (synthetic only).
 
 P14-E remains not authorized.
+
+
+## P14-D Independent Acceptance — REPAIR-001 — 2026-10-01
+
+**Decision: PASS / INDEPENDENTLY ACCEPTED.**
+
+Independent acceptance inspected the actual GitHub repository state at implementation head `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac`, compared against the prior failed submission `3ec4837e63df8c668f1057f78e7f9dce0f5702ab`, and verified the repair against the three previously blocking findings.
+
+### Acceptance findings
+
+1. **Contract freeze — PASS.** P14-D Design Contract is now explicitly `FROZEN — P14-D-REPAIR-001 — awaiting independent acceptance`, with no self-acceptance marker. Version v1.1 freezes the exact version-selection chain and the audit mechanically requires FROZEN while rejecting PASS/ACCEPTED self-declaration.
+2. **Same-revision version tie — PASS.** P14-A `visible_revisions()` now implements: maximum revision → earliest `available_time` on equal revision → smallest `canonical_json` on equal revision and availability. The new G-011 fixture and `test_p14d_011_same_revision_tie_earliest_wins` exercise the production `run_query()` path and verify insertion-order invariance.
+3. **PIT / restatement semantics — PASS.** `available_time <= as_of` remains the visibility rule; `event_time` does not grant visibility. Restatement behavior remains frozen and regression-tested.
+4. **Boundary / virgin-zone integrity — PASS.** P14-D continues to use the P13-U research-zone guard; fixtures use synthetic future dates only. P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+5. **Scope — PASS.** The repair diff from `3ec4837` is limited to P14-D docs/harness/Golden/audit plus the narrowly required P14-A PIT comparison repair and a documentation-only production query change. No factor, alpha, calibration, policy, recommendation, portfolio, trading, P13-T, P13-U, or P14-C Contract/Matrix/Golden changes were introduced.
+
+### Contract / Matrix / Golden closure
+
+- P14-D Contract IDs: 10/10
+- P14-D Matrix IDs: 10/10
+- P14-D Golden fixtures: 11
+- P14-D Harness tests referenced: 11
+- P14-D audit: PASS, 0 hard findings
+- P14-C Contract SHA unchanged: `c217f6b984a27cfb6e54322e731f1fe6a381a868e319755191a68290c922167b`
+- P14-C Matrix SHA unchanged: `fc99637a74b6fb08fea977a6edcb6245c3bce1c2636d9736380da4b5599a3636`
+- P14-C canonical Golden report unchanged: `09cca5b0985265deddb42672b770efd88f82152a46b473acec7d1bb8970438f4`
+
+### Exact-head GitHub Actions evidence
+
+- Final implementation HEAD: `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac`
+- Workflow: `tests`
+- Run: `36798963447`
+- Event: push to `main`
+- Pytest job: `110168771501` — success
+- P13-M job: `110168771243` — success
+- Checkout evidence: workflow log fetches `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac`, checks out `origin/main`, and `git log -1 --format=%H` returns the same SHA.
+- P14-C Contract Harness audit: PASS
+- P14-D Contract Harness audit: PASS
+- P13-M regression: PASS (3 passed)
+- Full pytest: 495 passed, 0 failed, 2 warnings
+- All workflow jobs and all required steps completed successfully.
+
+### Independent acceptance result
+
+P14-D-REPAIR-001 is independently accepted. The previous three blockers are closed. P14-E is **not automatically authorized by this status entry**; it requires a separate phase contract / acceptance process and must preserve the existing P13-T STOPPED and P13-U PROTECTED boundaries.
+
+Last independently updated: 2026-10-01.
