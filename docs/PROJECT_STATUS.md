@@ -1420,9 +1420,28 @@ P14-E implementation remains NOT AUTHORIZED. Next gated stage: Harness.
 
 ## P14-E-002-REPAIR-001 — Golden Design Semantic Repair — 2026-10-01
 
-Docs-only repair to `docs/contracts/P14-E-GOLDEN-DESIGN.md` (+ one Matrix row sync). No src/tests/data changes; no Harness/pytest created.
+**Decision: PASS / INDEPENDENTLY ACCEPTED.**
 
-- **G-004 / G-007 exclusion semantics corrected**: the P14-D exclusion entry carries exactly `{source, source_id, reason, available_time}` (verified against `research_query.py`); the design no longer claims "exclusion 仅携带 available_time" or that the bundle cannot know a future unavailable record exists. Frozen semantics: an earlier-as_of bundle MAY contain the four-field P14-D exclusion for a post-as-of record, but MUST NOT carry that record's payload / raw_payload_hash / ingestion_id / future Evidence / future candidate_trace / future revision-selection state. G-004 now states explicitly: rev1 不进入 evidence、不进入 candidate_trace、payload/raw_payload_hash/ingestion_id 不出现在 bundle 任何字段；"知道存在一个未来尚不可用记录" ≠ "泄露未来 Evidence 内容"。
-- **G-002 evidence_id vs bundle_id distinction**: the chain is frozen as second attempt → P14-B DUPLICATE → canonical stored record not overwritten → evidence uses the final stored record → evidence_id does not fork → bundle_id does not change because the rejected attempt never enters the stored record set (NOT because "ingested_at 不参与 bundle_id" — bundle_id hashes the full bundle content including audit-only ingested_at). The wrong extension appears only as a negation or a banned failure mode (mechanically asserted). Matrix P14E-M-014 row synced.
+Independently inspected against the actual GitHub `main` HEAD `13fcd47267c479ff62ecdac554daf7b04005eabe`, compared with the failed P14-E-002 baseline `171ca2bd13a15cddca3adfe091c2c026d13c2b03`.
 
-Consistency checks: closure 17/17, goldens dense, coverage 17/17, old wrong claims absent (mechanically asserted). Regression evidence: p14d+p14c 122 tests unchanged and green. P13-T STOPPED; P13-U PROTECTED; P14-E implementation NOT AUTHORIZED.
+### Acceptance findings
+
+1. **Scope — PASS.** The repair is exactly one commit ahead of the failed submission and modifies only:
+   - `docs/contracts/P14-E-GOLDEN-DESIGN.md`
+   - `docs/contracts/P14-E-ACCEPTANCE-MATRIX.md`
+   - `docs/PROJECT_STATUS.md`
+   No `src/**`, `tests/**`, `data/**`, `tests/contracts/p14e/**`, Harness, or production implementation changes were introduced.
+2. **G-004 / G-007 exclusion semantics — PASS.** The design now matches the inspected P14-D `run_query()` behavior: an earlier-as_of bundle may carry the four-field exclusion `{source, source_id, reason, available_time}`, while the post-as-of record's payload, `raw_payload_hash`, `ingestion_id`, future Evidence, future candidate trace, and future revision-selection state are prohibited from the earlier bundle.
+3. **G-002 identity/bundle semantics — PASS.** The design correctly distinguishes `evidence_id` from `bundle_id`: `ingested_at` is excluded from `evidence_id), but may be part of the canonical bundle content. The invariant is correctly narrowed to the P14-B duplicate-attempt path: a rejected DUPLICATE attempt does not overwrite the canonical stored record and therefore does not change the resulting Evidence or bundle.
+4. **Matrix / Golden closure — PASS.** The frozen Matrix remains 17/17, and the Golden design covers all 17 Contract IDs through G-001..G-012 plus the mechanical source-scan design for P14E-016. P14E-M-014 is synchronized with the repaired G-002 semantics.
+5. **Virgin-zone integrity — PASS.** No real P13-T virgin dates were introduced. The design continues to use synthetic dates only for future-date guard testing. P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+6. **Governance — PASS.** P14-E remains implementation NOT AUTHORIZED. This repair does not self-promote the phase to Harness or implementation.
+7. **Exact-head CI — PASS.** GitHub Actions run `36823824639` is a successful push run for exact HEAD `13fcd47267c479ff62ecdac554daf7b04005eabe). The pytest job `110244957759` and p13m job `110244958097` both succeeded. Checkout logs report `git log -1 --format=%H` as the exact final HEAD. P14-C and P14-D contract audits passed; P13-M regression passed; full pytest reported **495 passed / 0 failed / 2 warnings**.
+
+### Independent acceptance result
+
+**P14-E-002-REPAIR-001 is independently accepted.**
+
+This acceptance closes the two blockers from P14-E-002. The next authorized stage is **P14-E Harness / Golden execution design implementation**, but P14-E production implementation, factor/policy/calibration/recommendation promotion, and P14-F remain unauthorized until their own gates are independently passed.
+
+Last independently updated: 2026-10-01.
