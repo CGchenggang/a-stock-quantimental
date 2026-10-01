@@ -1496,3 +1496,25 @@ Do not change the frozen P14-E Contract or Matrix semantics unless an actual dep
 P14-E production implementation remains **NOT AUTHORIZED**.
 
 Last independently updated: 2026-10-01.
+
+## P14-E-003-REPAIR-001 — Reverse Trace + Reload Authority + Mapping Closure — 2026-10-01
+
+Harness/Golden-layer repair of the four independent-acceptance blockers on P14-E-003 (`8b8f2c1`). Docs/tests only; **no src/** changes** (file pin re-verified); Contract/Matrix semantics untouched.
+
+### Repairs
+
+1. **P14E-017 reverse trace now actually verified** (G-001): the engine parses the authoritative P14-B `raw_records.jsonl` rows and `reverse_trace_resolve()` mechanically resolves each Evidence's `(ingestion_id, raw_payload_hash)` to exactly one raw row with matching `source/source_id/revision/event_time/available_time` — any mismatch raises. Negative case added: a tampered pair (A's ingestion_id + C's payload hash) must be unresolvable (G-001 `tampered_pair_unresolvable`).
+2. **P14E-013 reload authority completed** (`reload_verify(path, raw_rows=None)`): reload now verifies bundle-hash integrity AND — when the raw authority is supplied — resolves every Evidence identity back to the P14-B raw rows. G-009 exercises the full path including a negative tamper case: one Evidence `ingestion_id` is flipped AND the bundle hash recomputed, so the authority check (not hash integrity) is what fails the reload (`tampered_reload_raises`).
+3. **P14E-006 mapping closure** (G-005): exact one-to-one `result.records ↔ bundle.evidence` asserted per as-of via stable 4-tuple identity (source, source_record_id, revision, ingestion_id), counts equality, and `result_id` linkage for both bundles (engine now exposes `build_bundle_and_result`).
+4. **Expected-consumption closure** (mechanical, anti-recurrence): `check_fixture` tracks every declared expected leaf; a per-fixture `expected_consumed` check fails on any unconsumed declaration. All twelve fixtures now fully consumed — including the previously hard-coded G-004 `forbidden_fields_absent_everywhere` list, G-007 nested `bundle1/bundle2` expectations, G-008 `valid_evidence_field_count`/`defects`, G-009 `input_orders`/`no_runtime_fields`, G-010 `duplicate_not_new_revision`, and the new negative-case flags. G-006's prose note moved out of `expected` to top-level `notes`. Meta-test added: an injected unconsumed expected key must be flagged. Audit now reports `expected_consumption: 12/12 fixtures fully consumed`.
+
+### Validation (all executed)
+
+- `python scripts/audit_p14e_contract.py` → **PASS**, closures PASS/PASS, expected_consumption 12/12, 0 failures
+- `python -m pytest -q -ra tests/contracts/p14e/` → **35 passed** (canonical report byte-identical double-run)
+- `python -m pytest -q -ra tests/contracts/p14c/` → 90 passed; `tests/test_industry_relative.py` → 3 passed
+- `python -m pytest -q -ra` → **530 passed / 0 failed**, 2 warnings
+
+P13-T STOPPED / NOT EXECUTED; P13-U PROTECTED; P14-D PASS untouched; P14-E production implementation **NOT AUTHORIZED** (src file pin re-verified).
+
+P14-F not started. Awaiting independent acceptance.

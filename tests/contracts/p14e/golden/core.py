@@ -200,12 +200,14 @@ def select_lineage(candidates: list[RawIngestRecord], winner) -> tuple[str, list
     return reason, trace
 
 
-def build_bundle(record_dicts: list[dict], query_dict: dict,
-                 use_raw_store: bool = False, base_dir: Path | None = None):
+def build_bundle_and_result(record_dicts: list[dict], query_dict: dict,
+                            use_raw_store: bool = False,
+                            base_dir: Path | None = None):
     """Contract §7.1 bundle construction from P14-D run_query + frozen
-    §4/§6/§8 semantics. Returns (bundle, put_outcomes, store_or_None).
-    When use_raw_store with base_dir=None an internal temp dir is used and
-    cleaned up on return; pass base_dir to keep the store readable."""
+    §4/§6/§8 semantics. Returns (bundle, result, put_outcomes,
+    store_or_None). When use_raw_store with base_dir=None an internal
+    temp dir is used and cleaned up on return; pass base_dir to keep the
+    store readable."""
     records = build_records(record_dicts)
     check_mutation(records)
     put_outcomes: list[str] = []
@@ -215,14 +217,24 @@ def build_bundle(record_dicts: list[dict], query_dict: dict,
             with tempfile.TemporaryDirectory() as tmp:
                 store, put_outcomes = ingest_into_store(records, Path(tmp))
                 stored = store.records()
-                bundle = _assemble(stored, list(records), query_dict, put_outcomes)
-                return bundle, put_outcomes, store
+                bundle, result = _assemble(stored, list(records), query_dict,
+                                           put_outcomes)
+                return bundle, result, put_outcomes, store
         store, put_outcomes = ingest_into_store(records, base_dir)
         stored = store.records()
-        bundle = _assemble(stored, list(records), query_dict, put_outcomes)
-        return bundle, put_outcomes, store
+        bundle, result = _assemble(stored, list(records), query_dict,
+                                   put_outcomes)
+        return bundle, result, put_outcomes, store
     stored = records
-    bundle = _assemble(stored, list(records), query_dict, put_outcomes)
+    bundle, result = _assemble(stored, list(records), query_dict, put_outcomes)
+    return bundle, result, put_outcomes, store
+
+
+def build_bundle(record_dicts: list[dict], query_dict: dict,
+                 use_raw_store: bool = False, base_dir: Path | None = None):
+    """Thin wrapper: (bundle, put_outcomes, store_or_None)."""
+    bundle, _, put_outcomes, store = build_bundle_and_result(
+        record_dicts, query_dict, use_raw_store, base_dir)
     return bundle, put_outcomes, store
 
 
@@ -293,7 +305,41 @@ def _assemble(stored: list[RawIngestRecord], all_records: list[RawIngestRecord],
                    "examined": len(stored)},
     }
     bundle["bundle_id"] = _sha(canonical_json(bundle))
-    return bundle
+    return bundle, result
+
+
+# ------------------------------------------------- reverse trace / authority
+
+def load_raw_rows(path: Path) -> list[dict]:
+    """Parse the authoritative P14-B raw_records.jsonl."""
+    rows = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            rows.append(json.loads(line))
+    return rows
+
+
+def reverse_trace_resolve(evidence: dict, raw_rows: list[dict]) -> dict:
+    """Contract §15 / P14E-017: resolve one Evidence to its authoritative
+    P14-B raw record. The pair (ingestion_id, raw_payload_hash) must match
+    exactly one raw row, and the row's source/source_id/revision plus the
+    temporal identity fields must equal the Evidence's — otherwise
+    fail-fast (tamper / mismatch / unresolved all raise)."""
+    matches = [row for row in raw_rows
+               if row["record"]["ingestion_id"] == evidence["ingestion_id"]
+               and row["record"]["raw_payload_hash"] == evidence["raw_payload_hash"]]
+    if len(matches) != 1:
+        raise ValueError(
+            f"reverse trace unresolved for {evidence['source_id']}: "
+            f"{len(matches)} matching raw rows")
+    rec = matches[0]["record"]
+    for field in ("source", "source_id", "revision", "event_time",
+                  "available_time"):
+        if rec[field] != evidence[field]:
+            raise ValueError(
+                f"reverse trace identity mismatch on {field}: "
+                f"evidence={evidence[field]!r} raw={rec[field]!r}")
+    return rec
 
 
 # ------------------------------------------------------------- persistence
@@ -310,8 +356,11 @@ def persist_bundle(path: Path, bundle: dict) -> bool:
     return True
 
 
-def reload_verify(path: Path) -> list[dict]:
-    """Contract §12: reload recomputes every bundle_id."""
+def reload_verify(path: Path, raw_rows: list[dict] | None = None) -> list[dict]:
+    """Contract §12: reload recomputes every bundle_id AND — when the
+    P14-B raw authority is supplied — resolves every Evidence's
+    (ingestion_id, raw_payload_hash) back to the authoritative raw row.
+    Tampered or mismatched provenance fails fast."""
     out = []
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -319,7 +368,10 @@ def reload_verify(path: Path) -> list[dict]:
         bundle = json.loads(line)
         stored_id = bundle.pop("bundle_id")
         if _sha(canonical_json(bundle)) != stored_id:
-            raise ValueError("reload verification failed")
+            raise ValueError("reload verification failed: bundle hash mismatch")
+        if raw_rows is not None:
+            for evidence in bundle["evidence"]:
+                reverse_trace_resolve(evidence, raw_rows)
         bundle["bundle_id"] = stored_id
         out.append(bundle)
     return out
@@ -327,14 +379,37 @@ def reload_verify(path: Path) -> list[dict]:
 
 # --------------------------------------------------------- per-fixture checks
 
+def _leaves(obj, prefix=""):
+    """Yield (leaf path, value) pairs of the expected structure."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            yield from _leaves(v, f"{prefix}.{k}" if prefix else k)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            yield from _leaves(v, f"{prefix}[{i}]")
+    else:
+        yield prefix, obj
+
+
 def check_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
     out: list[tuple[str, bool, str]] = []
+    consumed: set[str] = set()
 
     def add(name, ok, detail=""):
         out.append((name, bool(ok), str(detail)))
 
     gid = fixture["golden_id"]
     inp, exp = fixture["input"], fixture["expected"]
+    leaves = dict(_leaves(exp))
+
+    def mark_tree(obj, prefix):
+        for path, _ in _leaves(obj, prefix):
+            consumed.add(path)
+
+    def ev(path):
+        consumed.add(path)
+        return leaves[path]
+
     q = inp["query"]
 
     if gid == "P14E-G-001":
@@ -344,223 +419,360 @@ def check_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
         id_a = build_bundle([a], q)[0]["evidence"][0]["evidence_id"]
         id_c = build_bundle([c], q)[0]["evidence"][0]["evidence_id"]
         add("g001.ab_order_invariant", id_ab1 == id_ab2)
-        add("g001.ab_equal", id_ab1 == id_a)
-        add("g001.c_differs", id_c != id_a)
+        add("g001.ab_equal", (id_ab1 == id_a) == ev("ab_evidence_id_equal"))
+        add("g001.c_differs", (id_c != id_a) == ev("c_evidence_id_differs"))
+        add("g001.evidence_count",
+            build_bundle([a, b], q)[0]["counts"]["evidence"]
+            == ev("evidence_count"))
+        for i, _field in enumerate(exp["identity_fields"]):
+            consumed.add(f"identity_fields[{i}]")
+        for i, _field in enumerate(exp["audit_fields_present"]):
+            consumed.add(f"audit_fields_present[{i}]")
         with tempfile.TemporaryDirectory() as tmp:
             bundle_rt, _, store_rt = build_bundle([a, b], q,
                                                   use_raw_store=True,
                                                   base_dir=Path(tmp))
-            raw_text = store_rt.path.read_text(encoding="utf-8")
-        ev = bundle_rt["evidence"][0]
-        add("g001.identity_fields",
-            all(f in ev for f in exp["identity_fields"]))
-        add("g001.audit_fields", all(f in ev for f in exp["audit_fields_present"]))
-        add("g001.reverse_trace",
-            all(ev[f] in raw_text for f in exp["reverse_trace_fields"]))
+            raw_rows = load_raw_rows(store_rt.path)
+        ev0 = bundle_rt["evidence"][0]
+        identity_ok = all(f in ev0 for f in exp["identity_fields"])
+        audit_ok = all(f in ev0 for f in exp["audit_fields_present"])
+        for i, trace_field in enumerate(exp["reverse_trace_fields"]):
+            consumed.add(f"reverse_trace_fields[{i}]")
+            assert trace_field in ev0, trace_field
+        add("g001.identity_and_audit_fields_present", identity_ok and audit_ok)
+        # P14E-017: real reverse trace through the authoritative raw rows
+        try:
+            reverse_trace_resolve(ev0, raw_rows)
+            resolved = True
+        except ValueError:
+            resolved = False
+        add("g001.reverse_trace_resolves",
+            resolved == ev("reverse_trace_resolves_in_raw_store") and resolved)
+        # negative tamper: mismatched (ingestion_id, raw_payload_hash) pair
+        tampered = dict(ev0)
+        tampered["raw_payload_hash"] = build_records([c])[0].raw_payload_hash
+        try:
+            reverse_trace_resolve(tampered, raw_rows)
+            tamper_detected = False
+        except ValueError:
+            tamper_detected = True
+        add("g001.tampered_pair_unresolvable",
+            tamper_detected == ev("tampered_pair_unresolvable")
+            and tamper_detected)
 
     elif gid == "P14E-G-002":
         with tempfile.TemporaryDirectory() as tmp:
             bundle, outcomes, store = build_bundle(
-                inp["records"], q, use_raw_store=True)
-            add("g002.put_outcomes", outcomes == exp["put_outcomes"], f"{outcomes}")
-            add("g002.evidence_count", bundle["counts"]["evidence"] == exp["evidence_count"])
-            ev = bundle["evidence"][0]
-            add("g002.stored_ingested_at",
-                ev["ingested_at"] == exp["stored_ingested_at"], ev["ingested_at"])
-            single = build_bundle([inp["records"][0]], q)[0]
-            add("g002.no_fork",
-                ev["evidence_id"] == single["evidence"][0]["evidence_id"])
-            bundle_text = canonical_json(bundle)
-            add("g002.duplicate_absent",
-                "2026-03-03T09:00:00+08:00" not in bundle_text)
-            add("g002.stored_record_only",
-                bundle["counts"]["examined"] == 1)
+                inp["records"], q, use_raw_store=True, base_dir=Path(tmp))
+        mark_tree(exp["put_outcomes"], "put_outcomes")
+        add("g002.put_outcomes", outcomes == exp["put_outcomes"], f"{outcomes}")
+        add("g002.evidence_count",
+            bundle["counts"]["evidence"] == ev("evidence_count"))
+        ev0 = bundle["evidence"][0]
+        add("g002.stored_ingested_at",
+            ev0["ingested_at"] == ev("stored_ingested_at"), ev0["ingested_at"])
+        single = build_bundle([inp["records"][0]], q)[0]
+        no_fork = ev0["evidence_id"] == single["evidence"][0]["evidence_id"]
+        add("g002.evidence_id_stable",
+            no_fork == (ev("evidence_id_forks") is False) and no_fork)
+        bundle_text = canonical_json(bundle)
+        dup_absent = "2026-03-03T09:00:00+08:00" not in bundle_text
+        add("g002.duplicate_attempt_absent",
+            dup_absent == ev("duplicate_attempt_absent_from_bundle")
+            and dup_absent)
+        add("g002.bundle_over_stored_record_only",
+            (ev("bundle_over_stored_record_only") is True)
+            and bundle["counts"]["examined"] == 1)
 
     elif gid == "P14E-G-003":
         bundle, _, _ = build_bundle(inp["records"], q)
         got_visible = sorted(e["source_id"] for e in bundle["evidence"])
+        mark_tree(exp["visible_source_ids"], "visible_source_ids")
         add("g003.visible", got_visible == sorted(exp["visible_source_ids"]),
             f"{got_visible}")
         got_excl = sorted((e["source_id"], e["reason"])
                           for e in bundle["exclusions"])
+        mark_tree(exp["exclusions"], "exclusions")
         want_excl = sorted((e["source_id"], e["reason"])
                            for e in exp["exclusions"])
         add("g003.exclusions", got_excl == want_excl, f"{got_excl}")
+        mark_tree(exp["exclusion_field_set"], "exclusion_field_set")
+        field_set = set(exp["exclusion_field_set"])
         for e in bundle["exclusions"]:
-            add("g003.exclusion_fields",
-                set(e) == EXCLUSION_FIELD_SET, f"{sorted(e)}")
-        add("g003.counts", bundle["counts"] == exp["counts"],
-            f"{bundle['counts']}")
+            add("g003.exclusion_fields", set(e) == EXCLUSION_FIELD_SET,
+                f"{sorted(e)}")
+        mark_tree(exp["counts"], "counts")
+        for key, want in exp["counts"].items():
+            add(f"g003.counts.{key}", bundle["counts"][key] == want,
+                f"{bundle['counts']}")
 
     elif gid in ("P14E-G-004", "P14E-G-007"):
         bundle1, _, _ = build_bundle(inp["records"], q)
-        bundle2 = None
-        if gid == "P14E-G-007":
-            bundle2, _, _ = build_bundle(
-                inp["records"], {**q, "as_of": inp["second_query_as_of"]})
-        b1_expected_revision = (exp["bundle1"]["selected_revision"]
-                                if gid == "P14E-G-007"
-                                else exp["selected_revision"])
-        add(f"{gid}.b1_revision",
-            bundle1["evidence"][0]["revision"] == b1_expected_revision)
-        b1_text = canonical_json(bundle1)
         rev1 = next(r for r in inp["records"] if r["revision"] == 1)
-        rev1_hash = RawIngestRecord(**rev1).raw_payload_hash
-        rev1_ing = RawIngestRecord(**rev1).ingestion_id
-        add(f"{gid}.rev1_hash_absent", rev1_hash not in b1_text)
-        add(f"{gid}.rev1_ingid_absent", rev1_ing not in b1_text)
+        rev1_record = build_records([rev1])[0]
+        b1_text = canonical_json(bundle1)
+        if gid == "P14E-G-007":
+            mark_tree(exp["bundle1"], "bundle1")
+            add("g007.b1_revision",
+                bundle1["evidence"][0]["revision"]
+                == exp["bundle1"]["selected_revision"])
+            add("g007.b1_trace_empty", bundle1["candidate_trace"] == [])
+        else:
+            add("g004.selected_revision",
+                bundle1["evidence"][0]["revision"] == ev("selected_revision"))
+            add("g004.candidate_trace_count",
+                len(bundle1["candidate_trace"]) == ev("candidate_trace_count"))
+        # rev1 content must not leak anywhere in the earlier bundle
+        add(f"{gid}.rev1_hash_absent",
+            rev1_record.raw_payload_hash not in b1_text)
+        add(f"{gid}.rev1_ingid_absent", rev1_record.ingestion_id not in b1_text)
         add(f"{gid}.rev1_payload_absent",
             canonical_json(rev1["raw_payload"]) not in b1_text)
-        lineage_source_id = next(r["source_id"] for r in inp["records"]
-                                 if r["revision"] == 1)
-        excl = next(e for e in bundle1["exclusions"]
-                    if e["source_id"] == lineage_source_id)
-        add(f"{gid}.exclusion_fields", set(excl) == EXCLUSION_FIELD_SET,
-            f"{sorted(excl)}")
-        add(f"{gid}.exclusion_reason", excl["reason"] == "NOT_YET_AVAILABLE")
-        rev1_available = next(r["available_time"] for r in inp["records"]
-                              if r["revision"] == 1)
-        add(f"{gid}.exclusion_available_time",
-            excl["available_time"] == rev1_available, excl["available_time"])
+        if gid == "P14E-G-004":
+            rev1_values = {
+                "raw_payload": canonical_json(rev1["raw_payload"]),
+                "raw_payload_hash": rev1_record.raw_payload_hash,
+                "ingestion_id": rev1_record.ingestion_id,
+            }
+            for i, fname in enumerate(exp["forbidden_fields_absent_everywhere"]):
+                consumed.add(f"forbidden_fields_absent_everywhere[{i}]")
+                assert fname in rev1_values, fname
+                add(f"g004.forbidden_absent.{fname}",
+                    rev1_values[fname] not in b1_text)
         if gid == "P14E-G-007":
-            add("g007.b1_trace_empty", bundle1["candidate_trace"] == [])
+            fp = ev("future_payload_values_in_bundle1")
+            add("g007.future_payload_flag",
+                (fp is False)
+                and canonical_json(rev1["raw_payload"]) not in b1_text)
+            bundle2, _, _ = build_bundle(
+                inp["records"], {**q, "as_of": inp["second_query_as_of"]})
+            mark_tree(exp["bundle2"], "bundle2")
             add("g007.b2_revision",
                 bundle2["evidence"][0]["revision"]
                 == exp["bundle2"]["selected_revision"])
-        else:
-            add("g004.trace_empty", bundle1["candidate_trace"] == [])
+        lineage_source_id = rev1["source_id"]
+        excl = next(e for e in bundle1["exclusions"]
+                    if e["source_id"] == lineage_source_id)
+        mark_tree(exp.get("exclusion_field_set", []), "exclusion_field_set")
+        add(f"{gid}.exclusion_fields", set(excl) == EXCLUSION_FIELD_SET,
+            f"{sorted(excl)}")
+        add(f"{gid}.exclusion_reason", excl["reason"] == "NOT_YET_AVAILABLE")
+        add(f"{gid}.exclusion_available_time",
+            excl["available_time"] == rev1["available_time"])
+        if gid == "P14E-G-004":
+            want_excl = exp["exclusion_for_rev1"]
+            mark_tree(want_excl, "exclusion_for_rev1")
+            add("g004.exclusion_matches_expected",
+                all(excl[k] == v for k, v in want_excl.items()))
             add("g004.knowing_not_leaking",
                 exp["knowing_existence_is_not_leaking_content"] is True)
+            consumed.add("knowing_existence_is_not_leaking_content")
 
     elif gid == "P14E-G-005":
-        b1, _, _ = build_bundle(inp["records"], q)
-        b2, _, _ = build_bundle(inp["records"],
-                                {**q, "as_of": inp["second_query_as_of"]})
+        b1, r1, _, _ = build_bundle_and_result(inp["records"], q)
+        b2, r2, _, _ = build_bundle_and_result(
+            inp["records"], {**q, "as_of": inp["second_query_as_of"]})
         add("g005.b1_revision",
-            b1["evidence"][0]["revision"] == exp["bundle1_selected_revision"])
+            b1["evidence"][0]["revision"] == ev("bundle1_selected_revision"))
         add("g005.b2_revision",
-            b2["evidence"][0]["revision"] == exp["bundle2_selected_revision"])
+            b2["evidence"][0]["revision"] == ev("bundle2_selected_revision"))
         ids1 = {e["evidence_id"] for e in b1["evidence"]}
         ids2 = {e["evidence_id"] for e in b2["evidence"]}
-        add("g005.disjoint", not (ids1 & ids2))
-        add("g005.bundle_ids_differ", b1["bundle_id"] != b2["bundle_id"])
-        from astock_v2.information.research_query import run_query as rq
-        r2 = rq([project(r) for r in build_records(inp["records"])],
-                ResearchQuery(**{**q, "as_of": inp["second_query_as_of"]}))
-        add("g005.result_id_linked", b2["result_id"] == r2["result_id"])
+        add("g005.disjoint",
+            (not (ids1 & ids2)) == ev("evidence_id_sets_disjoint"))
+        add("g005.bundle_ids_differ",
+            (b1["bundle_id"] != b2["bundle_id"]) == ev("bundle_ids_differ"))
+        # P14E-006: exact one-to-one result.records <-> bundle.evidence
+        for label, res, bun in (("b1", r1, b1), ("b2", r2, b2)):
+            got_map = sorted((r["source"], r["source_record_id"], r["revision"],
+                              r["ingestion_id"]) for r in res["records"])
+            want_map = sorted((e["source"], e["source_id"], e["revision"],
+                               e["ingestion_id"]) for e in bun["evidence"])
+            add(f"g005.one_to_one.{label}", got_map == want_map,
+                f"{got_map} vs {want_map}")
+            add(f"g005.counts_equal.{label}",
+                bun["counts"]["evidence"] == len(res["records"]))
+        links_hold = (b1["result_id"] == r1["result_id"]
+                      and b2["result_id"] == r2["result_id"])
+        add("g005.result_id_linked",
+            links_hold == ev("result_id_linked") and links_hold)
+        add("g005.result_id_linked.b1", b1["result_id"] == r1["result_id"])
+        add("g005.result_id_linked.b2", b2["result_id"] == r2["result_id"])
 
     elif gid == "P14E-G-006":
         bundle, _, _ = build_bundle(inp["records"], q)
-        ev = bundle["evidence"][0]
+        ev0 = bundle["evidence"][0]
         add("g006.selected_revision",
-            ev["revision"] == exp["selected_revision"], ev["revision"])
+            ev0["revision"] == ev("selected_revision"), ev0["revision"])
         add("g006.selection_reason",
-            ev["selection_reason"] == exp["selection_reason"],
-            ev["selection_reason"])
-        got = [(t["revision"], t.get("available_time"),
-                t.get("ingested_at"), t["rejection_reason"])
-               for t in bundle["candidate_trace"]]
-        want = [(t["revision"], t.get("available_time"),
-                 t.get("ingested_at"), t["reason"])
-                for t in exp["trace"]]
+            ev0["selection_reason"] == ev("selection_reason"),
+            ev0["selection_reason"])
+        got = [(t["revision"], t.get("available_time"), t.get("ingested_at"),
+                t["rejection_reason"]) for t in bundle["candidate_trace"]]
+        want_tree = exp["trace"]
+        mark_tree(want_tree, "trace")
+        want = [(t["revision"], t.get("available_time"), t.get("ingested_at"),
+                 t["reason"]) for t in want_tree]
         add("g006.trace", got == want, f"{got}")
 
     elif gid == "P14E-G-008":
         bundle, _, _ = build_bundle(inp["records"], q)
-        add("g008.valid_fields",
-            set(bundle["evidence"][0]) == set(EVIDENCE_FIELDS) | {"evidence_id",
-                                                                  "selection_reason"})
-        for defect in inp["defective_records"]:
-            record = dict(defect["record"])
-            record["raw_payload"] = record.get("raw_payload", {"v": 1.0})
-            base = RawIngestRecord(**record)
-            metadata = {"adapter_version": base.adapter_version,
-                        "raw_payload_hash": base.raw_payload_hash,
-                        "ingestion_id": base.ingestion_id}
-            removed = defect["remove_metadata"]
-            metadata.pop(removed)
-            info = RawInformationRecord(
-                source=record["source"], source_id=record["source_id"],
-                source_category=record["source_category"],
-                entity_id=record["entity_id"], entity_type=record["entity_type"],
-                event_time=record["event_time"],
-                available_time=record["available_time"],
-                revision=record["revision"], ingested_at=record["ingested_at"],
-                value=1.0, metadata=metadata)
-            try:
-                ev = {"source": info.source, "source_id": info.source_id,
-                      "revision": info.revision,
-                      "event_time": info.event_time,
-                      "available_time": info.available_time,
-                      "adapter_version": info.metadata.get("adapter_version"),
-                      "raw_payload_hash": info.metadata.get("raw_payload_hash"),
-                      "ingestion_id": info.metadata.get("ingestion_id"),
-                      "entity_id": info.entity_id,
-                      "information_type": info.entity_type,
-                      "ingested_at": info.ingested_at}
-                check_provenance_complete(ev)
-                add(f"g008.{removed}", False, "no raise")
-            except ValueError as exc:
-                add(f"g008.{removed}", removed in str(exc), str(exc)[:80])
-        add("g008.no_silent_default", exp["no_silent_default"])
+        add("g008.valid_field_count",
+            len(EVIDENCE_FIELDS) == ev("valid_evidence_field_count"),
+            f"{len(EVIDENCE_FIELDS)}")
+        add("g008.valid_fields_present",
+            set(bundle["evidence"][0]) == set(EVIDENCE_FIELDS)
+            | {"evidence_id", "selection_reason"})
+        mark_tree(exp["defects"], "defects")
+        raised_all = True
+        details = []
+        with tempfile.TemporaryDirectory() as tmp:
+            for defect in inp["defective_records"]:
+                record = dict(defect["record"])
+                record["raw_payload"] = record.get("raw_payload", {"v": 1.0})
+                base = RawIngestRecord(**record)
+                metadata = {"adapter_version": base.adapter_version,
+                            "raw_payload_hash": base.raw_payload_hash,
+                            "ingestion_id": base.ingestion_id}
+                removed = defect["remove_metadata"]
+                metadata.pop(removed)
+                info = RawInformationRecord(
+                    source=record["source"], source_id=record["source_id"],
+                    source_category=record["source_category"],
+                    entity_id=record["entity_id"],
+                    entity_type=record["entity_type"],
+                    event_time=record["event_time"],
+                    available_time=record["available_time"],
+                    revision=record["revision"],
+                    ingested_at=record["ingested_at"], value=1.0,
+                    metadata=metadata)
+                try:
+                    ev_partial = {
+                        "source": info.source, "source_id": info.source_id,
+                        "revision": info.revision,
+                        "event_time": info.event_time,
+                        "available_time": info.available_time,
+                        "adapter_version": info.metadata.get("adapter_version"),
+                        "raw_payload_hash": info.metadata.get("raw_payload_hash"),
+                        "ingestion_id": info.metadata.get("ingestion_id"),
+                        "entity_id": info.entity_id,
+                        "information_type": info.entity_type,
+                        "ingested_at": info.ingested_at}
+                    check_provenance_complete(ev_partial)
+                    raised_all = False
+                    details.append(f"{removed}: no raise")
+                except ValueError as exc:
+                    if removed not in str(exc):
+                        raised_all = False
+                        details.append(f"{removed}: {str(exc)[:60]}")
+            add("g008.raises", raised_all == ev("raises") and raised_all,
+                "; ".join(details))
+            add("g008.no_bundle",
+                (not (Path(tmp) / "evidence_bundles.jsonl").exists())
+                == ev("no_bundle"))
+        add("g008.no_silent_default", ev("no_silent_default") is True)
 
     elif gid == "P14E-G-009":
         records = inp["records"]
         orders = [records, list(reversed(records)),
                   records[2:] + records[:2]]
-        bundles = [build_bundle(order, q)[0] for order in orders]
-        ids = {b["bundle_id"] for b in bundles}
-        add("g009.bundle_ids_equal", len(ids) == 1, f"{ids}")
-        texts = {canonical_json(b) for b in bundles}
-        add("g009.byte_identical", len(texts) == 1)
-        add("g009.no_runtime_fields",
-            not any(tok in bundles[0]["bundle_id"] or
-                    tok in canonical_json(bundles[0])
-                    for tok in exp["no_runtime_fields"]))
+        add("g009.input_orders", len(orders) == ev("input_orders"))
+        bundles = []
         with tempfile.TemporaryDirectory() as tmp:
+            raw_rows = None
+            for order in orders:
+                bundle, result, _, store = build_bundle_and_result(
+                    order, q, use_raw_store=True, base_dir=Path(tmp))
+                bundles.append(bundle)
+                raw_rows = load_raw_rows(store.path)
+            ids = {b["bundle_id"] for b in bundles}
+            add("g009.bundle_ids_equal",
+                (len(ids) == 1) == ev("bundle_ids_equal"), f"{ids}")
+            texts = {canonical_json(b) for b in bundles}
+            add("g009.byte_identical",
+                (len(texts) == 1) == ev("byte_identical"))
+            mark_tree(exp["no_runtime_fields"], "no_runtime_fields")
+            add("g009.no_runtime_fields",
+                not any(tok in canonical_json(bundles[0])
+                        for tok in exp["no_runtime_fields"]))
             path = Path(tmp) / "evidence_bundles.jsonl"
             first = persist_bundle(path, bundles[0])
             second = persist_bundle(path, bundles[0])
             add("g009.duplicate_append_rejected",
-                first is True and second is False)
-            reloaded = reload_verify(path)
+                (first is True and second is False)
+                == ev("duplicate_append_rejected"))
+            reloaded = reload_verify(path, raw_rows=raw_rows)
             add("g009.reload_bundle_id_equal",
-                len(reloaded) == 1
-                and reloaded[0]["bundle_id"] == bundles[0]["bundle_id"])
+                (len(reloaded) == 1
+                 and reloaded[0]["bundle_id"] == bundles[0]["bundle_id"])
+                == ev("reload_bundle_id_equal"))
+            # negative: tamper one evidence ingestion_id and RECOMPUTE the
+            # bundle hash, so the P14-B authority check is what catches it
+            tampered = json.loads(json.dumps(bundles[0]))
+            old_id = tampered["evidence"][0]["ingestion_id"]
+            tampered["evidence"][0]["ingestion_id"] = (
+                ("0" if old_id[0] != "0" else "1") + old_id[1:])
+            tampered.pop("bundle_id")
+            tampered["bundle_id"] = _sha(canonical_json(tampered))
+            tpath = Path(tmp) / "tampered.jsonl"
+            tpath.write_text(canonical_json(tampered) + "\n", encoding="utf-8")
+            tamper_raised = False
+            try:
+                reload_verify(tpath, raw_rows=raw_rows)
+            except ValueError:
+                tamper_raised = True
+            add("g009.tampered_reload_raises",
+                tamper_raised == ev("tampered_reload_raises"))
         from astock_v2.information.research_query import run_query as rq
         info = [project(r) for r in build_records(records)]
         r1 = rq(info, ResearchQuery(**q))
         r2 = rq(list(reversed(info)), ResearchQuery(**q))
-        add("g009.result_id_stable", r1["result_id"] == r2["result_id"])
+        add("g009.result_id_stable",
+            (r1["result_id"] == r2["result_id"]) == ev("result_id_stable"))
 
     elif gid == "P14E-G-010":
         bundle, _, _ = build_bundle(inp["records"], q)
         add("g010.evidence_count",
-            bundle["counts"]["evidence"] == exp["evidence_count"],
+            bundle["counts"]["evidence"] == ev("evidence_count"),
             f"{bundle['counts']}")
         ids = [e["evidence_id"] for e in bundle["evidence"]]
-        add("g010.unique_evidence_ids", len(ids) == len(set(ids)))
+        add("g010.unique_evidence_ids",
+            (len(ids) == len(set(ids))) == ev("unique_evidence_ids"))
         keys = [(t["source"], t["source_id"], t["revision"],
                  t["available_time"], t["raw_payload_hash"])
                 for t in bundle["candidate_trace"]]
-        add("g010.trace_unique", len(keys) == len(set(keys)))
+        add("g010.trace_unique",
+            (len(keys) == len(set(keys))) == ev("trace_entries_unique"))
+        dup_rev = next(e["revision"] for e in bundle["evidence"]
+                       if e["source_id"] == "q-dup")
+        add("g010.duplicate_not_new_revision",
+            (dup_rev == 0) == ev("duplicate_not_new_revision"))
 
     elif gid == "P14E-G-011":
         records = build_records(inp["records"])
         with tempfile.TemporaryDirectory() as tmp:
             _, outcomes = ingest_into_store(records, Path(tmp))
+            mark_tree(exp["put_outcomes"], "put_outcomes")
             add("g011.put_outcomes", outcomes == exp["put_outcomes"],
                 f"{outcomes}")
         raised = False
         detail = ""
-        try:
-            build_bundle(inp["records"], q)
-        except ValueError as exc:
-            raised = True
-            detail = str(exc)
-        add("g011.bundle_raises", raised and exp["bundle_raises"], detail)
-        add("g011.error_mentions_lineage", "q-mut" in detail, detail[:80])
-        add("g011.p14b_authority", exp["p14b_authority_not_reimplemented"])
+        with tempfile.TemporaryDirectory() as tmp:
+            try:
+                build_bundle(inp["records"], q, base_dir=Path(tmp))
+            except ValueError as exc:
+                raised = True
+                detail = str(exc)
+            add("g011.bundle_raises",
+                (raised and exp["bundle_raises"]) == ev("bundle_raises"),
+                detail)
+            add("g011.no_bundle",
+                (not (Path(tmp) / "evidence_bundles.jsonl").exists())
+                == ev("no_bundle"))
+        add("g011.error_mentions_lineage",
+            ("q-mut" in detail) == ev("error_mentions_lineage"), detail[:80])
+        add("g011.p14b_authority",
+            ev("p14b_authority_not_reimplemented") is True)
 
     elif gid == "P14E-G-012":
         raised, detail = False, ""
@@ -569,14 +781,15 @@ def check_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
         except ValueError as exc:
             raised = True
             detail = str(exc)
-        add("g012.raises", raised and exp["raises"])
-        add("g012.match", exp["match"] in detail, detail[:60])
-        add("g012.synthetic_only", exp["synthetic_date_only"])
+        add("g012.raises", (raised and exp["raises"]) == ev("raises"))
+        add("g012.match", ev("match") in detail, detail[:60])
+        add("g012.synthetic_only", ev("synthetic_date_only") is True)
 
+    # consumption closure: every declared expected leaf must be consumed
+    unconsumed = sorted(set(leaves) - consumed)
+    add(f"{gid}.expected_consumed", not unconsumed, f"{unconsumed}")
     return out
 
-
-# ------------------------------------------------------------- global gates
 
 def load_fixtures() -> list[dict]:
     paths = sorted(FIXTURE_DIR.glob("G-*.json"))

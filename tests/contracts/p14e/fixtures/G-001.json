@@ -84,6 +84,7 @@
    "ingestion_id",
    "raw_payload_hash"
   ],
-  "reverse_trace_resolves_in_raw_store": true
+  "reverse_trace_resolves_in_raw_store": true,
+  "tampered_pair_unresolvable": true
  }
 }

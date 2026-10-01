@@ -78,6 +78,11 @@ def run_harness() -> dict:
     failures = [(n, d) for n, ok, d in engine if not ok]
     add("engine.all_checks_green", not failures,
         "; ".join(f"{n}: {d}" for n, d in failures[:5]))
+    consumption = [(n, ok) for n, ok, _ in engine
+                   if n.endswith("expected_consumed")]
+    add("expected_consumption",
+        len(consumption) == 12 and all(ok for _, ok in consumption),
+        f"{sum(ok for _, ok in consumption)}/12 fixtures fully consumed")
     add("engine.virgin_scan_clean",
         all(ok for n, ok, _ in core.check_virgin_scan()))
     add("engine.source_scan_clean",

@@ -76,6 +76,7 @@
    "generated_at",
    "uuid",
    "machine_path"
-  ]
+  ],
+  "tampered_reload_raises": true
  }
 }

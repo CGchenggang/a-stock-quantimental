@@ -110,6 +110,21 @@ def test_deterministic_double_run():
     assert all(v["passed"] for v in parsed["validation"])
 
 
+def test_expected_consumption_enforced():
+    """REPAIR-001 #4: every declared expected leaf must be consumed by an
+    assertion. A fixture with an unconsumed expected key must be flagged
+    by the engine (mechanically prevents declaration/acceptance-surface
+    drift)."""
+    fixture = json.loads(json.dumps(
+        next(f for f in FIXTURES if f["golden_id"] == "P14E-G-010")))
+    fixture["expected"]["bogus_unused_key"] = 1
+    results = core.check_fixture(fixture)
+    consumption = [r for r in results if r[0].endswith("expected_consumed")]
+    assert len(consumption) == 1
+    assert consumption[0][1] is False
+    assert "bogus_unused_key" in consumption[0][2]
+
+
 def test_all_checks_green():
     failures = [(n, d) for n, ok, d in core.run_all_checks() if not ok]
     assert not failures, failures

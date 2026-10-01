@@ -143,7 +143,9 @@
     "ingested_at": "2026-03-07T17:05:00+08:00",
     "reason": "REJECTED_CANONICAL_TIEBREAK"
    }
-  ],
-  "case_c_note": "rev4 pair: same revision, same available_time, same payload (same raw_payload_hash, not a mutation), differing only in ingested_at -> smallest canonical_json (earlier ingested_at) wins; insertion-order invariant"
- }
+  ]
+ },
+ "notes": [
+  "rev4 pair: same revision, same available_time, same payload (same raw_payload_hash, not a mutation), differing only in ingested_at -> smallest canonical_json (earlier ingested_at) wins; insertion-order invariant"
+ ]
 }
