@@ -9,6 +9,11 @@
 > v1.0: P14-E-004 初版——将已独立接受的 P14-E Contract v1.1 + Matrix v2
 >       (FROZEN) + Golden Design + Harness/Golden (REPAIR-001) 语义冻结为
 >       可实现、可机械验收的生产实现契约。
+> v1.1: P14-E-004-REPAIR-001——reverse-trace 错误分类由误写的"五类"统一为
+>       实际冻结的**四类**（§11：NOT_FOUND / AMBIGUOUS / IDENTITY_MISMATCH /
+>       RAW_RECORD_CORRUPTED）；hash mismatch 在权威 RawStore 状态下与
+>       NOT_FOUND 不可区分（同一检测条件与处理语义），不构成第五类。
+>       语义范围无其他变化；待独立验收。
 >
 > Contract SHA-256（本文件冻结后计算）：
 > 见 Acceptance Matrix 头部记录。
@@ -189,7 +194,7 @@ hash mismatch 表现为 NOT_FOUND（(ingestion_id, hash) 对无匹配行）；
 identity mismatch 在唯一行匹配但字段不等时触发。
 
 兼容性注记 N3：已接受的 Golden 引擎仅断言 reverse trace "raise"（不分类）；
-本节将其细化为五类错误——这是细化而非语义变更，Golden 的既有断言
+本节将其细化为四类错误——这是细化而非语义变更，Golden 的既有断言
 （任何不合法情形 raise）在细分类下依然全部成立。
 
 ## 12. Tamper / Mutation Matrix（P14E-P-015）
@@ -227,7 +232,7 @@ UUID / random / machine path / 环境相关顺序。外部实时行为（如远�
 
 ## 15. Contract Versioning（P14E-P-020）
 
-本契约版本 `P14-E Production Contract v1.0`；schema_version 字段
+本契约版本 `P14-E Production Contract v1.1`；schema_version 字段
 `p14e-evidence-bundle-1`。冻结后：文件内容变更（含任何字符）→ 新版本号 +
 新 SHA-256 + 独立验收；不得以"同一契约"名义变更语义。bundle 的
 `schema_version` 与本契约版本绑定。
@@ -263,7 +268,7 @@ UUID / random / machine path / 环境相关顺序。外部实时行为（如远�
 - **P14E-P-011**: canonical serialization 规范冻结（§4）。
 - **P14E-P-012**: bundle_id 确定性；同逻辑输入同 ID；重复 evidence 折叠。
 - **P14E-P-013**: 持久化语义冻结（§10：append-only/幂等/reload 双重校验）。
-- **P14E-P-014**: reverse trace API 与五类错误分类冻结（§11）。
+- **P14E-P-014**: reverse trace API 与四类错误分类冻结（§11）。
 - **P14E-P-015**: tamper Cases A-F 检测矩阵冻结（§12）。
 - **P14E-P-016**: missing/failure 状态的 bundle 语义冻结（§13）；枚举不合并。
 - **P14E-P-017**: provenance 失败整体 fail-fast；无降级 bundle。

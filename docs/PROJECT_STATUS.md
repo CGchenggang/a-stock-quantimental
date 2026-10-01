@@ -1551,7 +1551,7 @@ Last independently updated: 2026-10-01.
 
 Docs-only gate: the accepted P14-E semantics frozen into an implementable production blueprint. **No src/**, no data/, no tests/ changes; P14-E-003 Harness/Golden untouched (semantic acceptance authority).
 
-- `docs/contracts/P14-E-PRODUCTION-DESIGN-CONTRACT.md` (STATUS: DRAFT, `P14-E Production Contract v1.0`, SHA-256 `347261cb437e7dac473c489847af47c543881c4edcfc3d68ad2db83535d976ea`): module layout (evidence.py + evidence_store.py only; src file set pinned), identity classes (Evidence Identity 8 fields / Content / Provenance / Ingestion — P14-B `ingestion_id` formula verbatim), ingested_at four-dimension semantics (audit-only for identity; DUPLICATE -> no fork -> bundle_id unchanged because the rejected attempt never enters the stored record set), PIT inheritance, selection chain + frozen enums, candidate-trace leak prohibition (four-field exclusion; knowing existence != leaking content), mapping_key 1:1 closure, bundle model with field-participation table, canonical serialization spec, persistence (evidence_bundles.jsonl append-only/idempotent/reload with P14-B authority verification), reverse-trace API with five-class error taxonomy (refines Golden's raise-only assertions — compatibility note N3), tamper matrix Cases A-F, missing/failure state semantics, reproducibility boundary, contract versioning/freeze rule, anti-cheat, infrastructure-only scope.
+- `docs/contracts/P14-E-PRODUCTION-DESIGN-CONTRACT.md` (STATUS: DRAFT, `P14-E Production Contract v1.0`, SHA-256 `347261cb437e7dac473c489847af47c543881c4edcfc3d68ad2db83535d976ea`): module layout (evidence.py + evidence_store.py only; src file set pinned), identity classes (Evidence Identity 8 fields / Content / Provenance / Ingestion — P14-B `ingestion_id` formula verbatim), ingested_at four-dimension semantics (audit-only for identity; DUPLICATE -> no fork -> bundle_id unchanged because the rejected attempt never enters the stored record set), PIT inheritance, selection chain + frozen enums, candidate-trace leak prohibition (four-field exclusion; knowing existence != leaking content), mapping_key 1:1 closure, bundle model with field-participation table, canonical serialization spec, persistence (evidence_bundles.jsonl append-only/idempotent/reload with P14-B authority verification), reverse-trace API with four-class error taxonomy (refines Golden's raise-only assertions — compatibility note N3; REPAIR-001 unified the miscounted "five-class" to the actual four frozen classes), tamper matrix Cases A-F, missing/failure state semantics, reproducibility boundary, contract versioning/freeze rule, anti-cheat, infrastructure-only scope.
 - `docs/contracts/P14-E-PRODUCTION-ACCEPTANCE-MATRIX.md` (STATUS: DRAFT): 23 rows (P14E-P-M-001..023), 8 columns each, closure 23/23, Golden/Test binding to P14-E-003 fixtures or future production Harness checks.
 
 Dependency audit executed against actual implementations: ingestion_id formula MATCH, PIT boundary MATCH, exclusion field set MATCH, evidence_id formula consistent with Golden engine, selection chain frozen, persistence/duplicate/adapter_version semantics compatible. Compatibility notes N1 (P14-B DUPLICATE collapses same-key same-payload candidates at storage), N2 (canonical tiebreak reachable only across merged record sets), N3 (reverse-trace taxonomy refinement) frozen into the contract. **DEPENDENCY_CONTRACT_CONFLICT: NONE.**
@@ -1610,3 +1610,19 @@ This is a contract/matrix semantic closure defect, not merely wording.
 **Do not proceed to P14-E production implementation until the two blocking findings are independently rechecked and accepted.**
 
 Last independently updated: 2026-10-01.
+
+## P14-E-004-REPAIR-001 — Exact-head CI + Reverse-Trace Taxonomy Repair — 2026-10-01
+
+Narrow repair of the two P14-E-004 blocking findings (`c5da132`). Docs-only; no src/**, data/, tests/ changes; P14-E-003 accepted assets untouched.
+
+### REPAIR-001-B — reverse-trace taxonomy (Decision: FOUR-CLASS)
+
+Evidence survey: the accepted P14-E-003 Golden engine raises only two shapes (unresolved / identity mismatch); Production Contract §11 defines exactly four named classes; hash mismatch manifests as REVERSE_TRACE_NOT_FOUND because in the authoritative RawStore state a wrong (ingestion_id, raw_payload_hash) pair is indistinguishable from a nonexistent row — same detection condition (zero matches on the pair lookup), same authoritative state, same fail-fast handling. A fifth class would be an artificial split; per the acceptance mandate the count was unified to the actual frozen taxonomy.
+
+Changes: `P14-E Production Contract` bumped to **v1.1** per its own versioning rule — revision history records the correction; N3 note and invariant P14E-P-014 now state **four-class**; Matrix row P14E-P-M-014 synced ("reverse trace 四类错误分类"). New contract SHA-256: `8619873053dd29736ebd7f61c4c88edf4e9406ae2adb71d45a4a5a5f738ef6ff`. Closure re-verified 23/23 (0 orphan/duplicate/undefined); P14E-P-014 ↔ P14E-P-M-014 fully consistent. Residual "五类" appears only inside the revision-history correction quote (audit history).
+
+### REPAIR-001-A — exact-head CI
+
+Final repaired HEAD pushed; workflow run on the exact HEAD verified with checkout SHA == final HEAD (coordinates in the completion report).
+
+Status: P14-E-004-REPAIR-001 COMPLETE — WAITING FOR INDEPENDENT ACCEPTANCE. P14-E Production Implementation = NOT AUTHORIZED; P14-F = NOT AUTHORIZED; P13-T = STOPPED / NOT EXECUTED; P13-U = PROTECTED.

@@ -23,7 +23,7 @@
 | P14E-P-M-011 | P14E-P-011 | canonical serialization 规范 | 同输入字节对照 | 与 Golden 引擎字节一致 | sort_keys/紧凑/unicode 不转义 | 序列化漂移 | Golden 引擎对照 |
 | P14E-P-M-012 | P14E-P-012 | bundle_id 确定性 + 重复折叠 | Golden G-009/G-010 同语义执行 | 跨序同 ID；无重复 evidence | 确定性成立 | ID 漂移 | Golden G-009/G-010 |
 | P14E-P-M-013 | P14E-P-013 | 持久化：append-only/幂等/reload 双重校验 | Golden G-009 同语义执行（含篡改负例） | reload 通过 + 篡改被拒 | 语义一致 | reload 漂移或篡改通过 | Golden G-009 |
-| P14E-P-M-014 | P14E-P-014 | reverse trace 五类错误分类 | 负例矩阵（未找到/多匹配/身份不等/损坏行） | 各类独立触发对应错误 | 分类精确 | 全部归为 NOT_FOUND | 生产 Harness 负例 |
+| P14E-P-M-014 | P14E-P-014 | reverse trace 四类错误分类 | 负例矩阵（未找到/多匹配/身份不等/损坏行） | 各类独立触发对应错误 | 分类精确 | 全部归为 NOT_FOUND | 生产 Harness 负例 |
 | P14E-P-M-015 | P14E-P-015 | tamper Cases A-F 检测矩阵 | 六篡改场景逐一执行 | 全部检出 | 检出且 fail-fast | 任一未检出 | 生产 Harness 篡改矩阵 |
 | P14E-P-M-016 | P14E-P-016 | missing/failure 状态语义 | Golden G-003/G-008 同语义执行 | 空结果合法；fail-fast 场景一致 | 状态不合并 | 枚举合并/降级 bundle | Golden G-003/G-008 |
 | P14E-P-M-017 | P14E-P-017 | provenance 失败整体 fail-fast | Golden G-008 同语义执行 | raise 且无持久化 | 无降级 bundle | 部分 bundle 产出 | Golden G-008 |
