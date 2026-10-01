@@ -1448,26 +1448,51 @@ Last independently updated: 2026-10-01.
 
 ## P14-E-003 — Harness + Golden Test Implementation — 2026-10-01
 
-The frozen P14-E Contract + Acceptance Matrix (FROZEN) + Golden Design converted into an executable Harness + Golden layer. **No P14-E production runtime was created** — `src/` file set is pinned (mechanically asserted) and no evidence/bundle/provenance runtime module exists.
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E production implementation or P14-F.**
 
-### Delivered
+Independently inspected actual GitHub main HEAD `8b8f2c182f9f6bc95628a558159f3fed49aa07ce` against the independently accepted P14-E-002-REPAIR-001 baseline `13fcd47267c479ff62ecdac554daf7b04005eabe`.
 
-- `tests/contracts/p14e/fixtures/G-001..G-012.json` — frozen fixtures with hand-written expected values (synthetic dates only: research-zone 2026-03 or 2099-01-01; real virgin window [2026-09-23, 2028-01-01) mechanically excluded).
-- `tests/contracts/p14e/golden/core.py` — the standard-answer engine: evidence identity per Contract §4 (evidence_id over the 8 Identity fields; ingested_at Audit-only), §7.1 bundle assembly from P14-D `run_query` + frozen §6 selection chain via P14-A `visible_revisions` semantics, P14-B `RawStore` authority replay (DUPLICATE / RAW_MUTATION_DETECTED), mutation fail-fast (P14E-012), provenance-completeness fail-fast (P14E-011), durable JSONL persistence with idempotent append + reload verification (P14E-013), determinism, source-scan / file-pin / anti-cheat scans (P14E-016), virgin scan (P14E-015), closure 17/17 (contract ↔ matrix ↔ goldens).
-- `tests/contracts/p14e/test_p14e_contract.py` / `test_p14e_matrix.py` / `test_p14e_golden.py` — 34 pytest cases.
-- `scripts/audit_p14e_contract.py` — machine-readable audit (`phase/status/contract_ids/matrix_ids/golden_ids/closures/p13_t/p13_u/production_implementation`), exit-code gated.
-- Workflow: added "Contract Harness audit (P14-E)" step.
+### Positive findings
 
-### Validation (all executed)
+- Scope is clean: one implementation commit from the accepted baseline; changes are confined to P14-E contract/Harness/Golden test infrastructure, PROJECT_STATUS, and one CI audit step.
+- No P14-E production Evidence/Bundle/Provenance runtime was added under `src/`.
+- Contract closure is 17/17; Matrix closure is 17/17; Golden fixtures are G-001..G-012; declared Golden coverage is 17/17.
+- P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+- Exact-head GitHub Actions run `36846986105` is green. The pytest job `110319367000` checked out exact HEAD `8b8f2c182f9f6bc95628a558159f3fed49aa07ce`; P14-C audit PASS, P14-D audit PASS, P14-E audit PASS, P13-M PASS, and full pytest reported **529 passed / 0 failed / 2 warnings**.
 
-- `python scripts/audit_p14e_contract.py` → PASS, closures PASS/PASS, 0 failures
-- `python -m pytest -q -ra tests/contracts/p14e/` → **34 passed** (deterministic double-run of the canonical report byte-identical)
-- `python -m pytest -q -ra tests/contracts/p14c/` → 90 passed (P14-C regression intact)
-- `python -m pytest -q -ra tests/test_industry_relative.py` → 3 passed
-- `python -m pytest -q -ra` → **529 passed / 0 failed**, 2 warnings
+### Blocking findings
 
-### Status
+1. **P14E-017 reverse traceability is not actually verified.**
+   G-001 declares `reverse_trace_resolves_in_raw_store = true`, but the Harness implementation only checks that `ingestion_id` and `raw_payload_hash` strings occur somewhere in the raw JSONL text. It does not parse the authoritative P14-B raw row and verify that the pair belongs to the same canonical raw record identified by `source/source_id/revision`, nor does it verify the full bundle → evidence → raw-record chain. This is weaker than Contract §15 / Matrix P14E-M-017.
 
-P14-E: Contract ACCEPTED / Matrix ACCEPTED / Golden Design ACCEPTED / Harness IMPLEMENTED / Golden IMPLEMENTED / **Production Implementation NOT AUTHORIZED**. P13-T STOPPED / NOT EXECUTED; P13-U PROTECTED; P14-D PASS untouched.
+2. **P14E-013 durable reload verification is incomplete.**
+   `reload_verify()` recomputes `bundle_id`, but does not verify that each Evidence `(ingestion_id, raw_payload_hash)` resolves back to the P14-B `raw_records.jsonl` authority as required by Contract §12. G-009 therefore does not exercise the full reload-time P14-B provenance check; it only proves bundle self-integrity.
 
-P14-F not started. Awaiting independent acceptance.
+3. **P14E-006 one-to-one result/evidence mapping is under-tested.**
+   G-005 checks selected revisions, evidence-ID disjointness, bundle-ID difference, and result-ID linkage, but does not assert the Contract's required `result.records ↔ bundle.evidence` one-to-one mapping or the declared counts equality. The Matrix explicitly requires this.
+
+4. **Golden expected values are not consistently authoritative assertions.**
+   Several fixture fields are declared as expected invariants but the Harness substitutes hard-coded semantic assertions instead of comparing all declared expected structures. This creates a gap between the frozen Golden fixture and the executable acceptance surface; a change to an unused expected field could pass without detection.
+
+These are Harness/G​olden acceptance defects, not production-runtime defects. Do not add production Evidence/Provenance/Bundle code to fix them.
+
+### Required narrow repair
+
+**P14-E-003-REPAIR-001 — Reverse Trace + Reload Authority + Mapping Closure**
+
+Only repair the Harness/Golden acceptance layer.
+
+Required:
+1. Repair G-001/P14E-017 so the test parses P14-B `raw_records.jsonl` and mechanically resolves `bundle.evidence[*].ingestion_id + raw_payload_hash` to the same authoritative raw record, including source/source_id/revision consistency.
+2. Repair `reload_verify()` / G-009 so reload verifies both bundle hash integrity and every Evidence identity against the P14-B RawStore authority. A tampered or mismatched raw provenance pair must fail-fast.
+3. Repair G-005/P14E-006 to assert exact one-to-one mapping between P14-D `result.records` and bundle Evidence, including counts equality and stable identity correspondence.
+4. Audit every G-001..G-012 fixture's `expected` object. Every material expected field must be consumed by an assertion; remove only genuinely redundant fields, and do not silently leave declared expectations unused.
+5. Add negative tamper/reverse-trace cases where necessary so the Harness proves failure, not only success.
+6. Preserve all current semantic boundaries: no `src/**` production implementation; no P14-A/B/C/D semantic changes; no P13-T/U changes; no factor/alpha/policy/calibration/recommendation/portfolio/trading changes; no P14-F.
+7. Re-run P14-E audit, P14-E tests, P14-C regression, P13-M regression, and full pytest. Produce exact-final-HEAD GitHub Actions evidence with checkout SHA == final HEAD.
+
+Do not change the frozen P14-E Contract or Matrix semantics unless an actual dependency contradiction is demonstrated; if one is found, STOP and report `DEPENDENCY_CONTRACT_CONFLICT`.
+
+P14-E production implementation remains **NOT AUTHORIZED**.
+
+Last independently updated: 2026-10-01.
