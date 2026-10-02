@@ -36,7 +36,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Current Commit
 
-`2c0a8d93faab7ae17d5d8f78509c36949b0b4205` — P14-E-005 Implementation Contract Draft (CONTRACT DRAFT, not accepted; awaiting independent acceptance).
+`70634cbe9e8086d325c2cff7efd377461d3d746a` — P14-E-005-REVIEW-001 repaired Contract Draft (CONTRACT DRAFT, not accepted; awaiting independent acceptance).
 
 Latest independently accepted implementation gate: P14-E-004 Production Implementation Contract at `a72502f98a1da6aaa39ce8e048b180a0e074b466` (acceptance record commit `144b38f6f5ab11e4000ecabf2512aa0a1e422bb2`). Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118` (P14-D/P14-E-004 are design/query-infrastructure gates; no production alpha runtime exists).
 
@@ -1732,3 +1732,38 @@ Delivered with this push: workflow run on the final repaired HEAD with checkout 
 - P14-C / P14-D / P14-E audits + P13-M: PASS (CI).
 
 P14-E-005 remains CONTRACT DRAFT — WAITING FOR INDEPENDENT ACCEPTANCE. P14-E-006 NOT AUTHORIZED; P14-E Production Implementation NOT AUTHORIZED; P14-F NOT AUTHORIZED; P13-T STOPPED / NOT EXECUTED; P13-U PROTECTED.
+
+
+## P14-E-005-REVIEW-001 — Independent Acceptance — 2026-10-02
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E-006.**
+
+Independently inspected actual GitHub main HEAD `70634cbe9e8086d325c2cff7efd377461d3d746a` against the P14-E-005-REVIEW-001 baseline `2c0a8d93faab7ae17d5d8f78509c36949b0b4205`.
+
+### Findings
+
+1. **P14-D authority alignment — PASS.** The Implementation Contract is v1.1. `create_bundle(query_result, authoritative_evidence_records)` is frozen; P14-D is explicitly the authoritative PIT query/version-selection layer; the old `create_bundle(records, query)` signature is absent from the Contract. Matrix rows P14E-I-M-003/M-004/M-022 are synchronized. Contract and Matrix closure are both 24/24.
+
+2. **Scope — PASS.** The exact one-commit diff contains only:
+   - `docs/PROJECT_STATUS.md`
+   - `docs/contracts/P14-E-IMPLEMENTATION-CONTRACT.md`
+   - `docs/contracts/P14-E-IMPLEMENTATION-ACCEPTANCE-MATRIX.md`
+   No `src/**`, `data/**`, tests, Golden/Harness, or upstream P14-A/B/C/D changes were introduced.
+
+3. **PROJECT_STATUS current phase — PASS after review repair.** The top-level phase is correctly P14-E-005 CONTRACT DRAFT / WAITING FOR INDEPENDENT ACCEPTANCE, and P14-E-004 remains PASS / INDEPENDENTLY ACCEPTED.
+
+4. **Blocking: exact-head GitHub Actions evidence is not independently retrievable.** The final HEAD `70634cbe9e8086d325c2cff7efd377461d3d746a` has no workflow run exposed by the available commit-run evidence, and its combined commit status is empty. The workflow definition does contain the required P14-C/P14-D/P14-E audits, P13-M regression, and full pytest steps, but a claimed local/embedded completion report cannot substitute for independently retrievable final-HEAD CI evidence. Therefore the required exact-head CI gate is not yet proven.
+
+5. **Blocking: Current Commit provenance was stale in the submitted status file.** The REVIEW-001 submission still identified `2c0a8d93...` as Current Commit even though the actual reviewed HEAD was `70634cbe...`. This acceptance record corrects that pointer; the final acceptance still requires CI evidence for the actual final HEAD.
+
+### Boundary
+
+- P14-E-005 remains CONTRACT DRAFT.
+- P14-E Production Implementation remains NOT AUTHORIZED.
+- P14-E-006 is NOT AUTHORIZED.
+- P14-F is NOT AUTHORIZED.
+- P13-T remains STOPPED / NOT EXECUTED.
+- P13-U remains PROTECTED.
+- No factor / alpha / calibration / policy / recommendation / portfolio / trading changes are authorized.
+
+**Required repair:** expose and independently verify a successful GitHub Actions run for the exact final P14-E-005 HEAD, including checkout SHA equality, P14-C/P14-D/P14-E audits, P13-M, and full pytest. Then resubmit for independent acceptance.
