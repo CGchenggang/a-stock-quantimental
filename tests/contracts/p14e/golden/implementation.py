@@ -62,7 +62,9 @@ class AuditLog:
     def append(self, record: dict):
         if self._fail_writes:
             raise AuditWriteFailure("audit sink unavailable")
-        self.records.append(dict(record))
+        entry = dict(record)
+        entry["sequence_id"] = len(self.records) + 1
+        self.records.append(entry)
         return len(self.records)
 
 
@@ -237,36 +239,82 @@ def create_bundle(query_result: dict, authoritative_evidence_records):
         core.check_provenance_complete(ev)
         evidence_by_key[(r.source, r.source_id, r.revision, r.ingested_at)] = ev
 
-    # consume the already-resolved result — no re-query
+    # consume the already-resolved result — no re-query, no re-selection
+    # P14-D has already resolved PIT visibility and version selection;
+    # every result.records entry IS the selected winner (P14E consumes it
+    # as-is). Selection reason/trace come from result records directly.
     selected_keys = {
         (r["source"], r["source_record_id"], r["revision"], r["ingested_at"])
         for r in query_result["records"]}
     result_id = query_result["result_id"]
 
     evidence: list[dict] = []
-    trace: list[dict] = []
     lineages: dict[tuple, list] = {}
     for r in records:
         lineages.setdefault((r.source, r.source_id), []).append(r)
-    for key in sorted(lineages):
-        cands = lineages[key]
-        admissible = [r for r in cands
-                      if core.is_admissible(core.project(r), query_result["query"]["as_of"])
-                      is True]
-        winner_ev = next((ev for k, ev in evidence_by_key.items()
-                          if (k[0], k[1]) == key
-                          and (k[0], k[1], k[2], k[3]) in selected_keys), None)
-        if winner_ev is None:
-            continue  # lineage fully excluded; represented by exclusions
-        winner_rec = next(r for r in admissible
-                          if (r.source, r.source_id, r.revision, r.ingested_at)
-                          == (winner_ev["source"], winner_ev["source_id"],
-                              winner_ev["revision"], winner_ev["ingested_at"]))
-        reason, cand_trace = core.select_lineage(admissible, winner_rec)
-        e = dict(winner_ev)
-        e["selection_reason"] = reason
+
+    # Evidence: exactly the records P14-D selected (1:1 with result.records).
+    # No is_admissible, no select_lineage — P14-D already decided.
+    evidence = []
+    for r in query_result["records"]:
+        k = (r["source"], r["source_record_id"], r["revision"],
+             r["ingested_at"])
+        ev = evidence_by_key.get(k)
+        if ev is None:
+            raise ValueError(
+                f"identity_failure: P14-D selected record {k} not found in "
+                f"authoritative records")
+        e = dict(ev)
+        # selection reason derived purely from P14-D's already-resolved
+        # state (which revision won vs which were visible-but-not-selected)
+        lineage = lineages.get((r["source"], r["source_record_id"]), [])
+        same_rev = [c for c in lineage
+                    if c.revision == r["revision"]
+                    and c.ingested_at != r["ingested_at"]]
+        if not same_rev and len(lineage) == 1:
+            e["selection_reason"] = "SELECTED_HIGHEST_REVISION"
+        elif same_rev and all(
+                c.ingested_at > r["ingested_at"] for c in lineage
+                if c.revision == r["revision"] and c is not winner_rec(r)):
+            e["selection_reason"] = "SELECTED_EARLIEST_ON_REVISION_TIE"
+        else:
+            e["selection_reason"] = "SELECTED_CANONICAL_TIEBREAK"
         evidence.append(e)
-        trace.extend(cand_trace)
+
+    # candidate trace: P14-E records which authoritative records P14-D did
+    # NOT select, keyed by lineage — no re-selection, just bookkeeping of
+    # what P14-D already resolved
+    selected_lineage_keys = {(r["source"], r["source_record_id"])
+                             for r in query_result["records"]}
+    trace: list[dict] = []
+    for key in sorted(lineages):
+        if key not in selected_lineage_keys:
+            continue  # lineage fully excluded; represented by exclusions
+        for r in sorted(lineages[key],
+                        key=lambda c: (c.revision, c.available_time,
+                                       c.canonical_json())):  # type: ignore[name-defined]
+            k4 = (r.source, r.source_id, r.revision, r.ingested_at)
+            if k4 in selected_keys:
+                continue  # this is the winner
+            same_rev_higher = any(
+                o.revision > r.revision
+                for o in lineages[key]
+                if (o.source, o.source_id, o.ingested_at) in selected_keys
+                or True)  # P14-D already decided; we just record the fact
+            if any(o.revision > r.revision for o in lineages[key]):
+                reason = "REJECTED_LOWER_REVISION"
+            elif any(o.revision == r.revision and o.ingested_at > r.ingested_at
+                     for o in lineages[key]):
+                reason = "REJECTED_REVISION_TIE_NOT_EARLIEST"
+            else:
+                reason = "REJECTED_CANONICAL_TIEBREAK"
+            trace.append({"source": r.source, "source_id": r.source_id,
+                          "revision": r.revision,
+                          "available_time": r.available_time,
+                          "raw_payload_hash": r.raw_payload_hash,
+                          "ingested_at": r.ingested_at,
+                          "rejection_reason": reason})
+
     evidence.sort(key=lambda e: (e["source"], e["source_id"], e["revision"]))
     trace.sort(key=lambda t: (t["source"], t["source_id"], t["revision"],
                               t["available_time"], t["raw_payload_hash"]))
@@ -292,6 +340,11 @@ def create_bundle(query_result: dict, authoritative_evidence_records):
     }
     bundle["bundle_id"] = _sha(canonical_json(bundle))
     return bundle
+
+
+def winner_rec(r):
+    """Placeholder identity function for tie-break comparison context."""
+    return r
 
 
 def freeze_bundle(bundle: dict) -> dict:
@@ -440,10 +493,15 @@ def check_implementation_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
             machine.transition(pair[1])
         add("ig103.every_transition_audited",
             (len(audit.records) == len(legal)) == ev("every_transition_audited"))
-        append_only = all(audit.records[i]["seq"] <= audit.records[i + 1]["seq"]
-                          for i in range(len(audit.records) - 1)) \
-            if all("seq" in r for r in audit.records) else True
-        add("g103.append_only", append_only == ev("audit_records_append_only"))
+        seqs = [r["sequence_id"] for r in audit.records]
+        unique = len(seqs) == len(set(seqs))
+        strictly_increasing = all(seqs[i] < seqs[i + 1]
+                                  for i in range(len(seqs) - 1))
+        starts_from_one = seqs == list(range(1, len(seqs) + 1))
+        append_only = unique and strictly_increasing and starts_from_one
+        add("g103.append_only",
+            append_only == ev("audit_records_append_only"),
+            f"seqs={seqs} unique={unique} strict={strictly_increasing}")
         audit_fail = AuditLog(fail_writes=True)
         failed_migration = False
         try:
@@ -501,17 +559,22 @@ def check_implementation_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
             add("ig104.rawstore_write_rejected",
                 outcome == "RAW_MUTATION_DETECTED" and before == after
                 and ev("rawstore_write_canonical_unchanged") is True)
-        # 3. History rebuild rejection: stripped result → fail-fast
+        # 3. History rebuild rejection: measure real before/after state
+        #    Historical state = the authoritative record set itself.
+        before_state = sorted(r.as_dict().items() for r in records)
         rebuild_rejected = False
         try:
             create_bundle(stripped, records)
         except ValueError:
             rebuild_rejected = True
+        after_state = sorted(r.as_dict().items() for r in records)
+        state_unchanged = before_state == after_state
         add("ig104.history_rebuild_attempt_outcome",
             ("FAIL_FAST" if rebuild_rejected else "NO_RAISE")
             == ev("history_rebuild_attempt_outcome"))
         add("ig104.history_state_unchanged",
-            ev("history_state_unchanged") is True)  # no state mutated
+            state_unchanged == ev("history_state_unchanged")
+            and state_unchanged, f"state_unchanged={state_unchanged}")
         add("ig104.history_rebuild_rejected",
             rebuild_rejected == ev("history_rebuild_rejected"))
         add("g104.failure_layer", ev("failure_layer") == "authority_violation")
