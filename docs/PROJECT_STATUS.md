@@ -1823,3 +1823,81 @@ Accepted artifact: P14-E-005 Contract Draft at `70634cbe9e8086d325c2cff7efd37746
 - No factor / alpha / calibration / policy / recommendation / portfolio / trading changes.
 
 **Next gate:** P14-E-006 Golden / Harness Design. Production implementation remains separately gated and must not begin during P14-E-006.
+
+## P14-E-006 — Independent Acceptance — 2026-10-02
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E production implementation.**
+
+Independently inspected actual GitHub main HEAD `7ec854b28f16e4d42c9df01f563c044440261b8f` against the independently accepted P14-E-005 Contract Draft at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
+
+### Verified positive
+
+- Exact-head GitHub Actions evidence exists: workflow run `37000539665`, head_sha exactly `7ec854b28f16e4d42c9df01f563c044440261b8f`.
+- pytest job `110816985050` and P13-M job `110816984930` both succeeded.
+- Checkout log explicitly checked out `7ec854b28f16e4d42c9df01f563c044440261b8f`.
+- P14-C, P14-D, P14-E audits, P13-M regression, and full pytest all succeeded; full pytest = **550 passed / 0 failed / 2 warnings**.
+- Diff from the P14-E-005 accepted baseline contains no `src/**` or `data/**` production changes; P14-E-005 Contract/Matrix themselves were not modified.
+- P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+
+### Blocking finding 1 — P14-D authority violation inside the P14-E-006 reference implementation
+
+The new `tests/contracts/p14e/golden/implementation.py` defines `create_bundle(query_result, authoritative_evidence_records)`, but internally calls `core.build_bundle_and_result(authoritative_evidence_records, query_result["query"])`.
+
+This re-executes the P14-D query from the raw query instead of consuming the already-resolved P14-D result. That directly violates the independently accepted P14-E-005 REVIEW-001 rule:
+
+> P14-D is authoritative; P14-E consumes the already-resolved P14-D query result and MUST NOT independently reconstruct/repeat/replace PIT visibility or version selection.
+
+The current IG fixtures do not catch this: the positive API fixture verifies only interface presence/validation and does not prove that `query_result["records"]`, `excluded`, and `counts` are authoritative inputs that are consumed without re-querying.
+
+### Blocking finding 2 — expected fields are declared but not semantically tested
+
+IG-104 declares:
+
+- `raw_query_rejected`
+- `rawstore_write_rejected`
+- `history_rebuild_rejected`
+
+but the harness only proves the stripped-result authority failure. The latter two are accepted merely because the fixture says `true`; no attempted RawStore write or history-rebuild operation is executed and rejected.
+
+Therefore "expected consumption" is syntactic consumption, not semantic verification.
+
+### Blocking finding 3 — audit append-only assertion is vacuous
+
+IG-103 declares `audit_records_append_only=true`, but `AuditLog` records contain no sequence field. The harness therefore falls through to a vacuous `True` condition instead of mechanically proving append-only ordering/immutability.
+
+### Blocking finding 4 — P14-E-006 Golden Design document is internally contradictory
+
+The document still begins with `STATUS: DESIGN ONLY` and says executable tests/Harness must not exist, while the same document now appends:
+
+`P14-E-006 — Implementation Golden Design (IG-101..IG-107)`
+
+with `STATUS: DESIGN COMPLETE / IMPLEMENTED IN HARNESS / AWAITING INDEPENDENT ACCEPTANCE`.
+
+The acceptance audit simultaneously requires the old `STATUS: DESIGN ONLY` token. This is governance/document-state drift and must be reconciled rather than hidden by a passing assertion.
+
+### Blocking finding 5 — PROJECT_STATUS Current Commit is stale
+
+The actual main HEAD is `7ec854b28f16e4d42c9df01f563c044440261b8f`, but the top-level `Current Commit` still points to the previously accepted P14-E-005 HEAD `70634cbe9e8086d325c2cff7efd377461d3d746a`.
+
+The phase header correctly identifies P14-E-006, but the provenance pointer was not updated for the submitted stage.
+
+### Required narrow repair
+
+**P14-E-006-REPAIR-001 — Authority Consumption + Expected Closure + Governance Sync**
+
+Repair only the above five findings.
+
+Required outcomes:
+
+1. Make the P14-E-006 reference/harness path consume an already-resolved P14-D result. It must not call `run_query` or reconstruct PIT/version selection from `query_result["query"]` inside the P14-E API path.
+2. Add a deterministic negative/positive fixture proving that mutating or contradicting the supplied resolved result cannot be silently replaced by a fresh P14-D query.
+3. Mechanically exercise the IG-104 RawStore-write and history-rebuild prohibitions; no fixture boolean may stand alone as proof.
+4. Give audit records a deterministic ordering/sequence invariant and test append-only behavior non-vacuously.
+5. Reconcile `P14-E-GOLDEN-DESIGN.md` status language with the actual stage: it may state Golden/Harness Design implemented and awaiting independent acceptance, but must no longer simultaneously claim that executable Harness files are prohibited. Keep P14-E-005 Contracts frozen.
+6. Update `PROJECT_STATUS.md` Current Commit to the actual final repaired HEAD and preserve P14-E-005 PASS / INDEPENDENTLY ACCEPTED.
+7. Re-run exact-head GitHub Actions after the repair and verify checkout SHA equality, P14-C/P14-D/P14-E audits, P13-M, and full pytest.
+8. Keep production implementation NOT AUTHORIZED.
+
+Forbidden: changes to `src/**`, `data/**`, P14-A/B/C/D semantics, accepted P14-E Contracts/Matrix, P13-T/U, factors, alpha, calibration, policy, recommendation, portfolio, trading, or P14-F.
+
+P14-E-006 remains **FAIL / REPAIR REQUIRED** until this repair is independently accepted.
