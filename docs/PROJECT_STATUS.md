@@ -1767,3 +1767,27 @@ Independently inspected actual GitHub main HEAD `70634cbe9e8086d325c2cff7efd3774
 - No factor / alpha / calibration / policy / recommendation / portfolio / trading changes are authorized.
 
 **Required repair:** expose and independently verify a successful GitHub Actions run for the exact final P14-E-005 HEAD, including checkout SHA equality, P14-C/P14-D/P14-E audits, P13-M, and full pytest. Then resubmit for independent acceptance.
+
+## P14-E-005-REPAIR-002 — Exact-head CI Evidence for the Contract Draft HEAD — 2026-10-02
+
+Response to the P14-E-005-REVIEW-001 verdict (`7803421`). The verdict's Finding 5 (stale Current Commit) was already corrected by the verdict commit itself; the remaining blocker was independently retrievable exact-head CI evidence for `70634cbe9e8086d325c2cff7efd377461d3d746a`.
+
+### Exact-head CI evidence for the P14-E-005 Contract Draft HEAD
+
+- Workflow `tests`, run `36989469157` (event: push, completed / **success**)
+  - https://github.com/CGchenggang/a-stock-quantimental/actions/runs/36989469157
+- head_sha == `70634cbe9e8086d325c2cff7efd377461d3d746a` (exact-head match **YES**)
+- pytest job: **success** — steps include P14-C / P14-D / P14-E Contract Harness audits, P13-M pooled industry regression, and the Full pytest suite
+- p13m job: **success** — "P13-M pooled industry regression" step green
+- Retrieval endpoints that return this run:
+  - `GET /repos/CGchenggang/a-stock-quantimental/actions/runs?head_sha=70634cbe9e8086d325c2cff7efd377461d3d746a`
+  - `GET /repos/CGchenggang/a-stock-quantimental/commits/70634cbe9e8086d325c2cff7efd377461d3d746a/check-runs`
+  - Note for re-verification: the run appears under workflow-runs and check-runs endpoints, not the legacy combined-status endpoint; the original review-time lookup coincided with the recurring GitHub connectivity outage windows observed from this workspace.
+
+### Current Commit
+
+Current Commit = `70634cbe9e8086d325c2cff7efd377461d3d746a` (set by the verdict commit `7803421`), i.e. Current Commit == the P14-E-005 Contract Draft final HEAD. The evidence-recording and resubmission commits of this repair round are documentation-only and carry no Contract/Matrix/runtime changes.
+
+Boundary: P13-T STOPPED / NOT EXECUTED; P13-U PROTECTED; P14-E Production Implementation NOT AUTHORIZED; P14-E-006 NOT AUTHORIZED; P14-F NOT AUTHORIZED.
+
+P14-E-005-REPAIR-002 COMPLETE — WAITING FOR INDEPENDENT ACCEPTANCE.
