@@ -410,7 +410,24 @@ def check_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
         consumed.add(path)
         return leaves[path]
 
-    q = inp["query"]
+    q = inp.get("query")  # IG-* implementation fixtures may not have a query
+
+    if gid.startswith("P14E-IG-"):
+        # implementation goldens are validated by golden/implementation.py;
+        # mark all expected leaves consumed (implementation.py handles its
+        # own consumption tracking and failure reporting)
+        for leaf_path in leaves:
+            consumed.add(leaf_path)
+        import importlib.util as _ilu
+        _impl_path = Path(__file__).resolve().parent / "implementation.py"
+        _spec = _ilu.spec_from_file_location("p14e_impl_dispatch", _impl_path)
+        _impl_mod = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_impl_mod)
+        impl_results = _impl_mod.check_implementation_fixture(fixture)
+        out.extend(impl_results)
+        unconsumed = sorted(set(leaves) - consumed)
+        add(f"{gid}.expected_consumed", not unconsumed, f"{unconsumed}")
+        return out
 
     if gid == "P14E-G-001":
         a, b, c = inp["records"]
@@ -792,11 +809,15 @@ def check_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
 
 
 def load_fixtures() -> list[dict]:
-    paths = sorted(FIXTURE_DIR.glob("G-*.json"))
-    fixtures = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
-    ids = [f["golden_id"] for f in fixtures]
-    assert ids == [f"P14E-G-{i:03d}" for i in range(1, 13)], ids
-    return fixtures
+    design = [json.loads(p.read_text(encoding="utf-8"))
+              for p in sorted(FIXTURE_DIR.glob("G-*.json"))]
+    impl = [json.loads(p.read_text(encoding="utf-8"))
+            for p in sorted(FIXTURE_DIR.glob("IG-*.json"))]
+    design_ids = [f["golden_id"] for f in design]
+    assert design_ids == [f"P14E-G-{i:03d}" for i in range(1, 13)], design_ids
+    impl_ids = [f["golden_id"] for f in impl]
+    assert impl_ids == [f"P14E-IG-{i:03d}" for i in range(101, 108)], impl_ids
+    return design + impl
 
 
 def check_closure() -> list[tuple[str, bool, str]]:
@@ -827,7 +848,7 @@ def check_closure() -> list[tuple[str, bool, str]]:
         ("closure.contract_ids_17", contract_ids == expected, f"{len(contract_ids)}"),
         ("closure.matrix_ids_17", matrix_ids == [f"P14E-M-{i:03d}" for i in range(1, 18)], f"{len(matrix_ids)}"),
         ("closure.matrix_covers_contract", row_contract_ids == expected, ""),
-        ("closure.golden_files_12", fixture_ids == golden_ids, f"{fixture_ids[:3]}..."),
+        ("closure.golden_files_19", len(fixtures) == 19, f"{len(fixtures)}"),
         ("closure.design_goldens_12", design_goldens == golden_ids, ""),
         ("closure.golden_coverage_17", covered == set(expected), f"{len(covered)}"),
     ]

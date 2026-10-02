@@ -1,0 +1,31 @@
+{
+ "golden_id": "P14E-IG-103",
+ "title": "audit layer: every migration audited, audit failure fails the migration",
+ "matrix_ids": [
+  "P14E-I-M-008",
+  "P14E-I-M-017"
+ ],
+ "input": {
+  "transitions": [
+   [
+    "CREATE",
+    "VALIDATE"
+   ],
+   [
+    "VALIDATE",
+    "FREEZE"
+   ]
+  ],
+  "audit_write_failure": true
+ },
+ "expected": {
+  "every_transition_audited": true,
+  "audit_records_append_only": true,
+  "audit_failure_fails_migration": true,
+  "runtime_fields_absent": [
+   "generated_at",
+   "uuid",
+   "machine_path"
+  ]
+ }
+}

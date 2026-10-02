@@ -261,3 +261,32 @@
   alpha。
 - **Expected Failure**: 任一禁词命中或决策面符号出现。
 - **Matrix 对应**: P14E-M-016（Golden Fixture 列 = N/A (source scan)）。
+
+---
+
+## P14-E-006 — Implementation Golden Design (IG-101..IG-107)
+
+STATUS: DESIGN COMPLETE / IMPLEMENTED IN HARNESS / AWAITING INDEPENDENT ACCEPTANCE
+
+### Coverage mapping (Implementation Contract P14E-I-001..024)
+
+| IG ID | P14E-I-M Binding | Scenario | Expected Failure |
+|-------|-----------------|----------|-----------------|
+| IG-101 | P14E-I-M-006, M-011, M-012 | Bundle lifecycle state machine: legal path + forbidden transitions | Non-allowed transition raises TransitionForbidden; audited |
+| IG-102 | P14E-I-M-007, M-016, M-018 | Reverse trace FOUR-CLASS routing: success + 4 error classes | Each error class independently triggered; no fifth class |
+| IG-103 | P14E-I-M-008, M-017 | Audit layer: every transition audited; audit failure fails migration | Audit sink failure → migration fail-fast |
+| IG-104 | P14E-I-M-003 | Authority violations: raw query rejected; no RawStore write; no history rebuild | Raw query → authority_violation |
+| IG-105 | P14E-I-M-015 | QUERY read-only: repeated queries leave bytes identical | State mutation on query |
+| IG-106 | P14E-I-M-020, M-021 | Six-layer failure model: distinct triggers + triples | Layer merged or triple missing |
+| IG-107 | P14E-I-M-009, M-022 | Six API interfaces + validation pos/neg | Missing interface or wrong failure layer |
+
+Remaining P14E-I-M rows covered by P14-E-003 fixtures (G-001..G-012) or
+mechanical scans: M-001/M-002 (source scan), M-004 (fixtures replay),
+M-005/M-010/M-013/M-014/M-019 (G-009 replay), M-023 (dependency audit).
+
+### Verification Results
+
+- All 7 IG fixtures: **PASS** (engine + pytest)
+- Implementation closure: **24/24** (0 uncovered)
+- Expected consumption: **19/19 unique fixtures fully consumed**
+- Full pytest: 550 passed / 0 failed / 2 warnings

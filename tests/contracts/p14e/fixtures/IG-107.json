@@ -1,0 +1,55 @@
+{
+ "golden_id": "P14E-IG-107",
+ "title": "validation rules and six API interfaces with failure-layer mapping",
+ "matrix_ids": [
+  "P14E-I-M-009",
+  "P14E-I-M-022"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-api",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:05:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ],
+  "interfaces": [
+   "create_bundle",
+   "freeze_bundle",
+   "query_evidence",
+   "reverse_trace",
+   "validate_bundle",
+   "store_bundle"
+  ],
+  "failure_layer_map": {
+   "create_bundle": "input_validation",
+   "freeze_bundle": "identity_failure",
+   "query_evidence": "storage_failure",
+   "reverse_trace": "trace_failure",
+   "validate_bundle": "input_validation",
+   "store_bundle": "storage_failure"
+  }
+ },
+ "expected": {
+  "interfaces_present": true,
+  "failure_layers_mapped": true,
+  "validation_positive": true,
+  "validation_negative": true
+ }
+}

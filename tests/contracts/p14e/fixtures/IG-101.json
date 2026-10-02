@@ -1,0 +1,65 @@
+{
+ "golden_id": "P14E-IG-101",
+ "title": "bundle lifecycle state machine: legal path and forbidden transitions",
+ "matrix_ids": [
+  "P14E-I-M-006",
+  "P14E-I-M-011",
+  "P14E-I-M-012"
+ ],
+ "input": {
+  "query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-lc",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:05:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ],
+  "legal_sequence": [
+   "VALIDATE",
+   "FREEZE",
+   "STORED"
+  ],
+  "forbidden_transitions": [
+   [
+    "CREATE",
+    "STORED"
+   ],
+   [
+    "CREATE",
+    "FREEZE"
+   ],
+   [
+    "VALIDATE",
+    "STORED"
+   ],
+   [
+    "STORED",
+    "VALIDATE"
+   ]
+  ]
+ },
+ "expected": {
+  "initial_state": "CREATE",
+  "legal_path_final_state": "STORED",
+  "legal_transitions_all_succeed": true,
+  "forbidden_rejected_count": 4,
+  "every_transition_audited": true,
+  "forbidden_also_audited": true
+ }
+}

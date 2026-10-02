@@ -24,7 +24,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "tests" / "contracts" / "p14e"))
 
-from golden import core  # noqa: E402
+from golden import core, implementation as impl  # noqa: E402
 
 CONTRACT = REPO_ROOT / "docs" / "contracts" / "P14-E-DESIGN-CONTRACT.md"
 MATRIX = REPO_ROOT / "docs" / "contracts" / "P14-E-ACCEPTANCE-MATRIX.md"
@@ -61,14 +61,22 @@ def run_harness() -> dict:
     # golden layer
     fixtures = core.load_fixtures()
     fixture_ids = [f["golden_id"].replace("P14E-", "") for f in fixtures]
-    add("golden.ids_12_dense",
-        fixture_ids == [f"G-{i:03d}" for i in range(1, 13)])
+    add("golden.ids_dense",
+        fixture_ids == [f"G-{i:03d}" for i in range(1, 13)]
+        + [f"IG-{i:03d}" for i in range(101, 108)])
     covered = set()
     for f in fixtures:
-        covered |= set(f["contract_ids"])
+        covered |= set(f.get("contract_ids", []))
     # P14E-016 is covered by the sanctioned mechanical source scan (M-016)
     covered |= {"P14E-016"}
     add("golden.contract_coverage_17", covered == set(expected), f"{len(covered)}")
+    impl_cov = impl.check_implementation_closure()
+    add("impl.closure", all(ok for _, ok, _ in impl_cov),
+        "; ".join(f"{n}: {d}" for n, ok, d in impl_cov if not ok))
+    impl_fails = [(f["golden_id"], n) for f in impl.load_implementation_fixtures()
+                  for n, ok, _ in impl.check_implementation_fixture(f) if not ok]
+    add("impl.golden_checks_green", not impl_fails,
+        "; ".join(f"{gid}: {n}" for gid, n in impl_fails[:5]))
     add("golden.design_sections",
         len(re.findall(r"^## G-\d{3} ", design, re.M)) == 12)
     add("golden.status_design_only", "STATUS: DESIGN ONLY" in design)
@@ -80,9 +88,11 @@ def run_harness() -> dict:
         "; ".join(f"{n}: {d}" for n, d in failures[:5]))
     consumption = [(n, ok) for n, ok, _ in engine
                    if n.endswith("expected_consumed")]
+    unique_ids = {n.split(".")[0] for n, _ in consumption}
     add("expected_consumption",
-        len(consumption) == 12 and all(ok for _, ok in consumption),
-        f"{sum(ok for _, ok in consumption)}/12 fixtures fully consumed")
+        len(unique_ids) == 19 and all(ok for _, ok in consumption),
+        f"{sum(ok for _, ok in consumption)}/{len(consumption)} checks, "
+        f"{len(unique_ids)} unique fixtures fully consumed")
     add("engine.virgin_scan_clean",
         all(ok for n, ok, _ in core.check_virgin_scan()))
     add("engine.source_scan_clean",

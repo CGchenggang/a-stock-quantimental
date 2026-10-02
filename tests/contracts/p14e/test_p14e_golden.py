@@ -35,15 +35,18 @@ def test_golden_standard_answer(fixture):
 
 
 def test_golden_ids_dense_and_cover_contracts():
-    fixtures = FIXTURES
-    assert [f["golden_id"] for f in fixtures] == \
+    design = [f for f in FIXTURES if f["golden_id"].startswith("P14E-G-")]
+    impl = [f for f in FIXTURES if f["golden_id"].startswith("P14E-IG-")]
+    assert [f["golden_id"] for f in design] == \
         [f"P14E-G-{i:03d}" for i in range(1, 13)]
+    assert [f["golden_id"] for f in impl] == \
+        [f"P14E-IG-{i:03d}" for i in range(101, 108)]
     covered = set()
-    for f in fixtures:
-        covered |= set(f["contract_ids"])
+    for f in FIXTURES:
+        covered |= set(f.get("contract_ids", []))
     # P14E-016 is covered by the sanctioned mechanical source scan
-    # (matrix M-016: N/A (source scan)), not by a fixture
     covered |= {"P14E-016"}
+    # IG fixtures bind to P14E-I-M-* rows, not design contract IDs
     assert covered == set(f"P14E-{i:03d}" for i in range(1, 18))
 
 
@@ -106,7 +109,7 @@ def test_deterministic_double_run():
     assert report1 == report2
     parsed = json.loads(report1)
     assert parsed["phase"] == "P14-E"
-    assert parsed["golden_ids"] == 12
+    assert parsed["golden_ids"] == 19
     assert all(v["passed"] for v in parsed["validation"])
 
 

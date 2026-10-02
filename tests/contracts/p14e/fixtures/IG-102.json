@@ -1,0 +1,92 @@
+{
+ "golden_id": "P14E-IG-102",
+ "title": "reverse trace routes exactly the frozen FOUR-CLASS taxonomy",
+ "matrix_ids": [
+  "P14E-I-M-007",
+  "P14E-I-M-016",
+  "P14E-I-M-018"
+ ],
+ "input": {
+  "evidence": {
+   "source": "cn_stock_quote",
+   "source_id": "q-rt",
+   "revision": 0,
+   "event_time": "2026-03-02T15:00:00+08:00",
+   "available_time": "2026-03-02T16:00:00+08:00",
+   "adapter_version": "fixture-adapter-v1",
+   "raw_payload_hash": "HASH_RT",
+   "ingestion_id": "ING_RT"
+  },
+  "raw_rows_scenarios": {
+   "success": [
+    {
+     "record": {
+      "source": "cn_stock_quote",
+      "source_id": "q-rt",
+      "revision": 0,
+      "event_time": "2026-03-02T15:00:00+08:00",
+      "available_time": "2026-03-02T16:00:00+08:00",
+      "raw_payload_hash": "HASH_RT",
+      "ingestion_id": "ING_RT"
+     },
+     "outcome": "ACCEPTED"
+    }
+   ],
+   "not_found": [],
+   "ambiguous": [
+    {
+     "record": {
+      "source": "cn_stock_quote",
+      "source_id": "q-rt",
+      "revision": 0,
+      "event_time": "2026-03-02T15:00:00+08:00",
+      "available_time": "2026-03-02T16:00:00+08:00",
+      "raw_payload_hash": "HASH_RT",
+      "ingestion_id": "ING_RT"
+     },
+     "outcome": "ACCEPTED"
+    },
+    {
+     "record": {
+      "source": "cn_stock_quote",
+      "source_id": "q-rt",
+      "revision": 0,
+      "event_time": "2026-03-02T15:00:00+08:00",
+      "available_time": "2026-03-02T16:00:00+08:00",
+      "raw_payload_hash": "HASH_RT",
+      "ingestion_id": "ING_RT"
+     },
+     "outcome": "ACCEPTED"
+    }
+   ],
+   "identity_mismatch": [
+    {
+     "record": {
+      "source": "cn_stock_quote",
+      "source_id": "q-OTHER",
+      "revision": 0,
+      "event_time": "2026-03-02T15:00:00+08:00",
+      "available_time": "2026-03-02T16:00:00+08:00",
+      "raw_payload_hash": "HASH_RT",
+      "ingestion_id": "ING_RT"
+     },
+     "outcome": "ACCEPTED"
+    }
+   ],
+   "corrupted": [
+    "{not-valid-json"
+   ]
+  }
+ },
+ "expected": {
+  "routes": {
+   "success": null,
+   "not_found": "REVERSE_TRACE_NOT_FOUND",
+   "ambiguous": "REVERSE_TRACE_AMBIGUOUS",
+   "identity_mismatch": "REVERSE_TRACE_IDENTITY_MISMATCH",
+   "corrupted": "RAW_RECORD_CORRUPTED"
+  },
+  "success_resolves_all_identity_fields": true,
+  "no_fifth_class": true
+ }
+}

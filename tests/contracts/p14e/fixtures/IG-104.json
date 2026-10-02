@@ -1,0 +1,38 @@
+{
+ "golden_id": "P14E-IG-104",
+ "title": "authority violations rejected at the evidence runtime boundary",
+ "matrix_ids": [
+  "P14E-I-M-003"
+ ],
+ "input": {
+  "unresolved_query": {
+   "entity": "600000",
+   "information_type": "stock",
+   "as_of": "2026-03-04T16:00:00+08:00"
+  },
+  "records": [
+   {
+    "source": "cn_stock_quote",
+    "source_id": "q-auth",
+    "source_category": "A_SHARE_MARKET",
+    "entity_id": "600000",
+    "entity_type": "stock",
+    "event_time": "2026-03-02T15:00:00+08:00",
+    "available_time": "2026-03-02T16:00:00+08:00",
+    "revision": 0,
+    "ingested_at": "2026-03-02T16:05:00+08:00",
+    "raw_payload": {
+     "v": 1.0
+    },
+    "value": 1.0,
+    "adapter_version": "fixture-adapter-v1"
+   }
+  ]
+ },
+ "expected": {
+  "raw_query_rejected": true,
+  "rawstore_write_rejected": true,
+  "history_rebuild_rejected": true,
+  "failure_layer": "authority_violation"
+ }
+}

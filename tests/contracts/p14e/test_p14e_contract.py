@@ -91,7 +91,7 @@ def test_golden_design_sections_complete():
 
 
 def test_golden_fixtures_match_design():
-    fixtures = core.load_fixtures()
+    fixtures = [f for f in core.load_fixtures() if f["golden_id"].startswith("P14E-G-")]
     design = _design_text()
     for fx in fixtures:
         short_id = fx["golden_id"].replace("P14E-", "")   # design uses G-00X
