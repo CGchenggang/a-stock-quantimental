@@ -37,7 +37,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Current Commit
 
-`7ec854b28f16e4d42c9df01f563c044440261b8f` — P14-E-006 Golden/Harness implementation (DESIGN COMPLETE / HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE). Previous: P14-E-005 Contract Draft independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a` (CI run `36989469157`).
+`aa595c2244d26c32a4e8c36dc4facc9160c49824` — P14-E-006-REPAIR-001 submitted by ZCODE; independent acceptance FAILED / REPAIR REQUIRED. Previous: P14-E-005 Contract Draft independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a` (CI run `36989469157`).
 
 Latest independently accepted implementation gate: P14-E-004 Production Implementation Contract at `a72502f98a1da6aaa39ce8e048b180a0e074b466` (acceptance record commit `144b38f6f5ab11e4000ecabf2512aa0a1e422bb2`). Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118` (P14-D/P14-E-004 are design/query-infrastructure gates; no production alpha runtime exists).
 
@@ -310,7 +310,7 @@ When a new ZCODE stage is reported complete:
 9. If FAIL, issue focused repair tasks and do not advance the phase.
 10. If STOPPED because a data condition is not met, build/maintain integrity infrastructure rather than fabricating evidence.
 
-Last independently updated: 2026-09-30.
+Last independently updated: 2026-10-03.
 Independent P14-A acceptance recorded against HEAD `89349da30e656a571c7f97a4344a46502c3336ae`.
 
 
@@ -1901,3 +1901,34 @@ Required outcomes:
 Forbidden: changes to `src/**`, `data/**`, P14-A/B/C/D semantics, accepted P14-E Contracts/Matrix, P13-T/U, factors, alpha, calibration, policy, recommendation, portfolio, trading, or P14-F.
 
 P14-E-006 remains **FAIL / REPAIR REQUIRED** until this repair is independently accepted.
+
+
+## P14-E-006-REPAIR-001 Independent Acceptance — 2026-10-03
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E-006 acceptance or P14-E Production Implementation.**
+
+Independently inspected against ZCODE repair HEAD `aa595c2244d26c32a4e8c36dc4facc9160c49824`, with repair baseline `7ec854b28f16e4d42c9df01f563c044440261b8f`.
+
+Blocking findings:
+
+1. **Authority boundary is still violated.** `tests/contracts/p14e/golden/implementation.py:create_bundle()` no longer calls `run_query()`, but it still executes `core.is_admissible(...)` and `core.select_lineage(...)`. The former re-applies PIT admissibility and the latter re-selects lineage/selection semantics inside P14-E. P14-E-005 explicitly freezes P14-D as the authoritative query/version-selection layer; P14-E must consume the already-resolved `query_result` rather than reconstructing PIT/selection logic.
+
+2. **IG-103 append-only verification remains vacuous.** `AuditLog.append()` still stores records without any `seq` / `sequence_id`. The test explicitly falls back to `True` when sequence fields are absent:
+   `if all("seq" in r for r in audit.records) else True`.
+   Therefore the claimed strict append-only ordering is not actually verified.
+
+3. **Expected-value closure still contains a non-behavioral assertion.** IG-104 now performs a real RawStore mutation attempt and a real fail-fast history reconstruction attempt, which is an improvement; however `history_state_unchanged` is still asserted only from the fixture expected value rather than measured from before/after state. This leaves the expected field vulnerable to fixture self-certification.
+
+4. **Exact-head CI evidence is absent.** `fetch_commit_workflow_runs(aa595c...)` returns no workflow runs, and combined commit status is empty. Therefore the reported “full pytest 550 passed / P14-E audit PASS” cannot be independently accepted as CI evidence for the actual repair HEAD.
+
+5. **PROJECT_STATUS governance synchronization is still stale at the repair commit.** The repair commit message says Current Commit was synced to `7ec854b`, but the actual repository HEAD is `aa595c2244d26c32a4e8c36dc4facc9160c49824`. This is itself a governance-drift blocker and must be corrected as part of the repair.
+
+Required repair:
+- Make `create_bundle()` consume resolved P14-D state without re-running `is_admissible`, `select_lineage`, PIT filtering, revision selection, or restatement selection.
+- Add a real monotonic sequence field to AuditLog records and assert strict ordering/uniqueness in IG-103; remove the vacuous fallback.
+- Measure IG-104 history state before/after the rejected rebuild and assert equality from actual state, not from a fixture boolean.
+- Run GitHub Actions on the final repair HEAD and provide independently retrievable exact-head evidence, including full pytest, P14-C/D/E audits and P13-M regression.
+- Synchronize `PROJECT_STATUS.md` Current Commit to the final repair HEAD after the code/doc repair, then run the exact-head CI again if the status commit is part of the accepted state.
+- Preserve P14-E-005 accepted Contract and P14-D authority; no `src/**` production implementation; no `data/**`; no P14-F; no factor/alpha/policy/recommendation/trading changes.
+
+Current phase remains blocked. P14-E production implementation remains NOT AUTHORIZED.
