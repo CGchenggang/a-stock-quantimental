@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E-004 — FAIL / REPAIR REQUIRED (production implementation NOT AUTHORIZED)**; previous stages: P14-E Contract / Matrix / Golden Design / Harness+Golden — ACCEPTED; P14-D — PASS / INDEPENDENTLY ACCEPTED
+**P14-E-005 — CONTRACT DRAFT / WAITING FOR INDEPENDENT ACCEPTANCE (implementation NOT AUTHORIZED)**; previous stage: P14-E-004 Production Implementation Contract — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); before that: P14-E Contract / Matrix / Golden Design / Harness+Golden — ACCEPTED; P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -30,14 +30,15 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-C Golden Re-freeze | PASS | Independently accepted; 64 deterministic Golden fixtures; 61/61/61 closure; Production Implementation remains separately gated |
 | P14-C Production Implementation | PASS | Independently accepted at `06250722e5660975733695c1ffd956cde9a8c118`; completeness required-universe repair |
 | P14-D | PASS | Independently accepted after P14-D-REPAIR-001; PIT-safe information query layer; P14-E remains not authorized |
+| P14-E-004 | PASS | Production Implementation Contract accepted (Design Gate, `144b38f`); reverse-trace FOUR-CLASS frozen; Production Implementation remains separately gated |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` — P14-D-REPAIR-001 implementation head independently accepted. Status documentation is maintained separately.
+`2c0a8d93faab7ae17d5d8f78509c36949b0b4205` — P14-E-005 Implementation Contract Draft (CONTRACT DRAFT, not accepted; awaiting independent acceptance).
 
-Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118`, with acceptance-state documentation commit `ad032a0e7ada2b83a697601c79c5ed7b6e526592`.
+Latest independently accepted implementation gate: P14-E-004 Production Implementation Contract at `a72502f98a1da6aaa39ce8e048b180a0e074b466` (acceptance record commit `144b38f6f5ab11e4000ecabf2512aa0a1e422bb2`). Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118` (P14-D/P14-E-004 are design/query-infrastructure gates; no production alpha runtime exists).
 
 ## Current Research Boundary
 
@@ -1703,3 +1704,31 @@ Docs-only design gate: the accepted P14-E-004 Production Contract (v1.1) refined
 Compatibility: PASS against live implementations (ingestion_id formula, PIT boundary, exclusion field set, result_id re-verified) and against accepted contracts (P14-A/B/C/D, P14-E Design Contract v1.1, Production Contract v1.1, Acceptance Record 144b38f). **DEPENDENCY_CONTRACT_CONFLICT: NONE.**
 
 Verification: consistency checks PASS (24 unique dense contract IDs, 24 unique matrix rows, closure 24/24, FOUR-CLASS preserved with no fifth REVERSE_TRACE_* class, no vague invariant wording). Full regression untouched. P14-E Production Implementation = NOT AUTHORIZED; P14-F = NOT AUTHORIZED; P13-T STOPPED; P13-U PROTECTED.
+
+## P14-E-005-REVIEW-001 — Authority-Aligned create_bundle + Status Sync — 2026-10-01
+
+Narrow review repair of the P14-E-005 Implementation Contract Draft (`2c0a8d9`). Docs-only; no src/data/tests changes; accepted P14-E-003/004 assets untouched.
+
+### Finding A — PROJECT_STATUS sync (FIXED)
+
+Current Phase header had silently drifted to "P14-E-004 — FAIL / REPAIR REQUIRED" (two prior phase-header replacements no-op'd on anchor mismatch without asserts). Now synced: Current Phase = **P14-E-005 — CONTRACT DRAFT / WAITING FOR INDEPENDENT ACCEPTANCE (implementation NOT AUTHORIZED)**; P14-E-004 PASS / INDEPENDENTLY ACCEPTED preserved (added to the Accepted Phases table and Current Commit section: design-gate baseline `a72502f`, acceptance record `144b38f`).
+
+### Finding B — P14-D authority alignment (FIXED)
+
+Contract bumped to **v1.1** per its versioning duty (semantic change: API input responsibility). Frozen rule (bilingual, §3):
+
+> P14-D is the authoritative PIT query and version-selection authority. P14-E consumes the already-resolved P14-D query result. P14-E MUST NOT independently reconstruct, repeat, or replace P14-D PIT visibility or version-selection logic.
+
+`create_bundle` signature frozen as **`create_bundle(query_result, authoritative_evidence_records)`** — query_result = the completed P14-D run_query output (result.query / result_id / records / exclusions); authoritative_evidence_records = the P14-B authoritative record set for Evidence/Provenance/Reverse Trace. The ambiguous `create_bundle(records, query)` form is removed; the runtime never receives a raw query to re-execute visibility/revision-selection/restatement/PIT-filtering. CMP-EVIDENCE input, §6.1 CREATE metadata provenance, §3, and Matrix rows P14E-I-M-003 / M-004 / M-022 synced. ID count unchanged at 24 (rule folded into existing IDs — no ID inflation).
+
+### Finding C — exact-head CI
+
+Delivered with this push: workflow run on the final repaired HEAD with checkout SHA == final HEAD (coordinates in the completion report).
+
+### Verification
+
+- Contract/Matrix closure: 24/24 (0 orphan / 0 duplicate / 0 undefined); 8 columns intact; REVIEW-001 semantics mechanically asserted (frozen signature present, old signature absent, bilingual authority rule present, C1 input free of bare ResearchQuery).
+- Full pytest: **530 passed / 0 failed** (documentation-only change; test layer untouched).
+- P14-C / P14-D / P14-E audits + P13-M: PASS (CI).
+
+P14-E-005 remains CONTRACT DRAFT — WAITING FOR INDEPENDENT ACCEPTANCE. P14-E-006 NOT AUTHORIZED; P14-E Production Implementation NOT AUTHORIZED; P14-F NOT AUTHORIZED; P13-T STOPPED / NOT EXECUTED; P13-U PROTECTED.

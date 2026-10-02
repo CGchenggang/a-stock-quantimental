@@ -14,10 +14,17 @@
 > - P14-E Design Contract v1.1 / Matrix v2 (FROZEN) / Golden Design /
 >   Harness+Golden（REPAIR-001）。
 >
+> 契约版本：P14-E Implementation Contract v1.1
+>
 > 修订历史：
 > v1.0: P14-E-005 初版——实现边界、运行时架构（六组件）、权威模型、
 >       Evidence 身份继承、Bundle 生命周期七态、Reverse Trace 四类、
 >       持久化规则、失败模型六层、API 接口语义、兼容性结论。
+> v1.1: REVIEW-001——create_bundle 输入责任与 P14-D Authority 对齐：
+>       签名冻结为 create_bundle(query_result, authoritative_evidence_records)；
+>       P14-D 是 PIT 查询与版本选择唯一权威，P14-E 仅消费已解析的
+>       Query Result，不得自行重建/重复执行/替代 PIT 可见性与版本选择
+>       逻辑（§3 规则、CMP-EVIDENCE 输入、§6.1 CREATE、§10 接口同步）。
 
 ---
 
@@ -66,6 +73,23 @@ P14-E Evidence Runtime  evidence/bundle 构造、持久化、追溯
 （NOT_YET_AVAILABLE / OUTSIDE_AS_OF / UNRESOLVED_AVAILABILITY）由运行时
 原样携带，不合并、不重定义。
 
+REPAIR-001 冻结规则（无例外）：
+
+```text
+P14-D is the authoritative PIT query and version-selection authority.
+
+P14-E consumes the already-resolved P14-D query result.
+
+P14-E MUST NOT independently reconstruct, repeat, or replace
+P14-D PIT visibility or version-selection logic.
+```
+
+即：P14-D 是 PIT 查询与版本选择的权威层；P14-E 消费已经由 P14-D 解析
+完成的 Query Result；P14-E 不得自行重建、重复执行或替代 P14-D 的 PIT
+可见性（visibility / PIT filtering）与版本选择（revision selection /
+restatement selection）逻辑。Evidence Runtime 的输入是"已解析的 result"，
+不是"原始 query"。
+
 ## 4. Runtime Architecture — 六组件（P14E-I-004..009）
 
 每个组件以七元组冻结（Responsibility / Input / Output / Authority Source /
@@ -77,7 +101,7 @@ Failure Behavior / Persistence Requirement / Test Requirement）。
 |----|------|
 | ID | CMP-EVIDENCE |
 | Responsibility | 从 P14-B records + P14-D result 构造 Evidence（§5 身份）与 Evidence Bundle（§6 结构）；携带已接受的 selection/rejection 枚举（SELECTED_HIGHEST_REVISION / SELECTED_EARLIEST_ON_REVISION_TIE / SELECTED_CANONICAL_TIEBREAK / REJECTED_LOWER_REVISION / REJECTED_REVISION_TIE_NOT_EARLIEST / REJECTED_CANONICAL_TIEBREAK），不重定义 |
-| Input | RawIngestRecord 列表、ResearchQuery、P14-D run_query result |
+| Input | P14-D run_query result（**已解析**的查询结果，含 result.query 规范回显 / result_id / records / exclusions）+ authoritative_evidence_records（P14-B 权威记录集，用于 Evidence / Provenance / Reverse Trace）。运行时不得接收原始 query 并自行执行 PIT/选择 |
 | Output | Evidence 对象、EvidenceBundle 对象（内存态） |
 | Authority Source | P14-B identity 原语、P14-A 投影、P14-D result_id |
 | Failure Behavior | mutation / provenance 不完整 → fail-fast（无部分产物） |
@@ -179,7 +203,8 @@ CREATE → VALIDATE → FREEZE → STORED ─┬→ QUERY
 ```text
 Allowed transition:   → VALIDATE
 Forbidden transition: 直接 STORE / 直接 FREEZE / 对外可见
-Required metadata:    query 规范回显、as_of、result_id、输入记录集快照身份
+Required metadata:    query 规范回显、as_of、result_id（三者均取自
+                      P14-D 已解析 result，运行时不重算）、输入记录集快照身份
 Failure mode:         mutation（同键异 hash）或 provenance 缺失 → fail-fast，
                       无 bundle 对象存活，C5 记录构造失败事件
 ```
@@ -291,11 +316,16 @@ Recovery:  reload 逐行重算 bundle_id + 每 Evidence 经 C4 回溯 P14-B 权�
 仅语义，无实现：
 
 ```text
-create_bundle(records, query)
-    In:  RawIngestRecord 列表 + ResearchQuery
+create_bundle(query_result, authoritative_evidence_records)
+    In:  query_result = P14-D 已完成的查询结果（run_query 的输出，含
+         result.query / result_id / records / exclusions）；
+         authoritative_evidence_records = 用于 Evidence / Provenance /
+         Reverse Trace 的 P14-B 权威记录集
     Out: CREATE 态 bundle 草稿（含 bundle_id）
     Side effect: 无（内存）
-    Authority limitation: 对输入只读；不触发持久化
+    Authority limitation: P14-E 仅消费已解析 result；**禁止**根据原始
+         query 自行执行 visibility / revision selection / restatement
+         selection / PIT filtering（REVIEW-001 冻结）
     Failures: mutation；provenance incomplete（Input validation 层）
 
 freeze_bundle(bundle)

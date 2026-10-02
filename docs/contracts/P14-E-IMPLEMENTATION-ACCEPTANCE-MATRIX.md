@@ -11,8 +11,8 @@
 |-----------|------------|-------------|-------------|-------------------|-----------------|-------------------|---------------------|
 | P14E-I-M-001 | P14E-I-001 | Included 边界（模型/身份/生命周期/持久化/追溯/审计/校验/失败模型） | 机械范围断言 | 实现面与 §2.1 一致 | 全覆盖 | 缺组件 | 实现 Harness 结构检查 |
 | P14E-I-M-002 | P14E-I-002 | Excluded 边界（alpha/factor/trading/portfolio/execution/broker/order/LLM；P13-T/U） | 机械符号扫描 | 零决策语义符号 | 无越界 | 任一越界符号 | 源扫描 |
-| P14E-I-M-003 | P14E-I-003 | 权威链 + 三禁止 | 负例（写 RawStore/重建历史/覆盖 PIT 的尝试） | 全部被拒 | 零权威违反 | 任一得逞 | 实现 Harness 负例 |
-| P14E-I-M-004 | P14E-I-004 | CMP-EVIDENCE 七元组行为 | Golden 同输入对照 | 与 Golden 引擎逐位一致 | 一致 | ID/序列化漂移 | P14-E-003 fixtures 重放 |
+| P14E-I-M-003 | P14E-I-003 | 权威链 + 三禁止 + 消费已解析 result（不重执行 PIT/版本选择） | 负例（写 RawStore/重建历史/覆盖 PIT/重执行选择的尝试） | 全部被拒 | 零权威违反 | 任一得逞（含运行时重执行可见性/选择） | 实现 Harness 负例 |
+| P14E-I-M-004 | P14E-I-004 | CMP-EVIDENCE 七元组行为；输入 = 已解析 P14-D result + authoritative_evidence_records | Golden 同输入对照（result 预先由 P14-D 生成后喂入） | 与 Golden 引擎逐位一致 | 一致 | ID/序列化漂移；运行时自行执行查询/选择 | P14-E-003 fixtures 重放 |
 | P14E-I-M-005 | P14E-I-005 | CMP-STORE 七元组行为 | Golden G-009 同语义执行 | append/幂等/reload 语义一致 | 一致 | 写入/reload 漂移 | Golden G-009 |
 | P14E-I-M-006 | P14E-I-006 | CMP-MANAGER 状态机编排 | 全迁移矩阵执行 | 合法迁移全通、非法全拒 | 状态机精确 | 非法迁移得逞 | 实现 Harness 生命周期矩阵 |
 | P14E-I-M-007 | P14E-I-007 | CMP-TRACE 四类行为 | 四类负例 + 成功路径 | 分类精确 | 四类独立触发 | 合并为 NOT_FOUND | Golden G-001 + 实现 Harness 负例 |
@@ -30,6 +30,6 @@
 | P14E-I-M-019 | P14E-I-019 | 持久化规则（JSONL 约束优先/版本/哈希/恢复） | Golden G-009 + schema 断言 | 语义与 schema_version 一致 | 一致 | 存储语义漂移 | Golden G-009 |
 | P14E-I-M-020 | P14E-I-020 | 六层失败分类 | 六层各一触发用例 | 层次独立触发 | 分类精确 | 层合并 | 实现 Harness 失败矩阵 |
 | P14E-I-M-021 | P14E-I-021 | Detection/Response/Audit 三元组 | 每层三元组断言 | 三者齐备 | 全层齐备 | 缺 audit 或响应 | 实现 Harness 失败矩阵 |
-| P14E-I-M-022 | P14E-I-022 | 六接口语义（In/Out/副作用/权限/失败） | 接口契约逐项执行 | 与 §10 一致 | 语义精确 | 副作用越权/失败错层 | 实现 Harness 接口测试 |
+| P14E-I-M-022 | P14E-I-022 | 六接口语义（In/Out/副作用/权限/失败）；create_bundle(query_result, authoritative_evidence_records) | 接口契约逐项执行 | 与 §10 一致（含 create_bundle 冻结签名） | 语义精确 | 副作用越权/失败错层；出现 create_bundle(records, query) 旧签名 | 实现 Harness 接口测试 |
 | P14E-I-M-023 | P14E-I-023 | 兼容性（P14-A/B/C/D/E 全 PASS） | 依赖一致性重跑 | 结论 PASS | 无冲突 | 任一 conflict | 依赖审计脚本 |
 | P14E-I-M-024 | P14E-I-024 | 确定性/反作弊/边界继承 | Golden 双跑 + 源扫描 + 边界扫描 | 全绿 | 继承完整 | 任一漂移 | Golden G-009/G-012 + 源扫描 |
