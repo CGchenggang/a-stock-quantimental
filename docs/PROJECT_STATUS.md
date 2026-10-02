@@ -37,7 +37,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Current Commit
 
-`aa595c2244d26c32a4e8c36dc4facc9160c49824` — P14-E-006-REPAIR-001 submitted by ZCODE; independent acceptance FAILED / REPAIR REQUIRED. Previous: P14-E-005 Contract Draft independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a` (CI run `36989469157`).
+`70634cbe9e8086d325c2cff7efd377461d3d746a` — P14-E-005 Contract Draft (accepted); REPAIR-003 applied on top (docs-only; final HEAD = this commit) submitted by ZCODE; independent acceptance FAILED / REPAIR REQUIRED. Previous: P14-E-005 Contract Draft independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a` (CI run `36989469157`).
 
 Latest independently accepted implementation gate: P14-E-004 Production Implementation Contract at `a72502f98a1da6aaa39ce8e048b180a0e074b466` (acceptance record commit `144b38f6f5ab11e4000ecabf2512aa0a1e422bb2`). Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118` (P14-D/P14-E-004 are design/query-infrastructure gates; no production alpha runtime exists).
 

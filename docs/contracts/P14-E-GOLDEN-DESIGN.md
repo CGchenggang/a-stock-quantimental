@@ -2,9 +2,10 @@
 
 > STATUS: DESIGN COMPLETE / HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE
 >
-> **本文件是设计，不是可执行测试。** 禁止在本阶段创建 pytest / Harness /
-> production 实现（`tests/contracts/p14e/` 尚不得存在）。执行属于后续
-> Harness 阶段。
+> **本文件记录 Golden/Harness 设计与实现。** 测试已在 `tests/contracts/p14e/`
+> 中实现并执行通过（P14-E-006 Harness Implementation 阶段）。生产实现
+> NOT AUTHORIZED。原始设计约束（历史）：本文件最初仅记录设计；执行已在
+> P14-E-006 Harness Implementation 阶段落地。
 >
 > 冻结依据：P14-E Design Contract v1.1（`712faf9`）+ Acceptance Matrix
 > v2（FROZEN）。每个 Golden 必须给出 Input / Expected Evidence / Expected

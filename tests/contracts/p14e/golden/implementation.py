@@ -265,46 +265,51 @@ def create_bundle(query_result: dict, authoritative_evidence_records):
                 f"identity_failure: P14-D selected record {k} not found in "
                 f"authoritative records")
         e = dict(ev)
-        # selection reason derived purely from P14-D's already-resolved
-        # state (which revision won vs which were visible-but-not-selected)
+        # Selection reason: mechanical labeling of P14-D's already-resolved
+        # state. If this lineage has only one record, P14-D selected it as
+        # the highest (and only) revision. If multiple records exist in the
+        # same lineage, the reason is derived by comparing the selected
+        # record against other records in the SAME lineage using simple
+        # factual field comparison (not re-executing selection logic).
         lineage = lineages.get((r["source"], r["source_record_id"]), [])
-        same_rev = [c for c in lineage
-                    if c.revision == r["revision"]
-                    and c.ingested_at != r["ingested_at"]]
-        if not same_rev and len(lineage) == 1:
+        other_in_lineage = [c for c in lineage
+                            if c.ingested_at != r["ingested_at"]]
+        if not other_in_lineage:
             e["selection_reason"] = "SELECTED_HIGHEST_REVISION"
-        elif same_rev and all(
-                c.ingested_at > r["ingested_at"] for c in lineage
-                if c.revision == r["revision"] and c is not winner_rec(r)):
+        elif all(c.revision < r["revision"] for c in other_in_lineage):
+            e["selection_reason"] = "SELECTED_HIGHEST_REVISION"
+        elif all(c.revision == r["revision"]
+                 for c in other_in_lineage
+                 if c.available_time >= r["available_time"]):
             e["selection_reason"] = "SELECTED_EARLIEST_ON_REVISION_TIE"
         else:
             e["selection_reason"] = "SELECTED_CANONICAL_TIEBREAK"
         evidence.append(e)
 
     # candidate trace: P14-E records which authoritative records P14-D did
-    # NOT select, keyed by lineage — no re-selection, just bookkeeping of
-    # what P14-D already resolved
+    # NOT select. The rejection reason is a simple factual label derived
+    # from comparing the non-selected record against the selected record
+    # in the same lineage — mechanical labeling of P14-D's resolved state,
+    # not re-execution of selection logic.
     selected_lineage_keys = {(r["source"], r["source_record_id"])
                              for r in query_result["records"]}
     trace: list[dict] = []
     for key in sorted(lineages):
         if key not in selected_lineage_keys:
             continue  # lineage fully excluded; represented by exclusions
+        # find the selected record in this lineage (from result.records)
+        selected_rec = next(
+            (r for r in query_result["records"]
+             if r["source"] == key[0] and r["source_record_id"] == key[1]),
+            None)
         for r in sorted(lineages[key],
-                        key=lambda c: (c.revision, c.available_time,
-                                       c.canonical_json())):  # type: ignore[name-defined]
+                        key=lambda c: (c.revision, c.available_time)):
             k4 = (r.source, r.source_id, r.revision, r.ingested_at)
             if k4 in selected_keys:
                 continue  # this is the winner
-            same_rev_higher = any(
-                o.revision > r.revision
-                for o in lineages[key]
-                if (o.source, o.source_id, o.ingested_at) in selected_keys
-                or True)  # P14-D already decided; we just record the fact
-            if any(o.revision > r.revision for o in lineages[key]):
+            if selected_rec and r.revision < selected_rec["revision"]:
                 reason = "REJECTED_LOWER_REVISION"
-            elif any(o.revision == r.revision and o.ingested_at > r.ingested_at
-                     for o in lineages[key]):
+            elif selected_rec and r.revision == selected_rec["revision"]:
                 reason = "REJECTED_REVISION_TIE_NOT_EARLIEST"
             else:
                 reason = "REJECTED_CANONICAL_TIEBREAK"
@@ -340,11 +345,6 @@ def create_bundle(query_result: dict, authoritative_evidence_records):
     }
     bundle["bundle_id"] = _sha(canonical_json(bundle))
     return bundle
-
-
-def winner_rec(r):
-    """Placeholder identity function for tie-break comparison context."""
-    return r
 
 
 def freeze_bundle(bundle: dict) -> dict:
