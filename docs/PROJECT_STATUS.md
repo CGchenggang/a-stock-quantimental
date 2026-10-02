@@ -1932,3 +1932,43 @@ Required repair:
 - Preserve P14-E-005 accepted Contract and P14-D authority; no `src/**` production implementation; no `data/**`; no P14-F; no factor/alpha/policy/recommendation/trading changes.
 
 Current phase remains blocked. P14-E production implementation remains NOT AUTHORIZED.
+
+
+## P14-E-006-REPAIR-002 Independent Acceptance — 2026-10-03
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E-006 acceptance or P14-E Production Implementation.**
+
+Independently inspected ZCODE repair HEAD `ba500ddc0eb9a6e64f26cf3c718ef53d75945a35`, with repair baseline `aa595c2244d26c32a4e8c36dc4facc9160c49824`.
+
+### Verified positive
+
+- P14-D re-selection calls previously identified in `create_bundle()` are removed: no direct `core.is_admissible(...)`, `core.select_lineage(...)`, or `build_bundle_and_result(...)` call remains in the function.
+- `AuditLog.append()` now assigns deterministic `sequence_id = 1,2,3,...`.
+- IG-103 now checks uniqueness, strict monotonicity, and starts-from-one without the previous vacuous fallback.
+- IG-104 now measures authoritative record state before and after the rejected history-rebuild attempt and asserts actual equality.
+- Scope remains limited to the P14-E-006 harness/golden/status/audit layer; no `src/**` or `data/**` production changes are present in the repair diff.
+
+### Blocking findings
+
+1. **Exact-head CI evidence is still absent.** Independent GitHub retrieval for `ba500ddc0eb9a6e64f26cf3c718ef53d75945a35` returns no workflow runs and no combined commit statuses. Therefore ZCODE's reported `550 passed`, P14-C/D/E audits, and P13-M results are not independently verified for the actual repair HEAD. Agent-reported test output cannot substitute for exact-head CI evidence.
+
+2. **PROJECT_STATUS provenance is stale.** The actual repair HEAD is `ba500ddc0eb9a6e64f26cf3c718ef53d75945a35`, but the Current Commit field still identifies the previous repair HEAD `aa595c2244d26c32a4e8c36dc4facc9160c49824`. The repair therefore has not completed the required governance synchronization.
+
+3. **P14-D authority consumption is improved but not yet cleanly demonstrated.** The direct P14-D calls are gone, but `create_bundle()` still derives selection/rejection reasons by inspecting the full authoritative lineage and applying revision/tie comparisons itself (including the unconditional `or True` expression). The frozen Contract says P14-E must carry accepted selection/rejection semantics without redefining P14-D version-selection logic. This path should consume the already-resolved P14-D result rather than infer the winning/rejection semantics again from the raw lineage.
+
+4. **Golden Design remains internally contradictory.** Its status header now says `DESIGN COMPLETE / HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE`, but the same document still says it is not executable and that pytest/Harness files must not exist. Those statements cannot simultaneously describe the current P14-E-006 stage and should be reconciled; acceptance checks must not preserve the obsolete prohibition merely as a historical string.
+
+### Required narrow repair
+
+**P14-E-006-REPAIR-003**
+
+Repair only the four blockers above:
+
+- make candidate/selection-reason handling consume P14-D's resolved state without independently reconstructing selection semantics;
+- reconcile the Golden Design document and its audit expectations to the actual Design+Harness stage;
+- synchronize PROJECT_STATUS to the final repair state;
+- run GitHub Actions on the final target HEAD and independently verify exact checkout SHA, P14-C/D/E audits, P13-M regression, and full pytest.
+
+Preserve P14-E-005 Contract/Matrix, P14-D authority, P13-T/U boundaries, and the prohibition on production implementation.
+
+**P14-E-006 remains FAIL / REPAIR REQUIRED. P14-E Production Implementation remains NOT AUTHORIZED. P14-F remains NOT AUTHORIZED.**
