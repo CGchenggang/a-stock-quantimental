@@ -37,7 +37,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Current Commit
 
-`70634cbe9e8086d325c2cff7efd377461d3d746a` — P14-E-005 Contract Draft independently accepted. Acceptance evidence: exact-head CI run `36989469157` checked out `70634cbe`.
+`7ec854b28f16e4d42c9df01f563c044440261b8f` — P14-E-006 Golden/Harness implementation (DESIGN COMPLETE / HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE). Previous: P14-E-005 Contract Draft independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a` (CI run `36989469157`).
 
 Latest independently accepted implementation gate: P14-E-004 Production Implementation Contract at `a72502f98a1da6aaa39ce8e048b180a0e074b466` (acceptance record commit `144b38f6f5ab11e4000ecabf2512aa0a1e422bb2`). Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118` (P14-D/P14-E-004 are design/query-infrastructure gates; no production alpha runtime exists).
 

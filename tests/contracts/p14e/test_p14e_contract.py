@@ -54,7 +54,7 @@ def test_contract_statuses_consistent():
     assert "STATUS: DRAFT" in contract          # preserved by acceptance record
     assert "v1.1: REPAIR-001" in contract
     assert "STATUS: FROZEN" in matrix
-    assert "STATUS: DESIGN ONLY" in design
+    assert "STATUS: DESIGN COMPLETE / HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE" in design
     # no self-acceptance anywhere
     for name, text in (("contract", contract), ("matrix", matrix),
                        ("design", design)):

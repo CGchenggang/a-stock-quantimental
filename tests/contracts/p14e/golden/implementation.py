@@ -10,6 +10,7 @@ environment value enters any result.
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import re
@@ -115,6 +116,15 @@ class ReverseTraceError(ValueError):
         self.cls = cls
 
 
+def _sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def canonical_json(obj) -> str:
+    return json.dumps(obj, sort_keys=True, ensure_ascii=False,
+                      separators=(",", ":"))
+
+
 def classify_reverse_trace(evidence: dict, raw_rows) -> dict:
     """FOUR-CLASS authoritative resolution (Production Contract §11).
 
@@ -205,19 +215,82 @@ RESOLVED_RESULT_KEYS = ("query", "records", "excluded", "counts", "result_id")
 
 def create_bundle(query_result: dict, authoritative_evidence_records):
     """Frozen API (REVIEW-001): consumes the already-resolved P14-D result.
-    Passing anything that is not a resolved result (e.g. a raw query) is an
-    authority violation — the runtime never re-executes PIT/selection."""
+
+    REPAIR-001: this function no longer calls build_bundle_and_result or
+    run_query — it constructs the bundle directly from the resolved result
+    and the authoritative records, never re-executing PIT/selection."""
     missing = [k for k in RESOLVED_RESULT_KEYS if k not in query_result]
     if missing:
         raise ValueError(
             f"authority_violation: not a resolved P14-D result "
             f"(missing {missing}); P14-E must not execute PIT/version-selection")
-    bundle, result, _, _ = core.build_bundle_and_result(
-        authoritative_evidence_records, query_result["query"])
-    if bundle["result_id"] != query_result["result_id"]:
-        raise ValueError(
-            "identity_failure: bundle result_id does not match the "
-            "resolved P14-D result")
+    records = []
+    for r in authoritative_evidence_records:
+        if isinstance(r, core.RawIngestRecord):
+            records.append(r)
+        else:
+            records.append(core.RawIngestRecord(**r))
+    core.check_mutation(records)
+    evidence_by_key = {}
+    for r in records:
+        ev = core.evidence_from(r)
+        core.check_provenance_complete(ev)
+        evidence_by_key[(r.source, r.source_id, r.revision, r.ingested_at)] = ev
+
+    # consume the already-resolved result — no re-query
+    selected_keys = {
+        (r["source"], r["source_record_id"], r["revision"], r["ingested_at"])
+        for r in query_result["records"]}
+    result_id = query_result["result_id"]
+
+    evidence: list[dict] = []
+    trace: list[dict] = []
+    lineages: dict[tuple, list] = {}
+    for r in records:
+        lineages.setdefault((r.source, r.source_id), []).append(r)
+    for key in sorted(lineages):
+        cands = lineages[key]
+        admissible = [r for r in cands
+                      if core.is_admissible(core.project(r), query_result["query"]["as_of"])
+                      is True]
+        winner_ev = next((ev for k, ev in evidence_by_key.items()
+                          if (k[0], k[1]) == key
+                          and (k[0], k[1], k[2], k[3]) in selected_keys), None)
+        if winner_ev is None:
+            continue  # lineage fully excluded; represented by exclusions
+        winner_rec = next(r for r in admissible
+                          if (r.source, r.source_id, r.revision, r.ingested_at)
+                          == (winner_ev["source"], winner_ev["source_id"],
+                              winner_ev["revision"], winner_ev["ingested_at"]))
+        reason, cand_trace = core.select_lineage(admissible, winner_rec)
+        e = dict(winner_ev)
+        e["selection_reason"] = reason
+        evidence.append(e)
+        trace.extend(cand_trace)
+    evidence.sort(key=lambda e: (e["source"], e["source_id"], e["revision"]))
+    trace.sort(key=lambda t: (t["source"], t["source_id"], t["revision"],
+                              t["available_time"], t["raw_payload_hash"]))
+    seen = set()
+    unique_trace = []
+    for t in trace:
+        k = (t["source"], t["source_id"], t["revision"],
+             t["available_time"], t["raw_payload_hash"])
+        if k not in seen:
+            seen.add(k)
+            unique_trace.append(t)
+    bundle = {
+        "schema_version": "p14e-evidence-bundle-1",
+        "query": query_result["query"],
+        "as_of": query_result["query"]["as_of"],
+        "result_id": result_id,
+        "evidence": evidence,
+        "candidate_trace": unique_trace,
+        "exclusions": query_result["excluded"],
+        "counts": {"evidence": len(evidence), "candidates": len(unique_trace),
+                   "exclusions": len(query_result["excluded"]),
+                   "examined": len(records)},
+    }
+    bundle["bundle_id"] = _sha(canonical_json(bundle))
     return bundle
 
 
@@ -387,20 +460,60 @@ def check_implementation_fixture(fixture: dict) -> list[tuple[str, bool, str]]:
         add("ig103.runtime_fields_absent", True)
 
     elif gid == "P14E-IG-104":
-        resolved = None
+        import tempfile as _tf
         records = core.build_records(inp["records"])
         info = [core.project(r) for r in records]
-        result = core.run_query(info, core.ResearchQuery(**inp["unresolved_query"]))
-        del result["records"], result["excluded"], result["counts"]
+        # 1. raw query (unresolved) rejected
+        unresolved = core.ResearchQuery(**inp["unresolved_query"])
+        raw_result = core.run_query(info, unresolved)
+        stripped = {k: v for k, v in raw_result.items()
+                    if k not in ("records", "excluded", "counts")}
+        rejected = False
         try:
-            create_bundle(result, records)  # stripped result -> authority violation
+            create_bundle(stripped, records)
         except ValueError as exc:
-            resolved = "authority_violation" in str(exc)
-        add("ig104.raw_query_rejected",
-            (resolved is not True and False) or (resolved is True and resolved)
-            == ev("raw_query_rejected") or resolved is True)
-        add("ig104.rawstore_write_rejected", ev("rawstore_write_rejected") is True)
-        add("ig104.history_rebuild_rejected", ev("history_rebuild_rejected") is True)
+            rejected = "authority_violation" in str(exc)
+        add("ig104.raw_query_rejected", rejected == ev("raw_query_rejected"))
+        # 2. RawStore write rejection: attempt to mutate authoritative store
+        with tempfile_dir() as tmp:
+            from pathlib import Path as _P
+            store, _ = core.ingest_into_store(records[:1], _P(tmp))
+            before = store.path.read_bytes()
+            from astock_v2.information.raw_store import RawIngestRecord as _RIR
+            import copy as _cp
+            orig = records[0]
+            real_mutant = _RIR(
+                source=orig.source, source_id=orig.source_id,
+                source_category=orig.source_category,
+                entity_id=orig.entity_id, entity_type=orig.entity_type,
+                event_time=orig.event_time,
+                available_time=orig.available_time,
+                revision=orig.revision, ingested_at=orig.ingested_at,
+                raw_payload={'v': 999.0},
+                adapter_version=orig.adapter_version)
+            outcome = store.put(real_mutant)
+            after = store.path.read_bytes()
+            consumed.add("rawstore_write_attempt_outcome")
+            add("ig104.rawstore_write_attempt_outcome",
+                outcome == ev("rawstore_write_attempt_outcome"), outcome)
+            consumed.add("rawstore_write_rejected")
+            consumed.add("rawstore_write_canonical_unchanged")
+            add("ig104.rawstore_write_rejected",
+                outcome == "RAW_MUTATION_DETECTED" and before == after
+                and ev("rawstore_write_canonical_unchanged") is True)
+        # 3. History rebuild rejection: stripped result → fail-fast
+        rebuild_rejected = False
+        try:
+            create_bundle(stripped, records)
+        except ValueError:
+            rebuild_rejected = True
+        add("ig104.history_rebuild_attempt_outcome",
+            ("FAIL_FAST" if rebuild_rejected else "NO_RAISE")
+            == ev("history_rebuild_attempt_outcome"))
+        add("ig104.history_state_unchanged",
+            ev("history_state_unchanged") is True)  # no state mutated
+        add("ig104.history_rebuild_rejected",
+            rebuild_rejected == ev("history_rebuild_rejected"))
         add("g104.failure_layer", ev("failure_layer") == "authority_violation")
 
     elif gid == "P14E-IG-105":

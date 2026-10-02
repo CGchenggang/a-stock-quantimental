@@ -1,6 +1,6 @@
 # P14-E Golden Test Design
 
-> STATUS: DESIGN ONLY
+> STATUS: DESIGN COMPLETE / HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE
 >
 > **本文件是设计，不是可执行测试。** 禁止在本阶段创建 pytest / Harness /
 > production 实现（`tests/contracts/p14e/` 尚不得存在）。执行属于后续

@@ -33,6 +33,10 @@
   "raw_query_rejected": true,
   "rawstore_write_rejected": true,
   "history_rebuild_rejected": true,
-  "failure_layer": "authority_violation"
+  "failure_layer": "authority_violation",
+  "rawstore_write_attempt_outcome": "RAW_MUTATION_DETECTED",
+  "rawstore_write_canonical_unchanged": true,
+  "history_rebuild_attempt_outcome": "FAIL_FAST",
+  "history_state_unchanged": true
  }
 }

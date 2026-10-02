@@ -79,7 +79,8 @@ def run_harness() -> dict:
         "; ".join(f"{gid}: {n}" for gid, n in impl_fails[:5]))
     add("golden.design_sections",
         len(re.findall(r"^## G-\d{3} ", design, re.M)) == 12)
-    add("golden.status_design_only", "STATUS: DESIGN ONLY" in design)
+    add("golden.status_harness_implemented",
+        "DESIGN COMPLETE / HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE" in design)
 
     # engine checks
     engine = core.run_all_checks()
