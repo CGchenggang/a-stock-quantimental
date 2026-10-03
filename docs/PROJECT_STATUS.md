@@ -1972,3 +1972,32 @@ Repair only the four blockers above:
 Preserve P14-E-005 Contract/Matrix, P14-D authority, P13-T/U boundaries, and the prohibition on production implementation.
 
 **P14-E-006 remains FAIL / REPAIR REQUIRED. P14-E Production Implementation remains NOT AUTHORIZED. P14-F remains NOT AUTHORIZED.**
+
+
+## P14-E-006-REPAIR-003 Independent Acceptance — 2026-10-03
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E-006 acceptance or P14-E Production Implementation.**
+
+Independently inspected final ZCODE repair HEAD `17afd2d71675df86d443fc6093f822cf437970cb` against repair baseline `ba500ddc0eb9a6e64f26cf3c718ef53d75945a35`.
+
+### Verified positive
+
+- Candidate-trace cleanup removed the prior `or True` expression and the prior complex lineage-wide revision comparison.
+- Golden Design governance language is now consistent with an implemented Harness awaiting independent acceptance.
+- No `src/**` or `data/**` production changes are present in the repair diff.
+
+### Blocking findings
+
+1. **Exact-head GitHub Actions evidence is absent.** GitHub independently returns 0 workflow runs and 0 combined statuses for final HEAD `17afd2d71675df86d443fc6093f822cf437970cb`. ZCODE-reported test results cannot substitute for exact-head CI evidence.
+
+2. **PROJECT_STATUS Current Commit is stale.** The actual final ZCODE HEAD is `17afd2d71675df86d443fc6093f822cf437970cb`, while the file still reports `70634cbe...` as Current Commit.
+
+### Required narrow repair
+
+**P14-E-006-REPAIR-004 — Final CI + Status Synchronization**
+
+- Synchronize PROJECT_STATUS Current Commit to the final implementation state.
+- Produce GitHub Actions evidence for the final target HEAD and independently verify exact checkout SHA, P14-C/D/E audits, P13-M regression, and full pytest.
+- Preserve P14-E-005 Contract/Matrix, P14-D semantics, P13-T/U, production `src/**`, `data/**`, factors, alpha, calibration, policy, recommendation, portfolio, trading, and P14-F boundaries.
+
+**P14-E-006 remains FAIL / REPAIR REQUIRED. P14-E Production Implementation remains NOT AUTHORIZED. P14-F remains NOT AUTHORIZED.**
