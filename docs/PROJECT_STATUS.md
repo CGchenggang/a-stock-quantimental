@@ -2128,3 +2128,44 @@ The accepted package has:
 **Next authorized stage: P14-E Production Implementation.**
 
 Production implementation remains **NOT IMPLEMENTED / NOT AUTHORIZED** until its own exact-head CI and independent acceptance are completed.
+
+## P14-E Production Implementation — Independent Acceptance — 2026-10-03
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-F.**
+
+Independently reviewed against the actual `main` HEAD `12828101a4e393d2277d8ccffea529deb0138189`.
+
+### Positive findings
+
+- Production implementation is present in `src/astock_v2/information/evidence.py` and `evidence_store.py`.
+- Production diff from the accepted Design/Tasking baseline `bad52f16acaf7f5091215283672834291607cb26` is limited to the authorized P14-E implementation/test/audit/status surfaces; no `data/**` change was observed.
+- Exact-head GitHub Actions run `37104761266` is green at the actual `main` HEAD `12828101a4e393d2277d8ccffea529deb0138189`; pytest and P13-M jobs both succeeded.
+- The pytest job explicitly ran P14-C, P14-D, P14-E audits, P13-M pooled regression, and the full pytest suite; the run reported **568 passed / 2 warnings / 0 failed**.
+- P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+
+### Blocking findings
+
+1. **PIT-unsafe candidate-trace construction.** P14-E Contract §6.2 requires candidate_trace to contain only records admissible at the bundle's own as_of. Production `create_bundle()` places every non-selected record in a selected lineage into candidate_trace without filtering it by the already-resolved P14-D admissible state. A post-as-of higher revision can therefore appear in a historical bundle's candidate_trace, and the selection/rejection labeling also reasons over such records. This violates the frozen P14-E PIT boundary and duplicates P14-D version-selection semantics.
+
+2. **P14-D selection semantics are still re-derived inside P14-E.** `_selection_reason()` and `_rejection_reason()` independently compare revision and available_time to classify winners/losers. The accepted architecture permits mechanical labeling of P14-D's resolved state, but the current implementation uses the full authoritative lineage—including records outside the resolved admissible set—to infer those labels. The implementation therefore cannot be considered a pure consumer of P14-D's resolved decisions.
+
+3. **P14-B authority verification is optional on reload.** `EvidenceStore.reload()` performs authoritative RawStore verification only when `raw_store_path` is supplied and exists. Contract §12 makes the `(ingestion_id, raw_payload_hash)` → P14-B `raw_records.jsonl` verification mandatory on reload. A normal `EvidenceStore(path)` instance can therefore reload without authoritative verification. This is a production integrity bypass.
+
+4. **Production tests do not exercise the mandatory authority path.** `test_store_append_and_reload()` constructs `EvidenceStore(tmp_path / "evidence_bundles.jsonl")` without a RawStore path, so the passing reload test does not prove the frozen P14-B authority requirement. The suite also lacks a regression proving that a same-lineage post-as-of record is excluded from candidate_trace.
+
+### Required narrow repair — P14-E Production Implementation REPAIR-001
+
+Repair only the four blockers above:
+
+- Make candidate_trace derive strictly from the P14-D resolved/admissible state for the bundle's own as_of. Post-as-of records must never enter candidate_trace or influence selection/rejection labels.
+- Keep P14-D as the sole authority for PIT visibility and version selection. P14-E may only mechanically label decisions already represented by P14-D resolved state; it must not infer selection from the complete raw lineage.
+- Make P14-B authoritative RawStore verification mandatory for `EvidenceStore.reload()`; no optional bypass.
+- Add production regression tests for post-as-of higher revision in the same lineage, mandatory RawStore authority verification on reload, authority mismatch / missing RawStore failure, and preservation of the existing FOUR-CLASS taxonomy and deterministic bundle behavior.
+- Re-run full pytest, P13-M regression, P14-C/D/E audits, and exact-head GitHub Actions on the final repair HEAD.
+- Do not modify P14-E Contract semantics, P14-D, P14-C, P13-T/U, data, factors, calibration, policy, recommendation, portfolio, trading, or P14-F.
+
+**Gate remains:**
+- P14-E Production Implementation: **FAIL / REPAIR REQUIRED**
+- P14-F: **NOT AUTHORIZED**
+- P13-T: **STOPPED / NOT EXECUTED**
+- P13-U: **PROTECTED**
