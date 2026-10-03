@@ -186,8 +186,39 @@ def test_p14d_010_query_layer_is_infrastructure_only():
     result = run_query([_record("cn_stock_quote", "q-1")], _query())
     allowed_record_fields = set(PROVENANCE_FIELDS)
     assert set(result["records"][0]) <= allowed_record_fields
-    assert set(result) == {"query", "records", "excluded", "counts", "result_id"}
+    assert set(result) == {"query", "records", "excluded", "selection",
+                           "counts", "result_id"}
     assert set(result["counts"]) == {"visible", "excluded", "examined"}
+
+
+def test_p14d_011_selection_state_resolved_by_authority():
+    """REPAIR-002: run_query resolves and emits the selection/rejection
+    state — the P14-A selection rule labels its own decision at
+    resolution time; records entries stay pure provenance."""
+    records = [
+        _record("cn_stock_quote", "s-0", revision=0),
+        _record("cn_stock_quote", "s-0", revision=1,
+                event="2026-03-03T15:00:00+08:00",
+                available="2026-03-03T16:00:00+08:00"),
+        _record("cn_stock_quote", "s-0", revision=2,
+                event="2026-03-03T17:00:00+08:00",
+                available="2026-03-03T18:00:00+08:00"),
+    ]
+    result = run_query(records, _query())
+    assert set(result["selection"]) == {"selected", "rejected"}
+    assert [e["source_record_id"] for e in result["selection"]["selected"]] \
+        == ["s-0"]
+    assert result["selection"]["selected"][0]["revision"] == 2
+    assert result["selection"]["selected"][0]["selection_reason"] \
+        == "SELECTED_HIGHEST_REVISION"
+    rej = {e["revision"]: e["rejection_reason"]
+           for e in result["selection"]["rejected"]}
+    assert rej == {0: "REJECTED_LOWER_REVISION",
+                   1: "REJECTED_LOWER_REVISION"}
+    # records entries stay pure provenance — labels live only in the
+    # resolved selection state
+    assert "selection_reason" not in result["records"][0]
+    assert "rejection_reason" not in result["records"][0]
 
 
 # boundary: inclusive visibility at available_time == as_of

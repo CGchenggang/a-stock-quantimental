@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from astock_v2.research_boundary import assert_research_zone
 
 from .models import RawInformationRecord, parse_boundary
-from .pit import visible_revisions
+from .pit import resolve_selection, visible_revisions
 
 EXCLUSION_NOT_YET_AVAILABLE = "NOT_YET_AVAILABLE"
 EXCLUSION_OUTSIDE_AS_OF = "OUTSIDE_AS_OF"
@@ -154,6 +154,28 @@ def run_query(records: list[RawInformationRecord],
         p["source"], p["source_record_id"], p["available_time"],
         p["revision"], _canonical(p)))
 
+    # Resolved selection/rejection state (REPAIR-002): the selection
+    # authority labels its own decision at resolution time — the winner
+    # of every lineage with its selection_reason, and every visible
+    # non-selected record with its rejection_reason. PIT-excluded records
+    # are NOT selection rejections; they stay in `excluded`. P14-E
+    # consumes these labels verbatim and never re-derives them.
+    selected_pairs, rejected_pairs = resolve_selection(visible, selected)
+    selection_state = {
+        "selected": [
+            {**_provenance(record), "selection_reason": reason}
+            for record, reason in selected_pairs],
+        "rejected": [
+            {**_provenance(record), "rejection_reason": reason}
+            for record, reason in rejected_pairs],
+    }
+    selection_state["selected"].sort(key=lambda p: (
+        p["source"], p["source_record_id"], p["available_time"],
+        p["revision"], _canonical(p)))
+    selection_state["rejected"].sort(key=lambda p: (
+        p["source"], p["source_record_id"], p["revision"],
+        p["available_time"], _canonical(p)))
+
     counts = {
         "visible": len(provenance),
         "excluded": len(excluded),
@@ -163,6 +185,7 @@ def run_query(records: list[RawInformationRecord],
         "query": query.as_dict(),
         "records": provenance,
         "excluded": excluded,
+        "selection": selection_state,
         "counts": counts,
     }
     result["result_id"] = hashlib.sha256(_canonical(result).encode("utf-8")).hexdigest()
