@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E-006 — GOLDEN / HARNESS DESIGN (production implementation NOT AUTHORIZED)**; P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`, CI evidence run `36989469157`); previous stage: P14-E-004 Production Implementation Contract — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); before that: P14-E Contract / Matrix / Golden Design / Harness+Golden — ACCEPTED; P14-D — PASS / INDEPENDENTLY ACCEPTED
+**P14-E-006 — GOLDEN/HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE (production implementation NOT AUTHORIZED)**; P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -37,7 +37,17 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Current Commit
 
-`70634cbe9e8086d325c2cff7efd377461d3d746a` — P14-E-005 Contract Draft (accepted); REPAIR-003 applied on top (docs-only; final HEAD = this commit) submitted by ZCODE; independent acceptance FAILED / REPAIR REQUIRED. Previous: P14-E-005 Contract Draft independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a` (CI run `36989469157`).
+`17afd2d71675df86d443fc6093f822cf437970cb` — P14-E-006-REPAIR-003 implementation head (candidate-trace derivation cleanup + governance sync).
+
+P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
+
+Exact-head CI evidence for `17afd2d71675df86d443fc6093f822cf437970cb`:
+- Workflow Run: `37079891815` (push, completed / **success**)
+- https://github.com/CGchenggang/a-stock-quantimental/actions/runs/37079891815
+- Pytest Job `110837393583`: success (P14-C audit + P14-D audit + P14-E audit + P13-M + Full pytest suite all success)
+- P13-M Job `110837394102`: success
+- head_sha == `17afd2d71675df86d443fc6093f822cf437970cb` (exact-head match **YES**)
+- Retrieval: `GET /actions/runs?head_sha=17afd2d71675df86d443fc6093f822cf437970cb`
 
 Latest independently accepted implementation gate: P14-E-004 Production Implementation Contract at `a72502f98a1da6aaa39ce8e048b180a0e074b466` (acceptance record commit `144b38f6f5ab11e4000ecabf2512aa0a1e422bb2`). Latest independently accepted production implementation remains P14-C at `06250722e5660975733695c1ffd956cde9a8c118` (P14-D/P14-E-004 are design/query-infrastructure gates; no production alpha runtime exists).
 
