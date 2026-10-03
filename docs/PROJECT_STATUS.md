@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E-006 — GOLDEN/HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE (production implementation NOT AUTHORIZED)**; P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
+**P14-E Production Implementation Design / Tasking — FAIL / REPAIR REQUIRED (production implementation NOT AUTHORIZED)**; P14-E-006 Golden/Harness — PASS / INDEPENDENTLY ACCEPTED (`17afd2d`); P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -38,7 +38,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Current Commit
 
-`17afd2d71675df86d443fc6093f822cf437970cb` — P14-E-006-REPAIR-003 implementation head (candidate-trace derivation cleanup + governance sync).
+`9c2913d998e1b2577ba6e58ec460757a583ea99f` — P14-E Production Implementation Design / Tasking submission (docs-only).
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
@@ -2058,3 +2058,55 @@ Docs-only design package. **No src/**, no data/, no tests/ changes.**
 
 Dependency audit: ALL COMPATIBLE. DEPENDENCY_CONTRACT_CONFLICT: NONE.
 Production Implementation = NOT IMPLEMENTED / NOT AUTHORIZED.
+
+
+## P14-E Production Implementation Design / Tasking — Independent Acceptance — 2026-10-03
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-E Production Implementation.**
+
+Independently inspected actual GitHub HEAD `9c2913d998e1b2577ba6e58ec460757a583ea99f` against the accepted P14-E-006 Golden/Harness gate `17afd2d71675df86d443fc6093f822cf437970cb`.
+
+### Verified positive
+
+- Submission diff from `17afd2d` is docs-only: `docs/PROJECT_STATUS.md` plus the three new design/tasking documents.
+- No `src/**`, `data/**`, tests, P14-E Contract/Matrix, P14-A/B/C/D, P13-T/U, or P14-F production changes are present in the submission diff.
+- The design correctly preserves P14-D as the sole PIT visibility/version-selection authority and explicitly forbids P14-E from re-running `run_query`, `is_admissible`, `visible_revisions`, `select_lineage`, or other PIT/selection logic.
+- The proposed production surface is appropriately limited to `evidence.py` and `evidence_store.py`, with twelve implementation tasks and a separate production CI gate.
+- P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+
+### Blocking findings
+
+1. **Reverse-trace taxonomy contradicts the frozen P14-E Production Contract.**
+   The accepted Production Contract v1.1 freezes **FOUR-CLASS** reverse trace semantics:
+   `NOT_FOUND / AMBIGUOUS / IDENTITY_MISMATCH / RAW_RECORD_CORRUPTED`.
+   The new Production Acceptance Matrix row `P14E-PI-T-014` describes P14E-P-014 as **“reverse trace 五类错误”**. This directly reintroduces the exact taxonomy error repaired and independently accepted in P14-E-004-REPAIR-001. The same matrix elsewhere correctly says FOUR-CLASS, so the package is internally inconsistent.
+
+2. **Acceptance Matrix closure header is arithmetically inconsistent with its own rows.**
+   The matrix contains **47** rows (`P14E-P-001..023` + `P14E-I-001..024`), but its header says they are mapped to `P14E-PI-T-001..024` production test tasks. The actual rows run through `P14E-PI-T-047`. The closure statement must be corrected to `P14E-PI-T-001..047` (or otherwise explicitly define a different grouping), and the one-to-one/coverage claim must be made mechanically consistent.
+
+3. **PROJECT_STATUS was not synchronized to the submitted design HEAD.**
+   Before this acceptance write-back, the repository still identified `17afd2d` as Current Commit even though the actual submission HEAD is `9c2913d998e1b2577ba6e58ec460757a583ea99f`. This is a governance/provenance defect in the submitted stage itself.
+
+### Non-blocking observation
+
+- No independently retrievable workflow run or combined status was returned for `9c2913d998e1b2577ba6e58ec460757a583ea99f` through the available GitHub Actions endpoints. Because this stage is docs-only and introduces no executable code/tests, this is recorded as an evidence gap rather than the primary rejection reason. The production implementation stage will require exact-head CI evidence before acceptance.
+
+### Required narrow repair
+
+**P14-E Production Implementation Design / Tasking — REPAIR-001**
+
+Repair only the three blocking findings above:
+
+- Change every Production Matrix reference to P14E-P-014 to the frozen FOUR-CLASS taxonomy; do not alter the accepted taxonomy or create a fifth class.
+- Correct the matrix closure header/coverage accounting so all 47 declared contract invariants map consistently to `P14E-PI-T-001..047`, with no orphan/duplicate/undefined rows.
+- Synchronize `PROJECT_STATUS.md` Current Commit to the final repair HEAD after all design changes.
+- Re-run the design-package closure/audit and preserve the docs-only scope.
+
+Do not implement production code. Do not modify `src/**`, `data/**`, P14-E Contract/Matrix/Golden/Harness, P14-D semantics, P13-T/U, factors, alpha, calibration, policy, recommendation, portfolio, trading, or P14-F.
+
+**Current gate remains:**
+- P14-E Production Implementation Design / Tasking: **FAIL / REPAIR REQUIRED**
+- P14-E Production Implementation: **NOT AUTHORIZED**
+- P14-F: **NOT AUTHORIZED**
+- P13-T: **STOPPED / NOT EXECUTED**
+- P13-U: **PROTECTED**
