@@ -32,6 +32,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-D | PASS | Independently accepted after P14-D-REPAIR-001; PIT-safe information query layer; P14-E remains not authorized |
 | P14-E-004 | PASS | Production Implementation Contract accepted (Design Gate, `144b38f`); reverse-trace FOUR-CLASS frozen; Production Implementation remains separately gated |
 | P14-E-005 | PASS | Independently accepted Contract Draft at `70634cbe`; P14-D authority-aligned `create_bundle(query_result, authoritative_evidence_records)`; production implementation remains NOT AUTHORIZED |
+| P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
@@ -168,7 +169,7 @@ PIT-safe research information query layer:
 - provenance records + `result_id`;
 - virgin-zone entry guard.
 
-### P14-E — ACCEPTED / PRODUCTION IMPLEMENTATION NOT AUTHORIZED
+### P14-E — GOLDEN/HARNESS ACCEPTED / PRODUCTION IMPLEMENTATION NOT AUTHORIZED
 
 Research information evidence / provenance layer:
 - evidence identity (content-addressed via P14-B raw_payload_hash / ingestion_id);
@@ -2011,3 +2012,37 @@ Independently inspected final ZCODE repair HEAD `17afd2d71675df86d443fc6093f822c
 - Preserve P14-E-005 Contract/Matrix, P14-D semantics, P13-T/U, production `src/**`, `data/**`, factors, alpha, calibration, policy, recommendation, portfolio, trading, and P14-F boundaries.
 
 **P14-E-006 remains FAIL / REPAIR REQUIRED. P14-E Production Implementation remains NOT AUTHORIZED. P14-F remains NOT AUTHORIZED.**
+
+
+## P14-E-006 — Independent Acceptance — 2026-10-03
+
+**Decision: PASS / INDEPENDENTLY ACCEPTED.**
+
+Independently inspected ZCODE implementation HEAD `17afd2d71675df86d443fc6093f822cf437970cb` against the independently accepted P14-E-005 Contract Draft at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
+
+### Acceptance evidence
+
+- Exact-head GitHub Actions workflow run `37079891815` is **completed / success** and its `head_sha` exactly equals `17afd2d71675df86d443fc6093f822cf437970cb`.
+- The `pytest` job `111077854245` succeeded. Its steps explicitly include P14-C audit, P14-D audit, P14-E audit, P13-M regression, and Full pytest suite, all completed successfully.
+- The `p13m` job `111077854039` succeeded; its P13-M pooled industry regression step completed successfully.
+- The exact-head run was triggered by **push** on `main`; therefore the earlier connector limitation that only surfaced PR-associated runs does not invalidate this evidence.
+- Golden Design status is internally consistent: **DESIGN COMPLETE / HARNESS IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE** before this acceptance, with no remaining prohibition against the implemented Harness.
+- P14-E reference implementation consumes the already-resolved P14-D state; the previously identified direct P14-D re-selection calls and lineage-wide re-selection logic are absent from the repaired candidate-trace path.
+- IG-103 now has deterministic `sequence_id` values and mechanically verifies uniqueness, strict monotonicity, and start-from-one; no vacuous fallback remains.
+- IG-104 measures authoritative state before and after the rejected history-rebuild attempt and verifies actual equality; expected-value fixture booleans are not used as the sole proof.
+- Diff from accepted P14-E-005 baseline contains only Golden/Harness/audit/documentation changes; no `src/**` or `data/**` production implementation changes.
+- P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+- No factor, alpha, calibration, policy, recommendation, portfolio, trading, or P14-F promotion was introduced.
+
+### Gate result
+
+- **P14-E-006 Golden/Harness: PASS / INDEPENDENTLY ACCEPTED.**
+- **P14-E Production Implementation: NOT AUTHORIZED.**
+- **P14-F: NOT AUTHORIZED.**
+- **P13-T: STOPPED / NOT EXECUTED.**
+- **P13-U: PROTECTED.**
+
+### Next authorized stage
+
+The next stage is **P14-E Production Implementation Design/Tasking only**, under the frozen P14-E Contract/Matrix and the accepted Golden/Harness evidence. Any production implementation remains separately gated and must receive a new exact-head CI + independent acceptance before authorization.
+
