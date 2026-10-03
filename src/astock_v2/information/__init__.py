@@ -65,6 +65,13 @@ from .reconciliation import (
 from .expected_contract import (
     ExpectedContract, build_expected_contracts,
 )
+from .evidence import (
+    BUNDLE_SCHEMA_VERSION,
+    create_bundle,
+    freeze_bundle,
+    validate_bundle,
+)
+from .evidence_store import EvidenceStore
 from .research_query import (
     EXCLUSION_NOT_YET_AVAILABLE, EXCLUSION_OUTSIDE_AS_OF,
     EXCLUSION_UNRESOLVED_AVAILABILITY, PROVENANCE_FIELDS,
@@ -87,6 +94,8 @@ __all__ = [
     "is_admissible", "is_registered", "normalize", "parse_boundary",
     "ExpectedContract", "build_expected_contracts",
     "ResearchQuery", "run_query", "PROVENANCE_FIELDS",
+    "create_bundle", "freeze_bundle", "validate_bundle", "EvidenceStore",
+    "BUNDLE_SCHEMA_VERSION",
     "EXCLUSION_NOT_YET_AVAILABLE", "EXCLUSION_OUTSIDE_AS_OF",
     "EXCLUSION_UNRESOLVED_AVAILABILITY",
     "provenance_issues", "provenance_summary", "select_asof",

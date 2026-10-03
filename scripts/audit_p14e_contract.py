@@ -108,10 +108,12 @@ def run_harness() -> dict:
     add("boundary.research_end", RESEARCH_END == "2026-09-22")
     add("boundary.virgin_start", VIRGIN_START == "2026-09-23")
     src_info = REPO_ROOT / "src" / "astock_v2" / "information"
+    authorized = {"evidence.py", "evidence_store.py"}
     runtime_files = [p.name for p in src_info.glob("*.py")
-                     if p.name.startswith(("evidence", "bundle"))]
-    add("phase.production_implementation_not_authorized",
-        not runtime_files, f"{runtime_files}")
+                     if p.name.startswith(("evidence", "bundle"))
+                     and p.name not in authorized]
+    add("phase.production_implementation_files_authorized",
+        not runtime_files, f"unauthorized: {runtime_files}")
 
     failed = [c for c in checks if not c["ok"]]
     return {

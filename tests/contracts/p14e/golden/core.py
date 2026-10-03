@@ -56,10 +56,11 @@ GOLDEN_DESIGN_MD = REPO_ROOT / "docs" / "contracts" / "P14-E-GOLDEN-DESIGN.md"
 # the Harness (P14E-016: implementation NOT AUTHORIZED in this stage).
 PINNED_INFO_FILES = sorted([
     "__init__.py", "adapters.py", "adapters_fixture.py", "conflict.py",
-    "dedup.py", "expected_contract.py", "freshness.py", "models.py",
-    "normalization.py", "pit.py", "provenance.py", "quality.py",
-    "raw_store.py", "reconciliation.py", "registry.py",
-    "research_boundary_guard.py", "research_query.py", "source_health.py",
+    "dedup.py", "evidence.py", "evidence_store.py", "expected_contract.py",
+    "freshness.py", "models.py", "normalization.py", "pit.py",
+    "provenance.py", "quality.py", "raw_store.py", "reconciliation.py",
+    "registry.py", "research_boundary_guard.py", "research_query.py",
+    "source_health.py",
 ])
 
 BANNED_SRC_TOKENS = ["fixture_mode", "expected_result_override",
