@@ -33,9 +33,8 @@ import hashlib
 import json
 from pathlib import Path
 
-from .models import RawInformationRecord, parse_boundary
-from .raw_store import RawIngestRecord
-from .research_query import ResearchQuery
+from .models import parse_boundary
+from .raw_store import RawIngestRecord, to_information_record
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -130,36 +129,104 @@ def check_mutation(records: list[RawIngestRecord]) -> None:
 # Bundle construction
 # ---------------------------------------------------------------------------
 
-def _selection_reason(selected, lineage_records) -> str:
-    """Mechanical labeling of P14-D's already-resolved state."""
-    others = [c for c in lineage_records if c is not selected]
-    if not others:
+def _identity_key(record: RawIngestRecord) -> tuple:
+    return (record.source, record.source_id, record.revision,
+            record.ingested_at)
+
+
+def _resolved_exclusion_keys(query_result: dict) -> set:
+    """Identity keys of records P14-D already resolved as excluded
+    (out-of-scope / unresolved availability / not yet available).
+    Recognizing non-candidates by joining against this resolved set is
+    the ONLY visibility knowledge in this module — visibility itself is
+    never tested here."""
+    return {(e["source"], e["source_id"], e.get("available_time") or "")
+            for e in query_result["excluded"]}
+
+
+def _visible_candidates(lineage: list, selected_keys: set,
+                        excluded_keys: set) -> list:
+    """Authoritative records of one lineage that P14-D resolved as visible
+    selection candidates: neither selected nor resolved-excluded."""
+    cands = []
+    for r in lineage:
+        if _identity_key(r) in selected_keys:
+            continue
+        if (r.source, r.source_id, r.available_time or "") in excluded_keys:
+            continue
+        cands.append(r)
+    return cands
+
+
+def _check_candidate_consistent(candidate: RawIngestRecord,
+                                winner: RawIngestRecord) -> None:
+    """A visible candidate that outranks the resolved winner on any
+    P14-A rule means the authoritative records do not correspond to the
+    resolved result — authority fail-fast (never re-select)."""
+    if candidate.revision > winner.revision:
+        raise ValueError(
+            f"authority_violation: candidate "
+            f"{candidate.source}/{candidate.source_id} rev "
+            f"{candidate.revision} outranks resolved winner rev "
+            f"{winner.revision}; records do not correspond to result")
+    if candidate.revision == winner.revision:
+        if parse_boundary(candidate.available_time) < parse_boundary(
+                winner.available_time):
+            raise ValueError(
+                f"authority_violation: candidate "
+                f"{candidate.source}/{candidate.source_id} is an earlier "
+                f"revision tie than the resolved winner; records do not "
+                f"correspond to result")
+        if (candidate.available_time == winner.available_time
+                and to_information_record(candidate).canonical_json()
+                < to_information_record(winner).canonical_json()):
+            raise ValueError(
+                f"authority_violation: candidate "
+                f"{candidate.source}/{candidate.source_id} outranks the "
+                f"resolved winner on the canonical tiebreak; records do "
+                f"not correspond to result")
+
+
+def _selection_reason(winner: RawIngestRecord, candidates: list) -> str:
+    """Mechanical label of P14-D's resolved choice, factually compared
+    against the visible candidates P14-D resolved — never against the
+    full lineage, and never by re-executing selection."""
+    if not candidates or all(c.revision < winner.revision
+                             for c in candidates):
         return SELECTION_HIGHEST
-    if all(c.revision < selected.revision for c in others):
-        return SELECTION_HIGHEST
-    same_rev = [c for c in others if c.revision == selected.revision]
-    if same_rev and all(c.available_time > selected.available_time
-                        for c in same_rev):
+    tied = [c for c in candidates if c.revision == winner.revision]
+    if tied and all(parse_boundary(c.available_time)
+                    > parse_boundary(winner.available_time) for c in tied):
         return SELECTION_EARLIEST_TIE
     return SELECTION_CANONICAL
 
 
-def _rejection_reason(candidate, winner) -> str:
+def _rejection_reason(candidate: RawIngestRecord,
+                      winner: RawIngestRecord) -> str:
+    """Factual label of why a visible candidate lost to the resolved
+    winner. Records P14-D excluded (PIT / out-of-scope) never reach this
+    labeling — they are represented by the carried exclusions alone."""
+    _check_candidate_consistent(candidate, winner)
     if candidate.revision < winner.revision:
         return REJECTED_LOWER
-    if candidate.revision == winner.revision:
-        if candidate.available_time > winner.available_time:
-            return REJECTED_TIE_NOT_EARLIEST
-        return REJECTED_CANONICAL
-    return REJECTED_LOWER
+    if parse_boundary(candidate.available_time) > parse_boundary(
+            winner.available_time):
+        return REJECTED_TIE_NOT_EARLIEST
+    return REJECTED_CANONICAL
 
 
 def create_bundle(query_result: dict,
                   authoritative_evidence_records: list[RawIngestRecord]) -> dict:
     """Build an EvidenceBundle from an already-resolved P14-D result.
 
-    P14E-P-006: consumes query_result as-is; never re-executes PIT.
-    P14E-P-008: candidate_trace is pure bookkeeping of P14-D's decisions.
+    P14E-P-006: consumes query_result as-is; never re-executes PIT or
+    version selection. What was selected, what was excluded, and what
+    was a visible candidate are all read off the resolved result — the
+    full lineage is never scanned for selection truth.
+    P14E-P-008: candidate_trace labels only visible losers; records
+    P14-D excluded (post-as_of included) are represented by the carried
+    exclusions alone, so nothing beyond the as_of horizon can leak into
+    the bundle.
     """
     # authority check: must be a resolved result
     missing_keys = [k for k in ("query", "records", "excluded", "counts",
@@ -173,50 +240,52 @@ def create_bundle(query_result: dict,
     records = list(authoritative_evidence_records)
     check_mutation(records)
 
-    # evidence_id + provenance for every candidate
+    # evidence_id + provenance for every authoritative record
     ev_map: dict[tuple, dict] = {}
+    rec_map: dict[tuple, RawIngestRecord] = {}
     for r in records:
         ev = evidence_from(r)
         check_provenance_complete(ev)
-        ev_map[(r.source, r.source_id, r.revision, r.ingested_at)] = ev
+        k = _identity_key(r)
+        ev_map[k] = ev
+        rec_map[k] = r
 
-    # P14-D resolved: which records were selected
-    selected_set = {
-        (r["source"], r["source_record_id"], r["revision"], r["ingested_at"])
-        for r in query_result["records"]}
-
-    evidence: list[dict] = []
-    candidate_trace: list[dict] = []
     lineages: dict[tuple, list] = {}
     for r in records:
         lineages.setdefault((r.source, r.source_id), []).append(r)
 
-    for lineage_key in sorted(lineages):
-        lin = lineages[lineage_key]
-        # winner = the record whose (source, source_id, rev, ingested_at)
-        # is in selected_set AND in this lineage
-        winners = [r for r in lin
-                   if (r.source, r.source_id, r.revision, r.ingested_at)
-                   in selected_set]
-        if not winners:
-            continue  # fully excluded lineage
-        winner = winners[0]
-        reason = _selection_reason(winner, lin)
-        ev = dict(ev_map[(winner.source, winner.source_id,
-                          winner.revision, winner.ingested_at)])
-        ev["selection_reason"] = reason
+    # P14-D resolved state — the sole selection authority
+    selected_keys = {
+        (r["source"], r["source_record_id"], r["revision"], r["ingested_at"])
+        for r in query_result["records"]}
+    excluded_keys = _resolved_exclusion_keys(query_result)
+
+    evidence: list[dict] = []
+    candidate_trace: list[dict] = []
+    for sel in query_result["records"]:
+        k = (sel["source"], sel["source_record_id"], sel["revision"],
+             sel["ingested_at"])
+        base = ev_map.get(k)
+        winner = rec_map.get(k)
+        if base is None or winner is None:
+            raise ValueError(
+                f"identity_failure: P14-D selected record {k} not found "
+                f"in authoritative records")
+        lineage = lineages.get((sel["source"], sel["source_record_id"]), [])
+        cands = _visible_candidates(lineage, selected_keys, excluded_keys)
+        # fail-fast on inconsistent inputs before any labeling
+        rejections = [(c, _rejection_reason(c, winner)) for c in cands]
+        ev = dict(base)
+        ev["selection_reason"] = _selection_reason(winner, cands)
         evidence.append(ev)
-        # candidates = all non-winners in this lineage
-        for cand in lin:
-            if cand is winner:
-                continue
+        for cand, reason in rejections:
             candidate_trace.append({
                 "source": cand.source, "source_id": cand.source_id,
                 "revision": cand.revision,
                 "available_time": cand.available_time,
                 "raw_payload_hash": cand.raw_payload_hash,
                 "ingested_at": cand.ingested_at,
-                "rejection_reason": _rejection_reason(cand, winner),
+                "rejection_reason": reason,
             })
 
     evidence.sort(key=lambda e: (e["source"], e["source_id"], e["revision"]))

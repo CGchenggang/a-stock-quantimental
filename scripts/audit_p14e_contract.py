@@ -7,7 +7,8 @@ Validates the P14-E layer mechanically:
 - Golden fixtures G-001..G-012 dense, coverage 17/17
 - Golden design sections complete
 - Boundary constants (research_end / virgin_start / P13-T / P13-U)
-- No P14-E production runtime in src/ (implementation NOT AUTHORIZED)
+- P14-E production runtime pinned to evidence.py + evidence_store.py
+  (implemented, awaiting independent acceptance)
 - Golden engine checks all green
 
 Outputs the machine-readable verdict per the P14-E-003 contract and exits
@@ -126,7 +127,7 @@ def run_harness() -> dict:
         "contract_golden_closure": "PASS" if covered == set(expected) else "FAIL",
         "p13_t": "STOPPED",
         "p13_u": "PROTECTED",
-        "production_implementation": "NOT_AUTHORIZED",
+        "production_implementation": "IMPLEMENTED_AWAITING_ACCEPTANCE",
         "checks": checks,
         "failures": failed,
     }

@@ -13,6 +13,7 @@ import pytest
 
 from astock_v2.information.evidence import (
     BUNDLE_SCHEMA_VERSION,
+    REJECTED_CANONICAL,
     REJECTED_LOWER,
     REJECTED_TIE_NOT_EARLIEST,
     SELECTION_CANONICAL,
@@ -30,7 +31,11 @@ from astock_v2.information.evidence import (
     validate_bundle,
 )
 from astock_v2.information.evidence_store import EvidenceStore
-from astock_v2.information.raw_store import RawIngestRecord, to_information_record
+from astock_v2.information.raw_store import (
+    RawIngestRecord,
+    RawStore,
+    to_information_record,
+)
 from astock_v2.information.research_query import ResearchQuery, run_query
 
 
@@ -144,12 +149,22 @@ def test_reverse_trace_identity_mismatch():
 
 # ------------------------------------------------------- persistence
 
+def _authority(tmp_path, records):
+    """P14-B raw authority store pre-loaded with the given records."""
+    raw = RawStore(tmp_path / "raw_records.jsonl")
+    for r in records:
+        raw.put(r)
+    return raw
+
+
 def test_store_append_and_reload(tmp_path):
     from astock_v2.information.evidence_store import EvidenceStore
     records = [_rec("cn_stock_quote", "q-1")]
     result = _resolve(records, _query())
     b = create_bundle(result, records)
-    store = EvidenceStore(tmp_path / "evidence_bundles.jsonl")
+    raw = _authority(tmp_path, records)
+    store = EvidenceStore(tmp_path / "evidence_bundles.jsonl",
+                          raw_store_path=raw.path)
     assert store.append(b) is True
     assert store.append(b) is False
     reloaded = store.reload()
@@ -162,11 +177,64 @@ def test_store_detects_tamper(tmp_path):
     records = [_rec()]
     result = _resolve(records, _query())
     b = create_bundle(result, records)
-    store = EvidenceStore(tmp_path / "evidence_bundles.jsonl")
+    raw = _authority(tmp_path, records)
+    store = EvidenceStore(tmp_path / "evidence_bundles.jsonl",
+                          raw_store_path=raw.path)
     store.append(b)
     # tamper: inject garbage
     store.path.write_text("{broken json\n", encoding="utf-8")
     with pytest.raises((ValueError, json.JSONDecodeError)):
+        store.reload()
+
+
+def test_store_requires_raw_authority_path():
+    from pathlib import Path as _P
+    with pytest.raises(TypeError):
+        EvidenceStore(_P("evidence_bundles.jsonl"))
+
+
+def test_store_reload_fails_without_p14b_authority(tmp_path):
+    """REPAIR-001: reload MUST verify P14-B authority — a missing raw
+    authority store is a REVERSE_TRACE_NOT_FOUND failure, never a silent
+    hash-only pass."""
+    from astock_v2.information.evidence_store import EvidenceStore
+    records = [_rec("cn_stock_quote", "q-auth")]
+    result = _resolve(records, _query())
+    b = create_bundle(result, records)
+    raw_path = tmp_path / "raw_records.jsonl"
+    store = EvidenceStore(tmp_path / "evidence_bundles.jsonl",
+                          raw_store_path=raw_path)
+    assert store.append(b) is True
+    # authority file does not exist at all
+    with pytest.raises(ValueError, match="REVERSE_TRACE_NOT_FOUND"):
+        store.reload()
+    # authority file exists but holds no matching row
+    raw_path.touch()
+    with pytest.raises(ValueError, match="REVERSE_TRACE_NOT_FOUND"):
+        store.reload()
+    # with the real P14-B authority the same bundle reloads
+    raw = _authority(tmp_path, records)
+    assert raw.path == raw_path
+    reloaded = store.reload()
+    assert len(reloaded) == 1
+    assert reloaded[0]["bundle_id"] == b["bundle_id"]
+
+
+def test_store_reload_rejects_mutated_authority(tmp_path):
+    """Bundle hash intact but the raw authority row no longer resolves
+    (payload mutated elsewhere) → reload fails fast."""
+    from astock_v2.information.evidence_store import EvidenceStore
+    records = [_rec("cn_stock_quote", "q-mut-auth",
+                    payload={"close": 10.0}, value=10.0)]
+    result = _resolve(records, _query())
+    b = create_bundle(result, records)
+    mutated = [_rec("cn_stock_quote", "q-mut-auth",
+                    payload={"close": 99.0}, value=99.0)]
+    raw = _authority(tmp_path, mutated)
+    store = EvidenceStore(tmp_path / "evidence_bundles.jsonl",
+                          raw_store_path=raw.path)
+    store.append(b)
+    with pytest.raises(ValueError, match="REVERSE_TRACE_NOT_FOUND"):
         store.reload()
 
 
@@ -209,6 +277,8 @@ def test_selection_earliest_on_revision_tie():
     b = create_bundle(result, records)
     assert b["evidence"][0]["available_time"] == "2026-03-03T16:00:00+08:00"
     assert b["evidence"][0]["selection_reason"] == SELECTION_EARLIEST_TIE
+    assert len(b["candidate_trace"]) == 1
+    assert b["candidate_trace"][0]["rejection_reason"] == REJECTED_TIE_NOT_EARLIEST
 
 
 def test_selection_canonical_tiebreak():
@@ -222,6 +292,9 @@ def test_selection_canonical_tiebreak():
     b = create_bundle(result, [r1, r2])
     ev = b["evidence"][0]
     assert ev["ingested_at"] == "2026-03-02T16:05:00+08:00"
+    assert ev["selection_reason"] == SELECTION_CANONICAL
+    assert len(b["candidate_trace"]) == 1
+    assert b["candidate_trace"][0]["rejection_reason"] == REJECTED_CANONICAL
 
 
 # ------------------------------------------------------- P14-E-PI-010
@@ -269,3 +342,173 @@ def test_bundle_determinism():
     b2 = create_bundle(result2, list(reversed(records)))
     assert b1["bundle_id"] == b2["bundle_id"]
     assert canonical_json(b1) == canonical_json(b2)
+
+
+# --------------------------------------- REPAIR-001: PIT-safe candidate trace
+# candidate_trace labels ONLY visible losers; records P14-D excluded
+# (post-as_of included) never appear in the bundle beyond the carried
+# exclusions.
+
+def test_candidate_trace_pit_safe_no_post_as_of_leak():
+    visible = _rec("cn_stock_quote", "q-pit", revision=0,
+                   event="2026-03-02T15:00:00+08:00",
+                   available="2026-03-02T16:00:00+08:00",
+                   ingested="2026-03-02T16:05:00+08:00",
+                   payload={"close": 10.0}, value=10.0)
+    future = _rec("cn_stock_quote", "q-pit", revision=1,
+                  event="2026-03-09T15:00:00+08:00",
+                  available="2026-03-09T16:00:00+08:00",
+                  ingested="2026-03-09T16:05:00+08:00",
+                  payload={"close": 20.0}, value=20.0)
+    result = _resolve([visible, future], _query())
+    b = create_bundle(result, [visible, future])
+    text = canonical_json(b)
+    assert b["candidate_trace"] == []
+    assert future.raw_payload_hash not in text
+    assert future.ingested_at not in text
+    assert b["evidence"][0]["revision"] == 0
+    assert b["evidence"][0]["selection_reason"] == SELECTION_HIGHEST
+    # the future record is represented ONLY by P14-D's resolved exclusion
+    assert b["exclusions"] == [
+        {"source": "cn_stock_quote", "source_id": "q-pit",
+         "reason": "NOT_YET_AVAILABLE",
+         "available_time": "2026-03-09T16:00:00+08:00"}]
+
+
+def test_candidate_trace_labels_only_visible_losers():
+    records = [
+        _rec("cn_stock_quote", "q-ml", revision=0, payload={"close": 10.0},
+             value=10.0),
+        _rec("cn_stock_quote", "q-ml", revision=1,
+             event="2026-03-03T15:00:00+08:00",
+             available="2026-03-03T16:00:00+08:00",
+             ingested="2026-03-03T16:05:00+08:00", payload={"close": 11.0},
+             value=11.0),
+        _rec("cn_stock_quote", "q-ml", revision=2,
+             event="2026-03-03T17:00:00+08:00",
+             available="2026-03-03T18:00:00+08:00",
+             ingested="2026-03-03T18:05:00+08:00", payload={"close": 12.0},
+             value=12.0),
+    ]
+    result = _resolve(records, _query())
+    b = create_bundle(result, records)
+    assert b["evidence"][0]["revision"] == 2
+    assert b["evidence"][0]["selection_reason"] == SELECTION_HIGHEST
+    reasons = {t["revision"]: t["rejection_reason"]
+               for t in b["candidate_trace"]}
+    assert reasons == {0: REJECTED_LOWER, 1: REJECTED_LOWER}
+    assert b["counts"]["candidates"] == 2
+
+
+def test_selection_reason_not_mislabeled_by_future_revision():
+    """Regression: the reason must come from the visible candidates P14-D
+    resolved, not from the full lineage — a future revision must not flip
+    the label away from SELECTED_HIGHEST_REVISION."""
+    visible = _rec("macro_pmi_cn", "m-fut", revision=1, category="MACRO",
+                   event="2026-03-02T15:00:00+08:00",
+                   available="2026-03-02T16:00:00+08:00",
+                   payload={"v": 1.0})
+    future = _rec("macro_pmi_cn", "m-fut", revision=2, category="MACRO",
+                  event="2026-03-09T15:00:00+08:00",
+                  available="2026-03-09T16:00:00+08:00",
+                  ingested="2026-03-09T16:05:00+08:00",
+                  payload={"v": 2.0})
+    result = _resolve([visible, future], _query())
+    b = create_bundle(result, [visible, future])
+    assert b["evidence"][0]["selection_reason"] == SELECTION_HIGHEST
+    assert b["candidate_trace"] == []
+
+
+# --------------------------------- REPAIR-001: no PIT/selection re-execution
+
+def test_create_bundle_never_executes_pit_or_selection(monkeypatch):
+    """Architecture regression: no PIT / selection entry point executes
+    anywhere inside create_bundle — even with post-as-of siblings."""
+    import astock_v2.information.pit as pit_mod
+    import astock_v2.information.research_query as rq_mod
+    records = [
+        _rec("cn_stock_quote", "q-noexec", revision=0,
+             payload={"close": 10.0}, value=10.0),
+        _rec("cn_stock_quote", "q-noexec", revision=1,
+             event="2026-03-09T15:00:00+08:00",
+             available="2026-03-09T16:00:00+08:00",
+             ingested="2026-03-09T16:05:00+08:00", payload={"close": 20.0},
+             value=20.0),
+    ]
+    result = _resolve(records, _query())  # resolve BEFORE patching
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("P14-E executed PIT/selection logic")
+
+    monkeypatch.setattr(pit_mod, "is_admissible", _boom)
+    monkeypatch.setattr(pit_mod, "visible_revisions", _boom)
+    monkeypatch.setattr(pit_mod, "admissible_records", _boom)
+    monkeypatch.setattr(rq_mod, "run_query", _boom)
+    b = create_bundle(result, records)
+    assert b["counts"]["evidence"] == 1
+    assert b["candidate_trace"] == []
+
+
+def test_evidence_source_has_no_pit_or_selection_calls():
+    """Static surface: the production evidence module contains no call
+    form of any PIT/selection entry point."""
+    import astock_v2.information.evidence as ev_mod
+    text = Path(ev_mod.__file__).read_text(encoding="utf-8")
+    for token in ("is_admissible(", "visible_revisions(",
+                  "select_lineage(", "run_query(", "admissible_records("):
+        assert token not in text, token
+
+
+# ----------------------------------- REPAIR-001: authority-consistency guard
+
+def test_create_bundle_requires_selected_record_in_authority():
+    """P14-E consumes the resolved result 1:1 — a selected record with no
+    authoritative counterpart is an identity failure, never a silent
+    drop."""
+    records = [_rec("cn_stock_quote", "q-1")]
+    result = _resolve(records, _query())
+    with pytest.raises(ValueError, match="identity_failure"):
+        create_bundle(result, [])
+
+
+def test_create_bundle_rejects_candidate_outranking_winner():
+    """A visible candidate with a higher revision than the resolved
+    winner means records ≠ result → authority fail-fast."""
+    winner = _rec("cn_stock_quote", "q-w", revision=0,
+                  payload={"close": 10.0}, value=10.0)
+    result = _resolve([winner], _query())
+    smuggled = _rec("cn_stock_quote", "q-w", revision=1,
+                    event="2026-03-03T15:00:00+08:00",
+                    available="2026-03-03T16:00:00+08:00",
+                    ingested="2026-03-03T16:05:00+08:00",
+                    payload={"close": 20.0}, value=20.0)
+    with pytest.raises(ValueError, match="authority_violation"):
+        create_bundle(result, [winner, smuggled])
+
+
+def test_create_bundle_rejects_canonical_outranking_winner():
+    """Same revision + same available_time, but the record P14-D did NOT
+    select is the canonical-smaller copy → records ≠ result."""
+    loser = _rec("cn_stock_quote", "q-can", payload={"v": 1.0},
+                 ingested="2026-03-02T16:05:00+08:00")
+    winner = _rec("cn_stock_quote", "q-can", payload={"v": 1.0},
+                  ingested="2026-03-02T17:05:00+08:00")
+    result = _resolve([winner], _query())
+    with pytest.raises(ValueError, match="authority_violation"):
+        create_bundle(result, [loser, winner])
+
+
+def test_create_bundle_rejects_earlier_tie_than_winner():
+    """Same revision but an earlier available_time than the resolved
+    winner → impossible under the P14-A rule → fail-fast."""
+    winner = _rec("cn_stock_quote", "q-tie2", revision=1,
+                  available="2026-03-03T16:00:00+08:00",
+                  ingested="2026-03-03T16:05:00+08:00",
+                  payload={"v": 1.0})
+    earlier = _rec("cn_stock_quote", "q-tie2", revision=1,
+                   available="2026-03-02T16:00:00+08:00",
+                   ingested="2026-03-03T17:05:00+08:00",
+                   payload={"v": 1.0})
+    result = _resolve([winner], _query())
+    with pytest.raises(ValueError, match="authority_violation"):
+        create_bundle(result, [winner, earlier])
