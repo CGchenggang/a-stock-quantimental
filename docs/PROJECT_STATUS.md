@@ -2169,3 +2169,68 @@ Repair only the four blockers above:
 - P14-F: **NOT AUTHORIZED**
 - P13-T: **STOPPED / NOT EXECUTED**
 - P13-U: **PROTECTED**
+
+## P14-E Production Implementation REPAIR-001 — Independent Acceptance — 2026-10-03
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-F.**
+
+Independently inspected the actual `main` HEAD `cc9f1e3f4f7ecdaa1c3bc1a6b0740763a78ad8fe`.
+
+### Verified positive
+
+- Actual `main` HEAD is `cc9f1e3f4f7ecdaa1c3bc1a6b0740763a78ad8fe`.
+- Exact-head GitHub Actions workflow run `37130931030` is completed / success, with `head_sha` exactly equal to the actual `main` HEAD.
+- Pytest job `111225717061` succeeded and explicitly ran P14-C audit, P14-D audit, P14-E audit, P13-M pooled regression, and the full pytest suite.
+- Full pytest reported **580 passed / 2 warnings / 0 failed**.
+- P13-M pooled regression job `111225716868` succeeded.
+- REPAIR-001 adds real regressions for post-as-of candidate-trace exclusion, future revision not changing selection labels, no P14-D PIT/selection entry-point execution, mandatory P14-B authority on reload, missing/mismatched authority failure, and deterministic behavior.
+- `EvidenceStore` now requires a P14-B raw authority path and reload performs authoritative reverse-trace verification.
+- P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+- No factor, alpha, calibration, policy, recommendation, portfolio, trading, or P14-F promotion was introduced.
+
+### Blocking finding
+
+**P14-D version-selection semantics are still re-derived inside P14-E.**
+
+The repaired `evidence.py` no longer calls P14-D entry points and no longer leaks post-as-of records into `candidate_trace`; those parts are correct.
+
+However, `create_bundle()` still constructs `cands` by scanning the authoritative lineage and then `_selection_reason()` / `_rejection_reason()` independently compare `revision`, `available_time`, and canonical JSON to derive the winner/loser semantics. This remains a second implementation of P14-D's version-selection semantics.
+
+The accepted architecture requires P14-D to remain the sole PIT/version-selection authority and P14-E to consume the already-resolved P14-D state, then mechanically package/label that resolved state. Merely removing direct `run_query()` / `select_lineage()` calls is not sufficient if P14-E reconstructs the selection decision from the raw lineage.
+
+This is therefore an **architecture/authority violation**, not a test-count problem.
+
+### Governance finding
+
+`PROJECT_STATUS.md` in the actual HEAD `cc9f1e3f4f7ecdaa1c3bc1a6b0740763a78ad8fe` still reports `e546e3f5ca8c89fddb3f9e256ab08aa6c683a771` as Current Commit. The current status file is therefore stale relative to actual `main` HEAD.
+
+The exact-head CI itself is valid, because run `37130931030` checks out the actual `main` push SHA `cc9f1e3f4f7ecdaa1c3bc1a6b0740763a78ad8fe`.
+
+### Required narrow repair — P14-E Production Implementation REPAIR-002
+
+Repair only:
+
+1. Make P14-E consume P14-D's resolved selection/rejection state without reconstructing version-selection semantics from the complete authoritative lineage.
+2. Preserve PIT-safe candidate_trace: post-as-of records must remain excluded.
+3. Preserve mandatory P14-B RawStore verification on reload.
+4. Preserve the existing FOUR-CLASS taxonomy and deterministic bundle behavior.
+5. Synchronize `PROJECT_STATUS.md` Current Commit to the actual final repair HEAD.
+6. Run GitHub Actions on the final target HEAD and independently verify exact checkout SHA, P14-C/D/E audits, P13-M regression, and full pytest.
+
+Do not modify:
+- P14-E Contract / Matrix / Golden / accepted Design semantics;
+- P14-D implementation or authority;
+- P14-C;
+- P13-T / P13-U;
+- data;
+- factors / alpha;
+- calibration;
+- policy;
+- recommendation / portfolio / trading;
+- P14-F.
+
+**Current gate:**
+- P14-E Production Implementation: **FAIL / REPAIR REQUIRED**
+- P14-F: **NOT AUTHORIZED**
+- P13-T: **STOPPED / NOT EXECUTED**
+- P13-U: **PROTECTED**
