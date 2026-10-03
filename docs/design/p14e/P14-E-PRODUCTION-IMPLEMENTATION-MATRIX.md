@@ -2,8 +2,8 @@
 
 > STATUS: DRAFT — PRODUCTION IMPLEMENTATION NOT AUTHORIZED
 >
-> Closure: P14E-P-001..023 + P14E-I-001..024 = 47 contract invariants
-> mapped to P14E-PI-T-001..024 production test tasks = 100%
+> Closure: 47 contract invariants (P14E-P-001..023 = 23, P14E-I-001..024 = 24)
+> mapped to 47 production test rows (P14E-PI-T-001..047) = 47/47
 
 | Matrix ID | Contract ID | Requirement | Production Test |
 |-----------|------------|-------------|-----------------|
@@ -20,7 +20,7 @@
 | P14E-PI-T-011 | P14E-P-011 | canonical serialization | unit test |
 | P14E-PI-T-012 | P14E-P-012 | bundle_id 确定性 | unit test |
 | P14E-PI-T-013 | P14E-P-013 | 持久化 append-only/幂等/reload | unit + integration |
-| P14E-PI-T-014 | P14E-P-014 | reverse trace 五类错误 | unit test |
+| P14E-PI-T-014 | P14E-P-014 | reverse trace 四类错误分类 | unit test |
 | P14E-PI-T-015 | P14E-P-015 | tamper Cases A-F 检测矩阵 | unit test |
 | P14E-PI-T-016 | P14E-P-016 | missing/failure 状态不合并 | unit test |
 | P14E-PI-T-017 | P14E-P-017 | provenance 失败 fail-fast | unit test |
