@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E Production Implementation — IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE (production accepted NOT YET GRANTED)**; P14-E-006 Golden/Harness — PASS / INDEPENDENTLY ACCEPTED (`17afd2d`); P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
+**P14-E Production Implementation — REPAIR-001 IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE (production accepted NOT YET GRANTED)**; P14-E-006 Golden/Harness — PASS / INDEPENDENTLY ACCEPTED (`17afd2d`); P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -33,13 +33,13 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-004 | PASS | Production Implementation Contract accepted (Design Gate, `144b38f`); reverse-trace FOUR-CLASS frozen; Production Implementation remains separately gated |
 | P14-E-005 | PASS | Independently accepted Contract Draft at `70634cbe`; P14-D authority-aligned `create_bundle(query_result, authoritative_evidence_records)`; production implementation remains NOT AUTHORIZED |
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
-| P14-E Production Impl | IMPLEMENTED | Evidence runtime + store implemented at `1475745`; awaiting independent acceptance | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
+| P14-E Production Impl | REPAIR-001 IMPLEMENTED | Evidence runtime + store implemented at `1282810`; REPAIR-001 (PIT-safe candidate_trace, resolved-state selection labels, mandatory reload P14-B authority, negative tests) awaiting independent acceptance | Golden/Harness independently accepted at `17afd2d` |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`12828101a4e393d2277d8ccffea529deb0138189` — P14-E Production Implementation (IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE). Previous implementation commit: `14757455b0384b3af9301a2c51ff02f492f275b1`; Design/Tasking accepted at `bad52f16acaf7f5091215283672834291607cb26`.
+`e546e3f5ca8c89fddb3f9e256ab08aa6c683a771` — P14-E Production Implementation REPAIR-001 (PIT-safe candidate_trace + resolved-state selection labels + mandatory reload P14-B authority; IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE). Previous implementation commits: `12828101a4e393d2277d8ccffea529deb0138189`, `14757455b0384b3af9301a2c51ff02f492f275b1`; Design/Tasking accepted at `bad52f16acaf7f5091215283672834291607cb26`.
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
