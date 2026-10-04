@@ -238,6 +238,28 @@ def test_store_reload_rejects_mutated_authority(tmp_path):
         store.reload()
 
 
+def test_store_reload_rejects_hash_mismatched_authority_row(tmp_path):
+    """REPAIR-003 Test E (adversarial row): an authority row carrying the
+    right ingestion_id but a non-matching raw_payload_hash cannot
+    resolve — reverse trace requires BOTH fields to match."""
+    from astock_v2.information.evidence_store import EvidenceStore
+    records = [_rec("cn_stock_quote", "q-hm",
+                    payload={"close": 10.0}, value=10.0)]
+    result = _resolve(records, _query())
+    b = create_bundle(result, records)
+    row = {"record": json.loads(canonical_json(records[0].as_dict())),
+           "outcome": "ACCEPTED"}
+    row["record"]["raw_payload_hash"] = "0" * 64
+    raw_path = tmp_path / "raw_records.jsonl"
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_path.write_text(canonical_json(row) + "\n", encoding="utf-8")
+    store = EvidenceStore(tmp_path / "evidence_bundles.jsonl",
+                          raw_store_path=raw_path)
+    store.append(b)
+    with pytest.raises(ValueError, match="REVERSE_TRACE_NOT_FOUND"):
+        store.reload()
+
+
 # ------------------------------------------------------- mutation detection
 
 def test_mutation_detection():
