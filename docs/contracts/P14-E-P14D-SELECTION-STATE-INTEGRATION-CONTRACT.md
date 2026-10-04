@@ -17,8 +17,22 @@
 > authorized and frozen**; otherwise redesign the P14-E handoff so it
 > consumes existing accepted P14-D state without modifying P14-D."
 >
+> 独立可行性依据（2026-10-04）：P14-E Production Implementation
+> REPAIR-003 以 BLOCKED 终结（PROJECT_STATUS "REPAIR-003 BLOCKED
+> Record"，提交 `3d401bf1b09d4afe1afc2ec3bbf585cdff0f445b` +
+> `91836f74a1e8895c85b354e2fe27429a87aa92e9`）：两条替代路线——
+> 直接消费现有 P14-D state（冻结输出无标签源）与 P14-E 本地适配层
+> （必然重应用被 286f3a9 判定的比较语义）——均经代码级核查不可行；
+> 该 BLOCKED 判定已由独立验收确认原因成立。本契约因此是判定
+> preferred approach 的授权请求，也是当前唯一自洽路径。
+>
 > 修订历史：
 > v1: 初稿（P14-E Production Implementation REPAIR-003 提交）
+> v2: 独立验收准备修订（2026-10-04）——§2 补包面导出行
+>     （`__init__.py`）；§4 显式枚举 P14-E 恢复面两文件；
+>     §5.1 文件口径与 authority terminology 对齐；§6 强化
+>     未验收不实施与四阶段分离。§1/§3 语义面零变化；
+>     STATUS 仍为 DRAFT。
 
 ---
 
@@ -50,6 +64,12 @@ selection-state 发射面，该面先单独授权并冻结，P14-E 纯消费**�
 | `src/astock_v2/information/research_query.py` | `run_query` 输出新增顶层 `selection` 键 | additive，现有键语义/排序键零改动 |
 | `docs/contracts/P14-D-DESIGN-CONTRACT.md` | §9 增补 `selection` 说明 + 修订历史 v1.2 | 文档增补，状态行不动 |
 | `tests/contracts/p14d/test_p14d_harness.py` | 顶层键集断言扩展 + `test_p14d_011` | additive 断言 |
+| `src/astock_v2/information/__init__.py` | `from .pit import (...)` 增加 `resolve_selection`；`__all__` 增加同名导出（REPAIR-002 已验证 hunk，逐字恢复） | additive 包面导出：仅新增一个 re-export，不新增模块、不改既有导出语义 |
+
+包面说明：`__init__.py` 的改动仅是 P14-A 选择权威新函数的包级
+re-export（公开 API 完整性），不含任何逻辑；集成面的全部
+selection 语义仍只存在于 `pit.py`（规则旁）与 `research_query.py`
+（发射点）两处，且二者同属 P14-A/P14-D 权威面。
 
 **明确不在授权范围内**（即使本契约被接受）：PIT 可见性规则、版本
 选择规则、排除分类、`records`/`excluded`/`counts`/`result_id` 的
@@ -113,20 +133,51 @@ P14-E 消费实现已通过独立验收的 verified positive 审查
   欠解析 result 拒绝、未覆盖记录拒绝、trace 权威锚定、
   PIT 泄漏禁令、monkeypatch PIT/selection 入口、静态无调用扫描。
 
+恢复面文件集（Implementation 阶段执行，精确两文件、逐字恢复
+REPAIR-002 对应 delta，无其他）：
+
+- `src/astock_v2/information/evidence.py` —— 纯消费 create_bundle
+  （删除 lineage 扫描 / 补集推断 / `_selection_reason` /
+  `_rejection_reason` / `_check_candidate_consistent` 全部重推导
+  机器）。
+- `tests/test_p14e_production_impl.py` —— 上列 verbatim 回归组
+  逐字恢复。
+
+本文件集是 §4 承诺的完整实施面；除 §2 所列五处与本节两文件外，
+实施不得触碰任何其他文件。
+
 ## 5. 不变量（验收检查单）
 
-1. additive-only：除 §2 所列四处，无任何文件变动。
+1. additive-only：除 §2 所列 P14-D 集成面五处（`pit.py` /
+   `research_query.py` / P14-D 契约 / P14-D harness / 包
+   `__init__.py` 导出）与 §4 所列 P14-E 恢复面两文件
+   （`evidence.py` / `test_p14e_production_impl.py`）外，
+   无任何文件变动。authority ownership 全程不变：
+   P14-A/P14-D = selection/version authority（唯一），
+   P14-E = evidence consumer，P14-B = raw evidence authority，
+   P14-C = source reconciliation authority；本契约不产生、
+   不允许任何第二套 selection authority。
 2. PIT 语义零变化：visible ⇔ available_time <= as_of（含边界）。
 3. 选择规则零变化：visible_revisions 行为逐字节不变（回归证明）。
 4. 词表零变化：6 个标签字面值 = P14E-P-007 逐字。
 5. 确定性：含 selection 的 result 仍满足 P14D-006（双跑一致）。
-6. P14-E 纯消费：无任何比较逻辑（monkeypatch + 静态扫描证明）。
+6. P14-E 纯消费：无任何比较逻辑（monkeypatch + 静态扫描证明）；
+   实施后系统内 selection 分类逻辑唯一存在于 P14-A/P14-D 权威
+   （`pit.resolve_selection`，与规则同文件同源）——P14-E 侧不存在
+   `_selection_reason()` / `_rejection_reason()` 等任何第二套
+   selection authority，`selection_reason` / `rejection_reason`
+   一律从 resolved state 逐字消费。
 7. 既有 P14-D harness/golden 全绿（除 §2 明示的 additive 断言）。
 
-## 6. 实施门
+## 6. 实施门（四阶段分离，不得合并）
 
-- 本契约 STATUS: DRAFT —— **未验收，不实施**。
-- 验收 PASS 后的实施内容 = §2 + §3 + §4 的精确 delta
-  （即已验证的 REPAIR-002 改动，逐字恢复，仅更新文档内 SHA 引用）。
-- 验收 FAIL 则本面作废，P14-E handoff 保持 REPAIR-001 已接受形态，
-  架构修复另议。
+- 本契约 STATUS: DRAFT —— 在获得独立 Acceptance 记录之前**绝对不得
+  实施**：不得修改任何生产代码、测试、P14-D 冻结面或 P14-E 运行时。
+- 阶段分离：本契约获得独立 Contract Acceptance 后，仍须由验收方
+  显式作出 **Human Authorization**，之后才进入 **Implementation**
+  （内容 = §2 + §3 + §4 的精确 delta，即已验证的 REPAIR-002 改动
+  逐字恢复；P14-D 契约 v1.2 修订历史的授权依据行届时改引本契约），
+  最后由 **Independent Acceptance** 验收实施结果。本契约文本自身的
+  接受不构成实施授权。
+- 独立验收判 FAIL 则本面作废，P14-E handoff 保持 REPAIR-001 形态
+  （处于 286f3a9 FAIL 判定下），架构修复另议。
