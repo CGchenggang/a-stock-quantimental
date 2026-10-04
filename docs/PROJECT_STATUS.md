@@ -5,9 +5,7 @@
 
 ## Current Phase
 
-**P14-E Production Implementation — REPAIR-003 BLOCKED (governance revert `9de24f1` verified intact; integration surface `4b326b4` remains DRAFT — separate P14-D authorization REQUIRED; no P14-D modification made — see the REPAIR-003 BLOCKED Record) / production accepted NOT YET GRANTED; P14-F NOT AUTHORIZED**; P14-E-006 Golden/Harness — PASS / INDEPENDENTLY ACCEPTED (`17afd2d`); P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
-
-P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization for the separately scoped integration implementation is PENDING**; P14-E Production Implementation remains **NOT AUTHORIZED / REPAIR-003 BLOCKED until implementation authorization is explicitly granted and then independently accepted**; P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -33,13 +31,14 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-004 | PASS | Production Implementation Contract accepted (Design Gate, `144b38f`); reverse-trace FOUR-CLASS frozen; Production Implementation remains separately gated |
 | P14-E-005 | PASS | Independently accepted Contract Draft at `70634cbe`; P14-D authority-aligned `create_bundle(query_result, authoritative_evidence_records)`; production implementation remains NOT AUTHORIZED |
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
+| P14-D → P14-E Selection State Integration Contract v2 | PASS | Independently accepted at `51a769f`; separate Human Authorization required before implementation; P14-E production implementation remains NOT AUTHORIZED |
 | P14-E Production Impl | REPAIR-003 BLOCKED | Runtime at the REPAIR-001 form (`e546e3f`, itself under the `286f3a9` FAIL verdict for in-P14-E label re-derivation) + test-only Test E adversarial completion `9b7bf34`; REPAIR-001 verified-positive properties (PIT-safe candidate_trace, mandatory reload P14-B authority) intact; REPAIR-002 FAIL (governance: modified frozen P14-D surface); REPAIR-003 = byte-identical revert `9de24f1` + integration-surface authorization request `docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md` (DRAFT, not implemented) + mandated feasibility verification: **no compliant label source exists without modifying P14-D → BLOCKED; P14-D integration-surface authorization required** | Golden/Harness independently accepted at `17afd2d` |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`9b7bf34` — P14-E Production Implementation REPAIR-003 (governance revert `9de24f1` + integration-surface contract DRAFT `4b326b4` + test-only Test E adversarial completion `9b7bf34`). Status-sync convention: this file's Current Commit records the newest content commit at authoring time; the docs-only REPAIR-003 BLOCKED record commits on top of it are finalized by the acceptance record, which is the authoritative setter of the actual final HEAD (sha fixed-point is physically impossible inside a commit's own tree).
+`51a769f0a50632c5b8d71f4247d5a60ee2847012` — independently accepted P14-D → P14-E Selection State Integration Contract v2 (docs-only). Exact-head CI run `37185144953` is green and matches this SHA. This commit authorizes no implementation by itself; Human Authorization remains a separate gate.
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
@@ -306,6 +305,33 @@ Verified:
 - GitHub Actions run `36650601210`: pytest and p13m jobs both SUCCESS; all workflow steps inspected and Full pytest SUCCESS.
 
 P14-B is therefore accepted. P14-C is the next phase.
+
+## P14-D → P14-E Selection State Integration Contract — Independent Acceptance — 2026-10-04
+
+**Decision: PASS / INDEPENDENTLY ACCEPTED. This is Contract Acceptance only; it is NOT Human Implementation Authorization.**
+
+Independent verification performed against exact current `main` HEAD `51a769f0a50632c5b8d71f4247d5a60ee2847012`.
+
+### Acceptance evidence
+
+- Actual `main` HEAD: `51a769f0a50632c5b8d71f4247d5a60ee2847012`.
+- Compare from REPAIR-003 BLOCKED HEAD `91836f74a1e8895c85b354e2fe27429a87aa92e9`: exactly one commit, one changed file.
+- Changed file: `docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md`, +60/-9.
+- No production code, tests, P14-D implementation, P14-C/P14-B, P13-T/P13-U, data, alpha/factor/policy/recommendation/trading files were changed by this commit.
+- Contract v2 closes the prior authorization-scope gap: the package re-export is enumerated, the P14-E restoration surface is limited to `evidence.py` and its regression tests, and the implementation gate is separated into Contract Acceptance → Human Authorization → Implementation → Independent Acceptance.
+- Authority ownership is explicit: P14-A/P14-D remain the sole selection/version authority; P14-E is a consumer; P14-B remains raw-evidence authority; P14-C remains source-reconciliation authority.
+- The six P14-E selection/rejection labels are frozen verbatim; PIT visibility, version-selection semantics, existing result keys and ordering are declared unchanged.
+- P14-E re-selection is explicitly forbidden; the proposed implementation consumes resolved labels verbatim.
+- Exact-head GitHub Actions run `37185144953`: completed / success; `head_sha == 51a769f0a50632c5b8d71f4247d5a60ee2847012`.
+- Pytest job `111385410514`: all steps successful, including P14-C/D/E audits, P13-M pooled regression and full pytest.
+- P13-M job `111385410613`: successful.
+- ZCODE-reported full pytest: 581 passed / 2 warnings / 0 failed; CI workflow completed successfully.
+- P13-T remains STOPPED / NOT EXECUTED; P13-U remains PROTECTED; P14-F remains NOT AUTHORIZED.
+
+### Acceptance boundary
+
+This PASS accepts only the integration contract. It does **not** authorize implementation of `resolve_selection`, `research_query.py`, `information/__init__.py`, P14-D contract/harness changes, or P14-E `evidence.py` / regression-test restoration. Those changes require separate explicit Human Authorization.
+
 
 ## Operating Rule
 
