@@ -34,7 +34,8 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-D → P14-E Selection State Integration Contract v2 | PASS | Independently accepted at `51a769f`; separate Human Authorization required before implementation; P14-E production implementation remains NOT AUTHORIZED |
 | P14-E Production Impl | PASS / INDEPENDENTLY ACCEPTED | REPAIR-003 BLOCKED (independently confirmed) resolved via the authorized Integration Contract v2 (`51a769f`): Human Authorization granted → REPAIR-002 verified delta restored verbatim (`69cfe2a`) — P14-D emits the resolved selection state and P14-E is a pure verbatim consumer (all label re-derivation machinery deleted); Test E adversarial regression retained; mandatory P14-B reload authority unchanged. Implementation acceptance recorded 2026-10-04 per project-owner decision (see the acceptance record below) | Golden/Harness independently accepted at `17afd2d` |
 | R3-A Real Source Adapter | IMPLEMENTED — PENDING ACCEPTANCE | Owner-authorized start after the P14-E acceptance record: first REAL source adapter (`CNStockQuoteHistoricalAdapter`, local historical store → P14-B) added **inside the already-pinned `information/adapters.py`** (the P14-E golden file-set pin rejects new information/ files; no golden/harness change, no new file). Source identity = the already-registered `cn_stock_quote` (no registry change); `available_time` carried verbatim from store rows (store contract mandates explicit availability; trade day 16:00 +08:00 declared vendor publication); `ingested_at` caller-supplied and kept out of `raw_payload` (cross-run idempotency, evidence identity stability); missing availability REJECTED (durable audit), never invented | Full pytest 597 passed (double run identical); real-data smoke: 1,633 rows accepted / replay 1,633 DUPLICATE / 0 mutations / PIT query exact |
-| R4-A Evidence-backed Research Agent Loop | IMPLEMENTED — PENDING ACCEPTANCE | First end-to-end research loop (`agent/research_run.py`, new file, zero modifications to accepted surfaces): as_of → idempotent R3-A ingestion → P14-D `run_query` → P14-E `create_bundle` → factor inputs = VISIBLE records only → existing factors/risk/regime → reused `ResearchPacket`/orchestrator → conservative decision (uncalibrated ⇒ RESEARCH/NO_ACTION; probability honestly NOT_AVAILABLE; regime honestly UNKNOWN) → reused append-only `RecommendationLedger` with evidence identity in `input_snapshot`. 12 tests: E2E, PIT (exclusion recorded, inclusive boundary), evidence traceability, byte-identical replay (same store and across independent stores), symbol isolation (other symbol examined→OUTSIDE_AS_OF only), virgin-zone fail-fast, honest empty window | Full pytest 609 passed (double run identical); real-data smoke 000001: 42 visible bars → factors computed (vol 0.3442 annualized), risk flags honest, replay identical, ledger row carries bundle/result/evidence identity |
+| R4-A Evidence-backed Research Agent Loop | IMPLEMENTED — PENDING ACCEPTANCE | First end-to-end research loop (`agent/research_run.py`, new file, zero modifications to accepted surfaces): as_of → idempotent R3-A ingestion → P14-D `run_query` → P14-E `create_bundle` → factor inputs = VISIBLE records only → existing factors/risk/regime → reused `ResearchPacket`/orchestrator → conservative decision (uncalibrated ⇒ RESEARCH/NO_ACTION; probability honestly NOT_AVAILABLE; regime honestly UNKNOWN) → reused append-only `RecommendationLedger` with evidence identity in `input_snapshot`. 12 tests: E2E, PIT (exclusion recorded, inclusive boundary), evidence traceability, byte-identical replay (same store and across independent stores), symbol isolation (other symbol examined→OUTSIDE_AS_OF only), virgin-zone fail-fast, honest empty window. R4-A-NARROW-REPAIR-001: drawdown extraction from the OHLCV structure (see the R4-A section) | Full pytest 609→611 passed (double run identical); real-data smoke 000001: 42 visible bars → factors computed (vol 0.3442 annualized), risk flags honest, replay identical, ledger row carries bundle/result/evidence identity |
+| R4-B Research Agent Batch & Validation Loop | IMPLEMENTED — PENDING ACCEPTANCE | Pure-orchestration batch runner (`agent/research_batch.py`, new file, zero modifications to accepted surfaces): (symbols × as_ofs) → deduplicated targets sorted by (symbol, as_of) → **one idempotent pre-ingestion of ALL target symbols** (fixes the batch-position store-growth hazard that would otherwise make replay order-dependent) → per-target independent R4-A `run_research` → per-target failure isolation (FAILED + error recorded, never swallowed, batch proceeds) → batch result {batch_id, run_parameters, results[], summary{ok/failed/actions}} → `append_batch_to_ledger` via the existing R4-A append path (FAILED targets append nothing). 8 tests: multi-symbol batch, symbol isolation, PIT isolation across as_ofs, byte-identical replay, stable ordering + dedup, failure isolation (virgin-zone fail-fast trigger), ledger continuity, empty batch | Full pytest 619 passed (double run identical); real-data smoke: 000001+000002 batch → 2 OK, reversed-input replay identical, per-symbol results independent, ledger 2 rows with evidence identity |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
@@ -2744,6 +2745,79 @@ replay byte-identical; ledger row carries bundle/result/evidence identity.
 **Gate:**
 - R4-A Evidence-backed Research Agent Loop: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE**
 - R3-A Real Source Adapter: IMPLEMENTATION COMPLETE — PENDING INDEPENDENT ACCEPTANCE
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
+
+## R4-B — Research Agent Batch & Validation Loop — IMPLEMENTED — 2026-10-04
+
+**Authorization.** Owner-instructed product task following the R4-A acceptance: extend the
+single-run loop to a deterministic multi-symbol / multi-as_of **Batch Run** — engineering the
+batch, not redesigning any research model. Status: **IMPLEMENTATION COMPLETE — READY FOR
+INDEPENDENT ACCEPTANCE** (this record is not an acceptance decision).
+
+**Implementation (pure addition — zero modifications to accepted surfaces).**
+New `src/astock_v2/agent/research_batch.py`:
+
+```text
+run_research_batch(symbols, as_ofs, *, historical_store, raw_store,
+                   ingested_at, lookback=20)
+  → targets = deduplicated (symbol, as_of) pairs, sorted by (symbol, as_of)
+  → ONE idempotent pre-ingestion of all target symbols
+    (R3-A adapter → P14-B RawStore) before the first run
+  → per target: R4-A run_research(...)   [accepted chain, unchanged]
+  → per-target failure isolation: a failed target is recorded
+    {status: FAILED, error} and the batch continues — exceptions are
+    captured and reported, never swallowed
+  → batch result {batch_id, run_parameters, results[], summary}
+append_batch_to_ledger(batch_result, ledger, ingested_at)
+  → existing R4-A ledger append per successful target (FAILED targets
+    append nothing); input_snapshot carries run/bundle/result/evidence
+    identity as in R4-A
+```
+
+- **Determinism hazard found and fixed during implementation**: sequential per-run ingestion
+  inside the run loop makes the P14-B store grow between runs, so each run's examined set (and
+  therefore result_id/bundle_id/record_id) depended on batch position — first-call vs
+  second-call replay diverged. The batch now pre-ingests ALL target symbols once before the
+  first run, so every run sees the same store state; replay is byte-identical and input order
+  is irrelevant. No accepted surface was changed to achieve this.
+- **PIT**: unchanged — every run is the accepted R4-A run over the accepted P14-D query; the
+  batch adds no filtering, no PIT logic, and reads no store directly for research purposes.
+  Virgin-zone targets fail fast (assert_research_zone) and are recorded as FAILED while the
+  rest of the batch proceeds.
+- **Failure isolation**: per-target try/except records {symbol, as_of, status=FAILED, error};
+  other targets continue; nothing is silently dropped.
+- **Ledger**: the existing append-only ledger, one append per OK target via the existing R4-A
+  path — no second ledger, no batch write API added.
+
+**Tests.** `tests/test_r4b_research_batch.py` — 8 tests (tmp_path, CI-offline): multi-symbol
+batch (3 symbols, independent run identities), symbol isolation, PIT isolation across as_ofs
+(early run's inputs end at its own horizon; later bars excluded AND recorded), byte-identical
+batch replay, stable ordering under input reordering + target deduplication, failure isolation
+(virgin-zone fail-fast trigger: 3 OK + 3 FAILED recorded with errors, valid targets
+unaffected), ledger continuity (3 rows, evidence identity preserved), empty batch.
+
+**Verification.** Full pytest **619 passed / 2 warnings / 0 failed** (double run identical);
+P14-C/D/E audits exit 0; P13-M regression 3 passed. Real-data smoke (read-only): batch
+[000001, 000002] at 2020-02-03T16:00+08:00 → 2 OK (17 visible bars each), per-symbol results
+independent (different momentum/drawdown), replay identical INCLUDING reversed input order,
+ledger 2 rows with evidence identity.
+
+**Known limitations (honest).**
+1. Per-run `examined` counts cover all batch-ingested records (the accepted R4-A query
+   semantics); a provenance-invalid record in the shared raw store fails every run against
+   that store (P14-A fail-fast semantics) — per-symbol poison isolation would require scoping
+   the projection, an R4-A semantic change not authorized here.
+2. Failure-isolation coverage uses the virgin-zone guard as the failure trigger (the honest
+   accepted mechanism); ingestion-level source failures produce the adapter's own audited
+   reports rather than target failures.
+3. Batch size is unbounded in-code; production-scale batches (76-stock and beyond) need the
+   caller to supply the universe (no universe file is read by the runner).
+
+**Gate:**
+- R4-B Research Agent Batch & Validation Loop: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE**
+- R4-A / R3-A: pending their own independent acceptance records where noted above
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
