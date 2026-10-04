@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; P14-E Production Implementation is now **INTEGRATION IMPLEMENTED — PENDING INDEPENDENT ACCEPTANCE** (implementation commit `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; REPAIR-002 verified delta restored verbatim per contract §2+§3+§4); P14-F NOT AUTHORIZED.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) STARTED under owner authorization — reuse of the accepted P14-B/C/D/E authority chain, no semantic change**; P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -32,7 +32,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-005 | PASS | Independently accepted Contract Draft at `70634cbe`; P14-D authority-aligned `create_bundle(query_result, authoritative_evidence_records)`; production implementation remains NOT AUTHORIZED |
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
 | P14-D → P14-E Selection State Integration Contract v2 | PASS | Independently accepted at `51a769f`; separate Human Authorization required before implementation; P14-E production implementation remains NOT AUTHORIZED |
-| P14-E Production Impl | INTEGRATION IMPLEMENTED — PENDING ACCEPTANCE | REPAIR-003 BLOCKED (independently confirmed) resolved via the authorized Integration Contract v2 (`51a769f`): Human Authorization granted → REPAIR-002 verified delta restored verbatim (`69cfe2a`) — P14-D emits the resolved selection state (pit label constants + `resolve_selection`, `run_query` `selection` key, P14-D contract v1.2, harness additive assertions, `__init__` export) and P14-E is a pure verbatim consumer (all label re-derivation machinery deleted); REPAIR-003 Test E adversarial regression retained; P14-B mandatory reload authority unchanged | Golden/Harness independently accepted at `17afd2d` |
+| P14-E Production Impl | PASS / INDEPENDENTLY ACCEPTED | REPAIR-003 BLOCKED (independently confirmed) resolved via the authorized Integration Contract v2 (`51a769f`): Human Authorization granted → REPAIR-002 verified delta restored verbatim (`69cfe2a`) — P14-D emits the resolved selection state and P14-E is a pure verbatim consumer (all label re-derivation machinery deleted); Test E adversarial regression retained; mandatory P14-B reload authority unchanged. Implementation acceptance recorded 2026-10-04 per project-owner decision (see the acceptance record below) | Golden/Harness independently accepted at `17afd2d` |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
@@ -2578,3 +2578,27 @@ referenced as-is and were not altered.
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
+
+## P14-E Production Implementation — Independent Acceptance — 2026-10-04
+
+**Decision: PASS / INDEPENDENTLY ACCEPTED** (implementation acceptance; the integration
+CONTRACT acceptance was separately recorded at `0067807`).
+
+Accepted by the **project owner** (acceptance authority). The decision was communicated by the
+owner on 2026-10-04 (via the roadmap-audit task statement: "P14-E INDEPENDENTLY ACCEPTED") and is
+recorded in-repo by ZCODE on the owner's explicit instruction — ZCODE is not the acceptance
+authority and did not make this decision.
+
+- Accepted implementation: `69cfe2a86d23352e9f74cf7454aad6cf59135e7b` (exactly the 7
+  contract-authorized files, +318/−181; REPAIR-002 verified delta restored verbatim; Test E
+  regression retained).
+- Exact-head CI evidence: run `37189305728` (HEAD `d100d0197744671a83de03af1cc2580ae85e4bd9`)
+  and run `37190466113` (HEAD `4ff243c66b1906a4b0a8ddbfc082413b9b9f893f`), both completed /
+  success, all steps green (P14-C/D/E audits, P13-M regression, Full pytest suite).
+- Repository verification at audit HEAD `c8fdb48`: full pytest 583 passed / 2 warnings /
+  0 failed (double run identical); audits exit 0; no integrity problem found by the roadmap
+  audit (`docs/ROADMAP_AUDIT_2026-10-04.md`).
+- Gate after this record: **P14-E Production Implementation: PASS / INDEPENDENTLY ACCEPTED**;
+  next authorized work: **R3-A — Local Historical Store → P14-B real source adapter**, reusing
+  the accepted P14-B/C/D/E authority chain with **no semantic change**; P14-F remains
+  NOT AUTHORIZED; P13-T remains STOPPED / NOT EXECUTED; P13-U remains PROTECTED.
