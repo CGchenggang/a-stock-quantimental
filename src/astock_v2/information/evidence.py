@@ -2,12 +2,17 @@
 
 Consumes an already-resolved P14-D query result + P14-B authoritative
 records to construct, freeze, persist, and verify Evidence Bundles.
+P14-E is a pure consumer: PIT visibility, version selection, AND the
+selection/rejection labels are resolved by the authorities and carried
+by the result — nothing here re-derives any decision (REPAIR-002).
 
 Authority chain (P14-E MUST NOT re-execute):
 
     P14-B RawStore         identity primitives (ingestion_id, hash)
     P14-A projection       RawIngestRecord -> RawInformationRecord
-    P14-D run_query        PIT visibility + version selection (resolved)
+    P14-A pit              selection rule + its labels (resolve_selection)
+    P14-D run_query        PIT visibility + version selection +
+                           resolved selection/rejection state (emitted)
     P14-E (this module)    evidence / bundle / persistence / trace
 
 FOUR-CLASS reverse trace taxonomy (frozen):
@@ -16,7 +21,8 @@ FOUR-CLASS reverse trace taxonomy (frozen):
     REVERSE_TRACE_IDENTITY_MISMATCH
     RAW_RECORD_CORRUPTED
 
-FOUR-CLASS selection/rejection enums (frozen):
+Selection/rejection labels (frozen, defined in pit.py — the selection
+authority — and re-exported here):
     SELECTED_HIGHEST_REVISION
     SELECTED_EARLIEST_ON_REVISION_TIE
     SELECTED_CANONICAL_TIEBREAK
@@ -33,8 +39,15 @@ import hashlib
 import json
 from pathlib import Path
 
-from .models import parse_boundary
-from .raw_store import RawIngestRecord, to_information_record
+from .pit import (
+    REJECTED_CANONICAL_TIEBREAK,
+    REJECTED_LOWER_REVISION,
+    REJECTED_REVISION_TIE_NOT_EARLIEST,
+    SELECTED_CANONICAL_TIEBREAK,
+    SELECTED_EARLIEST_ON_REVISION_TIE,
+    SELECTED_HIGHEST_REVISION,
+)
+from .raw_store import RawIngestRecord
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -50,12 +63,15 @@ EVIDENCE_FIELDS = IDENTITY_FIELDS + (
     "entity_id", "information_type", "ingested_at",
 )
 
-SELECTION_HIGHEST = "SELECTED_HIGHEST_REVISION"
-SELECTION_EARLIEST_TIE = "SELECTED_EARLIEST_ON_REVISION_TIE"
-SELECTION_CANONICAL = "SELECTED_CANONICAL_TIEBREAK"
-REJECTED_LOWER = "REJECTED_LOWER_REVISION"
-REJECTED_TIE_NOT_EARLIEST = "REJECTED_REVISION_TIE_NOT_EARLIEST"
-REJECTED_CANONICAL = "REJECTED_CANONICAL_TIEBREAK"
+# Frozen selection/rejection vocabulary (P14E-P-007). The literals are
+# DEFINED by the selection authority (pit.py) and re-exported here —
+# P14-E only carries P14-D's resolved labels, it never classifies.
+SELECTION_HIGHEST = SELECTED_HIGHEST_REVISION
+SELECTION_EARLIEST_TIE = SELECTED_EARLIEST_ON_REVISION_TIE
+SELECTION_CANONICAL = SELECTED_CANONICAL_TIEBREAK
+REJECTED_LOWER = REJECTED_LOWER_REVISION
+REJECTED_TIE_NOT_EARLIEST = REJECTED_REVISION_TIE_NOT_EARLIEST
+REJECTED_CANONICAL = REJECTED_CANONICAL_TIEBREAK
 
 TRACE_NOT_FOUND = "REVERSE_TRACE_NOT_FOUND"
 TRACE_AMBIGUOUS = "REVERSE_TRACE_AMBIGUOUS"
@@ -134,108 +150,43 @@ def _identity_key(record: RawIngestRecord) -> tuple:
             record.ingested_at)
 
 
-def _resolved_exclusion_keys(query_result: dict) -> set:
-    """Identity keys of records P14-D already resolved as excluded
-    (out-of-scope / unresolved availability / not yet available).
-    Recognizing non-candidates by joining against this resolved set is
-    the ONLY visibility knowledge in this module — visibility itself is
-    never tested here."""
-    return {(e["source"], e["source_id"], e.get("available_time") or "")
-            for e in query_result["excluded"]}
-
-
-def _visible_candidates(lineage: list, selected_keys: set,
-                        excluded_keys: set) -> list:
-    """Authoritative records of one lineage that P14-D resolved as visible
-    selection candidates: neither selected nor resolved-excluded."""
-    cands = []
-    for r in lineage:
-        if _identity_key(r) in selected_keys:
-            continue
-        if (r.source, r.source_id, r.available_time or "") in excluded_keys:
-            continue
-        cands.append(r)
-    return cands
-
-
-def _check_candidate_consistent(candidate: RawIngestRecord,
-                                winner: RawIngestRecord) -> None:
-    """A visible candidate that outranks the resolved winner on any
-    P14-A rule means the authoritative records do not correspond to the
-    resolved result — authority fail-fast (never re-select)."""
-    if candidate.revision > winner.revision:
-        raise ValueError(
-            f"authority_violation: candidate "
-            f"{candidate.source}/{candidate.source_id} rev "
-            f"{candidate.revision} outranks resolved winner rev "
-            f"{winner.revision}; records do not correspond to result")
-    if candidate.revision == winner.revision:
-        if parse_boundary(candidate.available_time) < parse_boundary(
-                winner.available_time):
-            raise ValueError(
-                f"authority_violation: candidate "
-                f"{candidate.source}/{candidate.source_id} is an earlier "
-                f"revision tie than the resolved winner; records do not "
-                f"correspond to result")
-        if (candidate.available_time == winner.available_time
-                and to_information_record(candidate).canonical_json()
-                < to_information_record(winner).canonical_json()):
-            raise ValueError(
-                f"authority_violation: candidate "
-                f"{candidate.source}/{candidate.source_id} outranks the "
-                f"resolved winner on the canonical tiebreak; records do "
-                f"not correspond to result")
-
-
-def _selection_reason(winner: RawIngestRecord, candidates: list) -> str:
-    """Mechanical label of P14-D's resolved choice, factually compared
-    against the visible candidates P14-D resolved — never against the
-    full lineage, and never by re-executing selection."""
-    if not candidates or all(c.revision < winner.revision
-                             for c in candidates):
-        return SELECTION_HIGHEST
-    tied = [c for c in candidates if c.revision == winner.revision]
-    if tied and all(parse_boundary(c.available_time)
-                    > parse_boundary(winner.available_time) for c in tied):
-        return SELECTION_EARLIEST_TIE
-    return SELECTION_CANONICAL
-
-
-def _rejection_reason(candidate: RawIngestRecord,
-                      winner: RawIngestRecord) -> str:
-    """Factual label of why a visible candidate lost to the resolved
-    winner. Records P14-D excluded (PIT / out-of-scope) never reach this
-    labeling — they are represented by the carried exclusions alone."""
-    _check_candidate_consistent(candidate, winner)
-    if candidate.revision < winner.revision:
-        return REJECTED_LOWER
-    if parse_boundary(candidate.available_time) > parse_boundary(
-            winner.available_time):
-        return REJECTED_TIE_NOT_EARLIEST
-    return REJECTED_CANONICAL
+def _proj_key(proj: dict) -> tuple:
+    """Identity key of a P14-D provenance/selection projection — the same
+    tuple :func:`_identity_key` yields for the originating raw record."""
+    return (proj["source"], proj["source_record_id"], proj["revision"],
+            proj["ingested_at"])
 
 
 def create_bundle(query_result: dict,
                   authoritative_evidence_records: list[RawIngestRecord]) -> dict:
     """Build an EvidenceBundle from an already-resolved P14-D result.
 
-    P14E-P-006: consumes query_result as-is; never re-executes PIT or
-    version selection. What was selected, what was excluded, and what
-    was a visible candidate are all read off the resolved result — the
-    full lineage is never scanned for selection truth.
-    P14E-P-008: candidate_trace labels only visible losers; records
-    P14-D excluded (post-as_of included) are represented by the carried
-    exclusions alone, so nothing beyond the as_of horizon can leak into
-    the bundle.
+    P14-E is a PURE CONSUMER of resolved state (REPAIR-002): PIT
+    visibility, version selection, and the selection/rejection labels are
+    all decided by the P14-D/P14-A authority and carried by query_result
+    (`selection.selected` / `selection.rejected`). The authoritative
+    lineage is never scanned for selection truth and no comparison here
+    re-derives any decision. The authoritative records exist only to
+    anchor evidence identity to P14-B (evidence_id) and to fail fast when
+    the resolved state cites a record they do not contain.
     """
-    # authority check: must be a resolved result
+    # authority check: must be a fully-resolved P14-D result
     missing_keys = [k for k in ("query", "records", "excluded", "counts",
-                                "result_id") if k not in query_result]
+                                "result_id", "selection")
+                    if k not in query_result]
     if missing_keys:
         raise ValueError(
             f"authority_violation: not a resolved P14-D result "
             f"(missing {missing_keys}); P14-E must not execute "
             f"PIT/version-selection")
+    selection_state = query_result["selection"]
+    missing_state = [k for k in ("selected", "rejected")
+                     if k not in selection_state]
+    if missing_state:
+        raise ValueError(
+            f"authority_violation: resolved result carries no "
+            f"selection/rejection state (missing {missing_state}); "
+            f"P14-E consumes P14-D's resolved decisions verbatim")
 
     records = list(authoritative_evidence_records)
     check_mutation(records)
@@ -250,56 +201,58 @@ def create_bundle(query_result: dict,
         ev_map[k] = ev
         rec_map[k] = r
 
-    lineages: dict[tuple, list] = {}
-    for r in records:
-        lineages.setdefault((r.source, r.source_id), []).append(r)
+    # resolved selection labels, keyed by P14-D provenance identity
+    reason_by_key: dict[tuple, str] = {}
+    for sel in selection_state["selected"]:
+        if "selection_reason" not in sel:
+            raise ValueError(
+                "authority_violation: selected entry without "
+                "selection_reason; result is not fully resolved")
+        reason_by_key[_proj_key(sel)] = sel["selection_reason"]
 
-    # P14-D resolved state — the sole selection authority
-    selected_keys = {
-        (r["source"], r["source_record_id"], r["revision"], r["ingested_at"])
-        for r in query_result["records"]}
-    excluded_keys = _resolved_exclusion_keys(query_result)
-
+    # evidence: 1:1 with result.records, labeled by the resolved state
     evidence: list[dict] = []
-    candidate_trace: list[dict] = []
     for sel in query_result["records"]:
-        k = (sel["source"], sel["source_record_id"], sel["revision"],
-             sel["ingested_at"])
+        k = _proj_key(sel)
         base = ev_map.get(k)
-        winner = rec_map.get(k)
-        if base is None or winner is None:
+        if base is None:
             raise ValueError(
                 f"identity_failure: P14-D selected record {k} not found "
                 f"in authoritative records")
-        lineage = lineages.get((sel["source"], sel["source_record_id"]), [])
-        cands = _visible_candidates(lineage, selected_keys, excluded_keys)
-        # fail-fast on inconsistent inputs before any labeling
-        rejections = [(c, _rejection_reason(c, winner)) for c in cands]
+        if k not in reason_by_key:
+            raise ValueError(
+                f"authority_violation: selected record {k} is not covered "
+                f"by the resolved selection state")
         ev = dict(base)
-        ev["selection_reason"] = _selection_reason(winner, cands)
+        ev["selection_reason"] = reason_by_key[k]
         evidence.append(ev)
-        for cand, reason in rejections:
-            candidate_trace.append({
-                "source": cand.source, "source_id": cand.source_id,
-                "revision": cand.revision,
-                "available_time": cand.available_time,
-                "raw_payload_hash": cand.raw_payload_hash,
-                "ingested_at": cand.ingested_at,
-                "rejection_reason": reason,
-            })
+
+    # candidate_trace: P14-D's resolved rejections, projected verbatim
+    # (order preserved — the resolved state is emitted in frozen
+    # deterministic order; this projection renames fields, never
+    # reorders or re-classifies)
+    candidate_trace: list[dict] = []
+    for rej in selection_state["rejected"]:
+        if "rejection_reason" not in rej:
+            raise ValueError(
+                "authority_violation: rejected entry without "
+                "rejection_reason; result is not fully resolved")
+        k = _proj_key(rej)
+        if k not in rec_map:
+            raise ValueError(
+                f"identity_failure: rejected candidate {k} not found in "
+                f"authoritative records")
+        candidate_trace.append({
+            "source": rej["source"],
+            "source_id": rej["source_record_id"],
+            "revision": rej["revision"],
+            "available_time": rej["available_time"],
+            "raw_payload_hash": rej["raw_payload_hash"],
+            "ingested_at": rej["ingested_at"],
+            "rejection_reason": rej["rejection_reason"],
+        })
 
     evidence.sort(key=lambda e: (e["source"], e["source_id"], e["revision"]))
-    candidate_trace.sort(key=lambda t: (t["source"], t["source_id"],
-                                        t["revision"], t["available_time"],
-                                        t["raw_payload_hash"]))
-    seen: set = set()
-    unique_trace = []
-    for t in candidate_trace:
-        k = (t["source"], t["source_id"], t["revision"],
-             t["available_time"], t["raw_payload_hash"])
-        if k not in seen:
-            seen.add(k)
-            unique_trace.append(t)
 
     bundle = {
         "schema_version": BUNDLE_SCHEMA_VERSION,
@@ -307,11 +260,11 @@ def create_bundle(query_result: dict,
         "as_of": query_result["query"]["as_of"],
         "result_id": query_result["result_id"],
         "evidence": evidence,
-        "candidate_trace": unique_trace,
+        "candidate_trace": candidate_trace,
         "exclusions": query_result["excluded"],
-        "counts": {"evidence": len(evidence), "candidates": len(unique_trace),
+        "counts": {"evidence": len(evidence), "candidates": len(candidate_trace),
                    "exclusions": len(query_result["excluded"]),
-                   "examined": len(records)},
+                   "examined": query_result["counts"]["examined"]},
     }
     bundle["bundle_id"] = _sha(canonical_json(bundle))
     return bundle
