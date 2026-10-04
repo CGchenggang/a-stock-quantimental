@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E Production Implementation — REPAIR-002 IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE (production accepted NOT YET GRANTED)**; P14-E-006 Golden/Harness — PASS / INDEPENDENTLY ACCEPTED (`17afd2d`); P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
+**P14-E Production Implementation — REPAIR-003 IMPLEMENTED (governance revert `9de24f1` + integration-surface authorization request `4b326b4` DRAFT) / AWAITING INDEPENDENT ACCEPTANCE (production accepted NOT YET GRANTED; P14-F NOT AUTHORIZED)**; P14-E-006 Golden/Harness — PASS / INDEPENDENTLY ACCEPTED (`17afd2d`); P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -33,13 +33,13 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-004 | PASS | Production Implementation Contract accepted (Design Gate, `144b38f`); reverse-trace FOUR-CLASS frozen; Production Implementation remains separately gated |
 | P14-E-005 | PASS | Independently accepted Contract Draft at `70634cbe`; P14-D authority-aligned `create_bundle(query_result, authoritative_evidence_records)`; production implementation remains NOT AUTHORIZED |
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
-| P14-E Production Impl | REPAIR-002 IMPLEMENTED | Evidence runtime + store implemented at `1282810`; REPAIR-001 (PIT-safe candidate_trace, mandatory reload P14-B authority); REPAIR-002 (selection/rejection state resolved by P14-D/P14-A authority and consumed verbatim by P14-E — no lineage re-derivation) awaiting independent acceptance | Golden/Harness independently accepted at `17afd2d` |
+| P14-E Production Impl | REPAIR-003 IMPLEMENTED | Runtime at `1282810`; REPAIR-001 (PIT-safe candidate_trace, mandatory reload P14-B authority) verified positive; REPAIR-002 FAIL (governance: modified frozen P14-D surface); REPAIR-003 = byte-identical revert of all P14-D/P14-A/P14-E surfaces to the reviewed `cc9f1e3` state + integration-surface authorization request `docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md` (DRAFT, not implemented) | Golden/Harness independently accepted at `17afd2d` |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`01cbed837802d977654d6ed9c03de547e74c3e4e` — Independent acceptance record for P14-E Production Implementation REPAIR-002 (FAIL / REPAIR REQUIRED).
+`4b326b4` — P14-E Production Implementation REPAIR-003 submission (governance revert `9de24f1` + integration-surface contract DRAFT). Status-sync convention: this file's Current Commit records the newest content commit at authoring time; docs-only bookkeeping commits on top of it are finalized by the acceptance record, which is the authoritative setter of the actual final HEAD (sha fixed-point is physically impossible inside a commit's own tree).
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
@@ -2298,3 +2298,40 @@ Repair only:
 - **P14-F: NOT AUTHORIZED**
 - **P13-T: STOPPED / NOT EXECUTED**
 - **P13-U: PROTECTED**
+
+## P14-E Production Implementation REPAIR-003 — 2026-10-04
+
+Submitted in response to the REPAIR-002 independent acceptance
+(FAIL / REPAIR REQUIRED, record `3b8f8aebc9526bc55065da012023d748230351f2`).
+
+**Blocking #1 (governance/scope) — RESOLVED.** REPAIR-002 (`5dbc9c4`) had
+modified frozen P14-D surfaces (pit.py, research_query.py, P14-D design
+contract, P14-D harness) despite the task's explicit do-not-modify
+scope. REPAIR-003 restores all seven affected files byte-identically to
+the reviewed `cc9f1e3` state (verified: `git diff cc9f1e3` over
+`src/astock_v2/information/` and `tests/` is empty). Revert commit:
+`9de24f1`. No P14-D/P14-A implementation, contract, or authority is
+changed relative to its accepted state.
+
+**Blocking #2 (status sync) — ADDRESSED.** Current Commit now records
+the newest content commit at authoring time; the convention is stated
+in the Current Commit section. The acceptance record remains the
+authoritative setter of the actual final HEAD.
+
+**Architecture path per the verdict's preferred approach.** The
+resolved selection/rejection state is exposed to P14-E through an
+integration surface that is FIRST separately authorized and frozen:
+`docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md`
+(STATUS: DRAFT — AWAITING INDEPENDENT ACCEPTANCE, commit `4b326b4`).
+It is NOT implemented. The REPAIR-002 consumption architecture
+(verified positive as "conceptually sound") is restored only after
+that contract is accepted; if the contract is rejected, the P14-E
+handoff remains at the REPAIR-001 accepted form and the architecture
+repair is redesigned.
+
+**Gate:**
+- P14-E Production Implementation: REPAIR-003 IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE
+- P14-E/P14-D integration surface: DRAFT / NOT AUTHORIZED / NOT IMPLEMENTED
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
