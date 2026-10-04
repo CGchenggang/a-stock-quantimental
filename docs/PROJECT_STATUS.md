@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) IMPLEMENTED — PENDING INDEPENDENT ACCEPTANCE**; **R4-A (Evidence-backed Research Agent Loop) IMPLEMENTED — READY FOR INDEPENDENT ACCEPTANCE** (first end-to-end research run: P14-B→D→E→factors→risk→packet→ledger, deterministic replay proven); P14-F NOT AUTHORIZED.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) — PASS / INDEPENDENTLY ACCEPTED**; **R4-A (Evidence-backed Research Agent Loop) — PASS / INDEPENDENTLY ACCEPTED** (including R4-A-NARROW-REPAIR-001; acceptance decisions by the project owner, recorded on owner instruction — see the R3-A/R4-A acceptance record below); **R4-B (Research Agent Batch & Validation Loop) — IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE** (deterministic multi-symbol batch with failure isolation and pre-ingestion replay fix); P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -33,8 +33,8 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
 | P14-D → P14-E Selection State Integration Contract v2 | PASS | Independently accepted at `51a769f`; separate Human Authorization required before implementation; P14-E production implementation remains NOT AUTHORIZED |
 | P14-E Production Impl | PASS / INDEPENDENTLY ACCEPTED | REPAIR-003 BLOCKED (independently confirmed) resolved via the authorized Integration Contract v2 (`51a769f`): Human Authorization granted → REPAIR-002 verified delta restored verbatim (`69cfe2a`) — P14-D emits the resolved selection state and P14-E is a pure verbatim consumer (all label re-derivation machinery deleted); Test E adversarial regression retained; mandatory P14-B reload authority unchanged. Implementation acceptance recorded 2026-10-04 per project-owner decision (see the acceptance record below) | Golden/Harness independently accepted at `17afd2d` |
-| R3-A Real Source Adapter | IMPLEMENTED — PENDING ACCEPTANCE | Owner-authorized start after the P14-E acceptance record: first REAL source adapter (`CNStockQuoteHistoricalAdapter`, local historical store → P14-B) added **inside the already-pinned `information/adapters.py`** (the P14-E golden file-set pin rejects new information/ files; no golden/harness change, no new file). Source identity = the already-registered `cn_stock_quote` (no registry change); `available_time` carried verbatim from store rows (store contract mandates explicit availability; trade day 16:00 +08:00 declared vendor publication); `ingested_at` caller-supplied and kept out of `raw_payload` (cross-run idempotency, evidence identity stability); missing availability REJECTED (durable audit), never invented | Full pytest 597 passed (double run identical); real-data smoke: 1,633 rows accepted / replay 1,633 DUPLICATE / 0 mutations / PIT query exact |
-| R4-A Evidence-backed Research Agent Loop | IMPLEMENTED — PENDING ACCEPTANCE | First end-to-end research loop (`agent/research_run.py`, new file, zero modifications to accepted surfaces): as_of → idempotent R3-A ingestion → P14-D `run_query` → P14-E `create_bundle` → factor inputs = VISIBLE records only → existing factors/risk/regime → reused `ResearchPacket`/orchestrator → conservative decision (uncalibrated ⇒ RESEARCH/NO_ACTION; probability honestly NOT_AVAILABLE; regime honestly UNKNOWN) → reused append-only `RecommendationLedger` with evidence identity in `input_snapshot`. 12 tests: E2E, PIT (exclusion recorded, inclusive boundary), evidence traceability, byte-identical replay (same store and across independent stores), symbol isolation (other symbol examined→OUTSIDE_AS_OF only), virgin-zone fail-fast, honest empty window. R4-A-NARROW-REPAIR-001: drawdown extraction from the OHLCV structure (see the R4-A section) | Full pytest 609→611 passed (double run identical); real-data smoke 000001: 42 visible bars → factors computed (vol 0.3442 annualized), risk flags honest, replay identical, ledger row carries bundle/result/evidence identity |
+| R3-A Real Source Adapter | PASS / INDEPENDENTLY ACCEPTED | Owner-authorized start after the P14-E acceptance record: first REAL source adapter (`CNStockQuoteHistoricalAdapter`, local historical store → P14-B) added **inside the already-pinned `information/adapters.py`** (the P14-E golden file-set pin rejects new information/ files; no golden/harness change, no new file). Source identity = the already-registered `cn_stock_quote` (no registry change); `available_time` carried verbatim from store rows (store contract mandates explicit availability; trade day 16:00 +08:00 declared vendor publication); `ingested_at` caller-supplied and kept out of `raw_payload` (cross-run idempotency, evidence identity stability); missing availability REJECTED (durable audit), never invented | Full pytest 597 passed (double run identical); real-data smoke: 1,633 rows accepted / replay 1,633 DUPLICATE / 0 mutations / PIT query exact |
+| R4-A Evidence-backed Research Agent Loop | PASS / INDEPENDENTLY ACCEPTED | First end-to-end research loop (`agent/research_run.py`, new file, zero modifications to accepted surfaces): as_of → idempotent R3-A ingestion → P14-D `run_query` → P14-E `create_bundle` → factor inputs = VISIBLE records only → existing factors/risk/regime → reused `ResearchPacket`/orchestrator → conservative decision (uncalibrated ⇒ RESEARCH/NO_ACTION; probability honestly NOT_AVAILABLE; regime honestly UNKNOWN) → reused append-only `RecommendationLedger` with evidence identity in `input_snapshot`. 12 tests: E2E, PIT (exclusion recorded, inclusive boundary), evidence traceability, byte-identical replay (same store and across independent stores), symbol isolation (other symbol examined→OUTSIDE_AS_OF only), virgin-zone fail-fast, honest empty window. R4-A-NARROW-REPAIR-001: drawdown extraction from the OHLCV structure (see the R4-A section) | Full pytest 609→611 passed (double run identical); real-data smoke 000001: 42 visible bars → factors computed (vol 0.3442 annualized), risk flags honest, replay identical, ledger row carries bundle/result/evidence identity |
 | R4-B Research Agent Batch & Validation Loop | IMPLEMENTED — PENDING ACCEPTANCE | Pure-orchestration batch runner (`agent/research_batch.py`, new file, zero modifications to accepted surfaces): (symbols × as_ofs) → deduplicated targets sorted by (symbol, as_of) → **one idempotent pre-ingestion of ALL target symbols** (fixes the batch-position store-growth hazard that would otherwise make replay order-dependent) → per-target independent R4-A `run_research` → per-target failure isolation (FAILED + error recorded, never swallowed, batch proceeds) → batch result {batch_id, run_parameters, results[], summary{ok/failed/actions}} → `append_batch_to_ledger` via the existing R4-A append path (FAILED targets append nothing). 8 tests: multi-symbol batch, symbol isolation, PIT isolation across as_ofs, byte-identical replay, stable ordering + dedup, failure isolation (virgin-zone fail-fast trigger), ledger continuity, empty batch | Full pytest 619 passed (double run identical); real-data smoke: 000001+000002 batch → 2 OK, reversed-input replay identical, per-symbol results independent, ledger 2 rows with evidence identity |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
@@ -2660,7 +2660,7 @@ research consumption (P14-B invariant: "Raw storage is NOT research admissibilit
 queries against the virgin zone remain fail-fast guarded (`assert_research_zone`).
 
 **Gate:**
-- R3-A Real Source Adapter: **IMPLEMENTATION COMPLETE — PENDING INDEPENDENT ACCEPTANCE**
+- R3-A Real Source Adapter: **PASS / INDEPENDENTLY ACCEPTED**
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
@@ -2743,8 +2743,8 @@ replay byte-identical; ledger row carries bundle/result/evidence identity.
    the dedicated P14-C quality report is not yet wired into the run result.
 
 **Gate:**
-- R4-A Evidence-backed Research Agent Loop: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE**
-- R3-A Real Source Adapter: IMPLEMENTATION COMPLETE — PENDING INDEPENDENT ACCEPTANCE
+- R4-A Evidence-backed Research Agent Loop: **PASS / INDEPENDENTLY ACCEPTED**
+- R3-A Real Source Adapter: **PASS / INDEPENDENTLY ACCEPTED** (see the R3-A/R4-A acceptance record at the end of this file)
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
@@ -2818,6 +2818,36 @@ ledger 2 rows with evidence identity.
 **Gate:**
 - R4-B Research Agent Batch & Validation Loop: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE**
 - R4-A / R3-A: pending their own independent acceptance records where noted above
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
+
+## R3-A / R4-A — Independent Acceptance — 2026-10-04
+
+**Decisions: R3-A — PASS / INDEPENDENTLY ACCEPTED; R4-A — PASS / INDEPENDENTLY ACCEPTED**
+(R4-A acceptance covers the R4-A-NARROW-REPAIR-001 drawdown fix). Decided by the **project
+owner** (acceptance authority); the decisions were communicated by the owner with the R4-B
+task ("R3-A PASS / INDEPENDENTLY ACCEPTED", "R4-A PASS / INDEPENDENTLY ACCEPTED" — the R4-A
+acceptance had identified the single drawdown defect that NARROW-REPAIR-001 fixed) and are
+recorded in-repo by ZCODE on the owner's explicit instruction — ZCODE is not the acceptance
+authority and did not make these decisions.
+
+- R3-A accepted implementation: `2655146` (additive `CNStockQuoteHistoricalAdapter` inside the
+  pinned `adapters.py` + 14 tests). Exact-head CI: run `37196184804` (HEAD `2ccaeaa…`),
+  completed / success.
+- R4-A accepted implementation: `7f03f31` + NARROW-REPAIR-001 `03083ca` (drawdown extraction
+  from the OHLCV structure + 2 targeted tests). Exact-head CI: runs `37200152314`
+  (HEAD `1f9c124…`) and `37200888838` (HEAD `7a82344…`), both completed / success.
+- Post-acceptance state at `1c2921dd27b54d171cb425e7b7fbb27b0f60b552`: full pytest 619 passed
+  (double run identical), P14-C/D/E audits exit 0, P13-M 3 passed, exact-head run
+  `37205614901` completed / success. No repository integrity problem found.
+- **R4-B is NOT covered by this record**: it remains IMPLEMENTATION COMPLETE — READY FOR
+  INDEPENDENT ACCEPTANCE, awaiting the owner's independent review.
+
+**Gate:**
+- R3-A: **PASS / INDEPENDENTLY ACCEPTED**
+- R4-A (incl. NARROW-REPAIR-001): **PASS / INDEPENDENTLY ACCEPTED**
+- R4-B: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE** (this record makes no R4-B decision)
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
