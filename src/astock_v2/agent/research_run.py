@@ -112,6 +112,24 @@ def _factor_inputs(visible: list, as_of: str, ingested_at: str) -> ProviderResul
     )
 
 
+def _visible_close(rec) -> float | None:
+    """Close of one visible record, per the repo's actual data structures.
+
+    The historical-store row (``raw_payload``) carries the OHLCV structure
+    under ``value`` with a ``close`` field — that is the authoritative
+    extraction path. The P14-B record may also project ``value`` as the
+    close scalar (the R3-A adapter does). No new schema is invented: both
+    are existing repository structures, tried in that order.
+    """
+    ohlcv = rec.raw_payload.get("value") or {}
+    close = ohlcv.get("close") if isinstance(ohlcv, dict) else None
+    if isinstance(close, (int, float)) and close > 0:
+        return float(close)
+    if isinstance(rec.value, (int, float)) and rec.value > 0:
+        return float(rec.value)
+    return None
+
+
 def _max_drawdown(closes: list[float]) -> float:
     peak = None
     mdd = 0.0
@@ -167,8 +185,8 @@ def run_research(symbol: str, as_of: str, *,
             "method": (out.metadata or {}).get("method"),
         }
 
-    closes = [rec.value for rec in visible
-              if isinstance(rec.value, (int, float)) and rec.value > 0]
+    closes = [c for c in (_visible_close(rec) for rec in visible)
+              if c is not None]
     realized_drawdown = _max_drawdown(closes) if len(closes) >= 2 else None
     volatility = factors["volatility"]["value"]
     quality_complete = sum(

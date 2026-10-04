@@ -256,3 +256,75 @@ def test_run_against_pre_ingested_store(tmp_path):
                             raw_store=raw, ingested_at=INGESTED_AT)
     assert result["run_id"] == expected["run_id"]
     assert result["recommendation"] == expected["recommendation"]
+
+
+# ------------------------------------------- NARROW-REPAIR-001: drawdown
+
+def _ohlcv_record(symbol: str, day: str, close: float):
+    """A P14-B record whose ``value`` field IS the OHLCV structure — the
+    actual historical-quote data shape called out by the R4-A acceptance.
+    The close lives in ``raw_payload["value"]["close"]``."""
+    from astock_v2.information.raw_store import RawIngestRecord
+    event_time = f"{day}T15:00:00+08:00"
+    available_time = f"{day}T16:00:00+08:00"
+    ohlcv = {"date": day, "open": close - 0.2, "close": close,
+             "high": close + 0.1, "low": close - 0.3, "volume": 1_000.0,
+             "amount": None, "adjust": ""}
+    return RawIngestRecord(
+        source="cn_stock_quote",
+        source_id=f"{symbol}:{event_time}",
+        source_category="A_SHARE_MARKET",
+        entity_id=symbol,
+        entity_type="STOCK",
+        symbol=symbol,
+        event_time=event_time,
+        available_time=available_time,
+        revision=0,
+        ingested_at=INGESTED_AT,
+        raw_payload={"symbol": symbol, "event_time": event_time,
+                     "available_time": available_time, "revision": 0,
+                     "value": ohlcv},
+        adapter_version="cn_stock_quote_historical_adapter@1",
+        value=ohlcv,  # the OHLCV structure itself, not the close scalar
+        unit="CNY",
+        currency="CNY",
+    )
+
+
+def test_realized_drawdown_from_ohlcv_structure_records(tmp_path):
+    # closes 10 -> 12 -> 9 -> 11: peak 12, trough 9 => mdd = -0.25.
+    # The record ``value`` field is the OHLCV structure; the pre-repair
+    # extraction (rec.value as float) found no closes and produced
+    # realized_drawdown None / expected_drawdown 0.0. The repair must
+    # compute the real drawdown from raw_payload["value"]["close"].
+    from astock_v2.information.raw_store import RawStore
+    raw = RawStore(tmp_path / "raw_records.jsonl")
+    for day, close in zip(_DAYS[:4], (10.0, 12.0, 9.0, 11.0)):
+        raw.put(_ohlcv_record("000001", day, close))
+    result = run_research("000001", _DAYS[3] + "T16:00:00+08:00",
+                          raw_store=raw, lookback=3)
+    assert result["counts"]["visible"] == 4
+    assert result["risk"]["realized_drawdown"] == pytest.approx(-0.25)
+    assert result["risk"]["realized_drawdown"] != 0.0
+    assert result["risk"]["realized_drawdown"] is not None
+    # the real drawdown reached the existing RiskEngine
+    assert "HIGH_DRAWDOWN_RISK" in result["risk"]["flags"]
+    assert result["risk"]["max_loss_proxy"] == pytest.approx(-0.25)
+
+
+def test_drawdown_uses_only_visible_closes(tmp_path):
+    # at day-2 availability only closes [10, 12] are visible: monotone
+    # rise, so the realized drawdown is 0.0 — the later 9/11 bars must
+    # not participate and are carried as recorded exclusions
+    from astock_v2.information.raw_store import RawStore
+    raw = RawStore(tmp_path / "raw_records.jsonl")
+    for day, close in zip(_DAYS[:4], (10.0, 12.0, 9.0, 11.0)):
+        raw.put(_ohlcv_record("000001", day, close))
+    result = run_research("000001", _DAYS[1] + "T16:00:00+08:00",
+                          raw_store=raw, lookback=3)
+    assert result["counts"]["visible"] == 2
+    assert result["risk"]["realized_drawdown"] == 0.0
+    excluded_ids = {e["source_id"] for e in result["exclusions"]
+                    if e["reason"] == "NOT_YET_AVAILABLE"}
+    assert excluded_ids == {"000001:2020-01-06T15:00:00+08:00",
+                            "000001:2020-01-07T15:00:00+08:00"}
