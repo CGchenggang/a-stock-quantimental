@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization for the separately scoped integration implementation is PENDING**; P14-E Production Implementation remains **NOT AUTHORIZED / REPAIR-003 BLOCKED until implementation authorization is explicitly granted and then independently accepted**; P14-F NOT AUTHORIZED.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; P14-E Production Implementation is now **AUTHORIZED FOR IMPLEMENTATION / NOT YET INDEPENDENTLY ACCEPTED**; P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -38,7 +38,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Current Commit
 
-`51a769f0a50632c5b8d71f4247d5a60ee2847012` — independently accepted P14-D → P14-E Selection State Integration Contract v2 (docs-only). Exact-head CI run `37185144953` is green and matches this SHA. This commit authorizes no implementation by itself; Human Authorization remains a separate gate.
+`51a769f0a50632c5b8d71f4247d5a60ee2847012` — independently accepted P14-D → P14-E Selection State Integration Contract v2 (docs-only). Exact-head CI run `37185144953` is green and matches this SHA. **Human Authorization for the separately scoped integration implementation was granted on 2026-10-04 by the project owner; implementation remains subject to the exact scope in Contract v2 and subsequent Independent Acceptance.**
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
