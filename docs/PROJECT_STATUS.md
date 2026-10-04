@@ -2562,6 +2562,17 @@ ingestion_id / hash mismatch / adversarial hash-mismatched row), and
 determinism (double run + `test_bundle_determinism` +
 `test_p14d_006_deterministic_result`).
 
+**Contract STATUS lifecycle sync (docs-only, minimal repair).** Per the
+acceptance authority's minimal-repair instruction, the contract file
+`docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md`
+now records **STATUS: ACCEPTED — INDEPENDENTLY ACCEPTED** (Contract
+Acceptance `0067807`) with the four-stage lifecycle recorded in its
+header: Contract Acceptance (`0067807`) → Human Authorization GRANTED
+(`3ec2b86`) → Implementation DELIVERED (`69cfe2a`) → Independent
+Acceptance of the implementation **PENDING**. §1-§5 semantics
+unchanged; the `0067807` / `3ec2b86` / `69cfe2a` records are
+referenced as-is and were not altered.
+
 **Gate:**
 - P14-D → P14-E Integration: **IMPLEMENTATION COMPLETE — PENDING INDEPENDENT ACCEPTANCE** (this record is not an acceptance decision)
 - P14-F: NOT AUTHORIZED

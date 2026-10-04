@@ -1,9 +1,20 @@
 # P14-D → P14-E Selection State Integration Contract
 
-> 状态：**DRAFT — AWAITING INDEPENDENT ACCEPTANCE**
-> 本契约未获独立验收前**不得实施**：不修改任何 P14-D/P14-A 实现、契约、
-> 测试或 authority。本文档仅是 3b8f8ae 判定 Required narrow repair #1
-> "preferred approach" 所要求的**单独授权请求**。
+> 状态：**ACCEPTED — INDEPENDENTLY ACCEPTED**（Contract Acceptance，
+> 记录提交 `006780705fd93579b89141109de7353593608711`，2026-10-04，
+> 验收对象 = 本契约 v2 `51a769f0a50632c5b8d71f4247d5a60ee2847012`）
+>
+> 生命周期（四阶段分离，不得合并）：
+>
+> Contract Acceptance — PASS / INDEPENDENTLY ACCEPTED（`0067807`）
+>   → Human Authorization — GRANTED（`3ec2b86`，2026-10-04）
+>   → Implementation — DELIVERED（`69cfe2a86d23352e9f74cf7454aad6cf59135e7b`，
+>     2026-10-04）
+>   → Independent Acceptance of the implementation — **PENDING**
+>
+> 本文档源于 3b8f8ae 判定 Required narrow repair #1 "preferred
+> approach" 所要求的**单独授权请求**；"未获独立验收前不得实施"的
+> 前置约束已由上述授权链依序满足并解除。
 >
 > 授权依据链：
 > P14-E Production Implementation REPAIR-002 Independent Acceptance —
@@ -33,6 +44,12 @@
 >     §5.1 文件口径与 authority terminology 对齐；§6 强化
 >     未验收不实施与四阶段分离。§1/§3 语义面零变化；
 >     STATUS 仍为 DRAFT。
+> v3: 状态生命周期同步（2026-10-04，docs-only，最小 Repair）——
+>     STATUS 由 DRAFT 更新为 ACCEPTED — INDEPENDENTLY ACCEPTED
+>     （Contract Acceptance `0067807`）；记录 Human Authorization
+>     （`3ec2b86`）与 Implementation（`69cfe2a`）生命周期事实；
+>     §6 状态引用同步。§1-§5 语义零变化；四阶段分离保留；
+>     `0067807` / `3ec2b86` / `69cfe2a` 历史事实原样引用，无任何改写。
 
 ---
 
@@ -171,8 +188,12 @@ REPAIR-002 对应 delta，无其他）：
 
 ## 6. 实施门（四阶段分离，不得合并）
 
-- 本契约 STATUS: DRAFT —— 在获得独立 Acceptance 记录之前**绝对不得
-  实施**：不得修改任何生产代码、测试、P14-D 冻结面或 P14-E 运行时。
+- 本契约 STATUS：**ACCEPTED — INDEPENDENTLY ACCEPTED**（`0067807`）。
+  历史约束记录：在获得独立 Acceptance 记录之前**绝对不得实施**
+  （不得修改任何生产代码、测试、P14-D 冻结面或 P14-E 运行时）——
+  该前置条件已由 `0067807`（Contract Acceptance）与 `3ec2b86`
+  （Human Authorization）依序满足；实施 `69cfe2a` 系在授权链完成后
+  进行，其本身待 Independent Acceptance。
 - 阶段分离：本契约获得独立 Contract Acceptance 后，仍须由验收方
   显式作出 **Human Authorization**，之后才进入 **Implementation**
   （内容 = §2 + §3 + §4 的精确 delta，即已验证的 REPAIR-002 改动
