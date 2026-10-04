@@ -39,7 +39,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
 ## Current Commit
 
-`5dbc9c453df7d51c636a1cd07994c4ac85eb3ac0` — P14-E Production Implementation REPAIR-002 (selection/rejection state resolved by the P14-D/P14-A authority and consumed verbatim by P14-E; IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE). Previous implementation commits: `e546e3f5ca8c89fddb3f9e256ab08aa6c683a771` (REPAIR-001), `12828101a4e393d2277d8ccffea529deb0138189`, `14757455b0384b3af9301a2c51ff02f492f275b1`; Design/Tasking accepted at `bad52f16acaf7f5091215283672834291607cb26`.
+`01cbed837802d977654d6ed9c03de547e74c3e4e` — Independent acceptance record for P14-E Production Implementation REPAIR-002 (FAIL / REPAIR REQUIRED).
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
@@ -2234,3 +2234,67 @@ Do not modify:
 - P14-F: **NOT AUTHORIZED**
 - P13-T: **STOPPED / NOT EXECUTED**
 - P13-U: **PROTECTED**
+
+## P14-E Production Implementation REPAIR-002 — Independent Acceptance — 2026-10-04
+
+**Decision: FAIL / REPAIR REQUIRED. Do not advance to P14-F.**
+
+Independently inspected the actual `main` HEAD `01cbed837802d977654d6ed9c03de547e74c3e4e`.
+
+### Verified positive
+
+- REPAIR-002 successfully removes the prior P14-E lineage-wide version-selection/rejection re-derivation. `src/astock_v2/information/evidence.py` now requires a resolved `selection` state and consumes `selection_reason` / `rejection_reason` verbatim.
+- Candidate trace is now projected from the resolved rejected state rather than reconstructed from the full authoritative lineage; PIT-excluded/post-as-of records therefore do not enter candidate_trace.
+- Mandatory P14-B RawStore authority verification remains present in `EvidenceStore.reload()`.
+- REPAIR-002 adds meaningful regression coverage for resolved-state consumption, under-resolved results, uncovered selected records, authority anchoring, and verbatim label consumption.
+- Exact-head GitHub Actions run `37133719147` is completed / success and its `head_sha` exactly equals `01cbed837802d977654d6ed9c03de547e74c3e4e`.
+- Pytest job `111233819992` and P13-M job `111233820204` both succeeded. P14-C, P14-D, P14-E audits and P13-M regression all completed successfully.
+- Full pytest: **582 passed / 2 warnings / 0 failed**.
+- P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED.
+
+### Blocking findings
+
+1. **REPAIR-002 modified the frozen P14-D implementation/contract despite the repair task explicitly forbidding that scope.**
+
+The REPAIR-002 commit `5dbc9c453df7d51c636a1cd07994c4ac85eb3ac0` changes:
+- `src/astock_v2/information/pit.py`
+- `src/astock_v2/information/research_query.py`
+- `docs/contracts/P14-D-DESIGN-CONTRACT.md`
+- P14-D harness tests
+
+The change adds a new top-level `selection` state to P14-D results and introduces `resolve_selection()` in the P14-A/P14-D information path. Although the resulting architecture is conceptually sound and preserves the existing selection semantics, it is still a modification of an independently accepted/frozen P14-D surface. The REPAIR-002 task explicitly required: **“Do not modify P14-D implementation or authority.”**
+
+This is therefore a **governance/scope violation**, not a test failure.
+
+2. **PROJECT_STATUS was not synchronized to the actual final HEAD.**
+
+Actual `main` is `01cbed837802d977654d6ed9c03de547e74c3e4e`, while the submitted status before this acceptance still identified `5dbc9c453df7d51c636a1cd07994c4ac85eb3ac0` as Current Commit. The exact-head CI evidence is valid, but the project status itself was stale.
+
+### Required narrow repair — P14-E Production Implementation REPAIR-003
+
+Repair only:
+
+1. Resolve the authority/scope issue without weakening the frozen P14-D boundary. Preferred approach: expose the already-required resolved selection/rejection state through an explicitly authorized P14-E/P14-D integration surface **only if that surface is first separately authorized and frozen**; otherwise redesign the P14-E handoff so it consumes existing accepted P14-D state without modifying P14-D.
+2. Do not change the frozen P14-D implementation, contract, or authority in the repair unless an explicit new P14-D authorization is issued first.
+3. Preserve the successful REPAIR-002 properties: no P14-E lineage re-selection, PIT-safe candidate_trace, mandatory P14-B RawStore verification, FOUR-CLASS taxonomy, deterministic behavior, and the new regression coverage.
+4. Synchronize `PROJECT_STATUS.md` Current Commit to the actual final HEAD.
+5. Run exact-head GitHub Actions and independently verify checkout SHA, P14-C/D/E audits, P13-M regression, and full pytest.
+
+### Forbidden scope
+
+- P14-E Contract / Matrix / Golden / accepted Design semantics
+- un-authorized changes to P14-D implementation, contract, or authority
+- P14-C
+- P13-T / P13-U
+- data
+- factors / alpha
+- calibration
+- policy
+- recommendation / portfolio / trading
+- P14-F
+
+**Current gate:**
+- **P14-E Production Implementation: FAIL / REPAIR REQUIRED**
+- **P14-F: NOT AUTHORIZED**
+- **P13-T: STOPPED / NOT EXECUTED**
+- **P13-U: PROTECTED**
