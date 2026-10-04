@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) STARTED under owner authorization — reuse of the accepted P14-B/C/D/E authority chain, no semantic change**; P14-F NOT AUTHORIZED.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) IMPLEMENTED — PENDING INDEPENDENT ACCEPTANCE**; **R4-A (Evidence-backed Research Agent Loop) IMPLEMENTED — READY FOR INDEPENDENT ACCEPTANCE** (first end-to-end research run: P14-B→D→E→factors→risk→packet→ledger, deterministic replay proven); P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -34,6 +34,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-D → P14-E Selection State Integration Contract v2 | PASS | Independently accepted at `51a769f`; separate Human Authorization required before implementation; P14-E production implementation remains NOT AUTHORIZED |
 | P14-E Production Impl | PASS / INDEPENDENTLY ACCEPTED | REPAIR-003 BLOCKED (independently confirmed) resolved via the authorized Integration Contract v2 (`51a769f`): Human Authorization granted → REPAIR-002 verified delta restored verbatim (`69cfe2a`) — P14-D emits the resolved selection state and P14-E is a pure verbatim consumer (all label re-derivation machinery deleted); Test E adversarial regression retained; mandatory P14-B reload authority unchanged. Implementation acceptance recorded 2026-10-04 per project-owner decision (see the acceptance record below) | Golden/Harness independently accepted at `17afd2d` |
 | R3-A Real Source Adapter | IMPLEMENTED — PENDING ACCEPTANCE | Owner-authorized start after the P14-E acceptance record: first REAL source adapter (`CNStockQuoteHistoricalAdapter`, local historical store → P14-B) added **inside the already-pinned `information/adapters.py`** (the P14-E golden file-set pin rejects new information/ files; no golden/harness change, no new file). Source identity = the already-registered `cn_stock_quote` (no registry change); `available_time` carried verbatim from store rows (store contract mandates explicit availability; trade day 16:00 +08:00 declared vendor publication); `ingested_at` caller-supplied and kept out of `raw_payload` (cross-run idempotency, evidence identity stability); missing availability REJECTED (durable audit), never invented | Full pytest 597 passed (double run identical); real-data smoke: 1,633 rows accepted / replay 1,633 DUPLICATE / 0 mutations / PIT query exact |
+| R4-A Evidence-backed Research Agent Loop | IMPLEMENTED — PENDING ACCEPTANCE | First end-to-end research loop (`agent/research_run.py`, new file, zero modifications to accepted surfaces): as_of → idempotent R3-A ingestion → P14-D `run_query` → P14-E `create_bundle` → factor inputs = VISIBLE records only → existing factors/risk/regime → reused `ResearchPacket`/orchestrator → conservative decision (uncalibrated ⇒ RESEARCH/NO_ACTION; probability honestly NOT_AVAILABLE; regime honestly UNKNOWN) → reused append-only `RecommendationLedger` with evidence identity in `input_snapshot`. 12 tests: E2E, PIT (exclusion recorded, inclusive boundary), evidence traceability, byte-identical replay (same store and across independent stores), symbol isolation (other symbol examined→OUTSIDE_AS_OF only), virgin-zone fail-fast, honest empty window | Full pytest 609 passed (double run identical); real-data smoke 000001: 42 visible bars → factors computed (vol 0.3442 annualized), risk flags honest, replay identical, ledger row carries bundle/result/evidence identity |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
@@ -2659,6 +2660,76 @@ queries against the virgin zone remain fail-fast guarded (`assert_research_zone`
 
 **Gate:**
 - R3-A Real Source Adapter: **IMPLEMENTATION COMPLETE — PENDING INDEPENDENT ACCEPTANCE**
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
+
+## R4-A — Evidence-backed Research Agent Loop — IMPLEMENTED — 2026-10-04
+
+**Authorization.** Owner-instructed product task following the roadmap audit and the R3-A
+delivery: "the first truly runnable, testable, reproducible Evidence-backed Research Agent
+Loop" — **integration of existing accepted components, not new infrastructure**. Status:
+**IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE** (this record is not an
+acceptance decision).
+
+**Implementation (pure addition — zero modifications to accepted surfaces).**
+New `src/astock_v2/agent/research_run.py`:
+
+```text
+run_research(symbol, as_of, *, historical_store, raw_store, ingested_at, lookback=20)
+  → idempotent R3-A ingestion (CNStockQuoteHistoricalAdapter → RawStore)
+  → P14-D run_query(as_of)                [accepted PIT/selection authority]
+  → P14-E create_bundle                   [accepted evidence/provenance]
+  → factor inputs = VISIBLE records only  (joined by the P14-E identity key;
+                                           never a direct store read)
+  → existing factors (momentum/volatility/trend/volume_ratio via the
+    accepted ProviderResult PIT gate) + RiskEngine + regime classifier
+  → reused ResearchPacket / ResearchOrchestrator.research_state
+  → RecommendationRecord (conservative rule: uncalibrated ⇒ RESEARCH,
+    action NO_ACTION — never fabricated BUY/SELL)
+  → reused append-only RecommendationLedger (evidence identity in
+    input_snapshot for replay/review)
+```
+
+- **PIT**: the only visibility rule is the accepted P14-D query; post-availability rows are
+  excluded AND carried in the result as explicit exclusions (never silently dropped). The
+  virgin-zone guard rides on `ResearchQuery` (assert_research_zone) — a virgin as_of fails fast.
+- **Evidence participation**: factor inputs are the visible evidence records (identity-key
+  join); the recommendation's `provenance` carries `result_id` + `bundle_id`; the ledger's
+  `input_snapshot` carries run_id/result_id/bundle_id/evidence_ids/factor-input source_ids.
+- **Honest labeling**: probability = NOT_AVAILABLE (no trained model artifact in the accepted
+  src surface; P13-Q calibrators remain research-only), regime = UNKNOWN via the existing
+  classifier (no model-grade market inputs), data_quality score = P14-E provenance completeness
+  (documented basis), calibration_status = NOT_CALIBRATED.
+- **Determinism**: no wall-clock anywhere; `ingested_at` is caller-pinned ingestion metadata.
+
+**Tests.** `tests/test_r4a_research_run.py` — 12 tests (tmp_path, CI-offline): E2E loop,
+PIT exclusion+inclusive boundary, pre-availability invisibility, evidence traceability,
+byte-identical replay (same store AND across independent stores), symbol isolation (other
+symbol examined → OUTSIDE_AS_OF exclusion only, never in evidence/inputs), virgin-zone
+fail-fast, honest empty window (NO_ACTION), pre-ingested-store variant, ledger integration
+with evidence identity.
+
+**Verification.** Full pytest **609 passed / 2 warnings / 0 failed** (double run identical);
+P14-C/D/E audits exit 0; P13-M regression 3 passed. Real-data smoke (read-only): symbol
+000001, as_of 2020-03-09T16:00+08:00 → 42 visible bars of 1,633 examined; factors computed
+(momentum −0.0034, volatility 0.3442 annualized, trend −0.0372, volume_ratio 0.3028); risk
+flags HIGH_VOLATILITY + HIGH_DRAWDOWN_RISK (drawdown −0.1857); decision RESEARCH / NO_ACTION;
+replay byte-identical; ledger row carries bundle/result/evidence identity.
+
+**Known limitations (honest).**
+1. probability NOT_AVAILABLE — no trained model artifact in the accepted src surface.
+2. regime UNKNOWN — the classifier correctly refuses model-grade output from single-stock data.
+3. Decision actions limited to NO_ACTION/RESEARCH(/HOLD when calibrated) — no BUY/SELL until a
+   validated edge exists (P13-R: no policy beat hold-all).
+4. Single-symbol runs; the multi-symbol loop is the existing script-side runner (future work,
+   not authorized by this task).
+5. P14-C quality machinery is consumed implicitly (normalize gates + provenance completeness);
+   the dedicated P14-C quality report is not yet wired into the run result.
+
+**Gate:**
+- R4-A Evidence-backed Research Agent Loop: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE**
+- R3-A Real Source Adapter: IMPLEMENTATION COMPLETE — PENDING INDEPENDENT ACCEPTANCE
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
