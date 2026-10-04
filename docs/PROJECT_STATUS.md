@@ -33,6 +33,7 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
 | P14-D → P14-E Selection State Integration Contract v2 | PASS | Independently accepted at `51a769f`; separate Human Authorization required before implementation; P14-E production implementation remains NOT AUTHORIZED |
 | P14-E Production Impl | PASS / INDEPENDENTLY ACCEPTED | REPAIR-003 BLOCKED (independently confirmed) resolved via the authorized Integration Contract v2 (`51a769f`): Human Authorization granted → REPAIR-002 verified delta restored verbatim (`69cfe2a`) — P14-D emits the resolved selection state and P14-E is a pure verbatim consumer (all label re-derivation machinery deleted); Test E adversarial regression retained; mandatory P14-B reload authority unchanged. Implementation acceptance recorded 2026-10-04 per project-owner decision (see the acceptance record below) | Golden/Harness independently accepted at `17afd2d` |
+| R3-A Real Source Adapter | IMPLEMENTED — PENDING ACCEPTANCE | Owner-authorized start after the P14-E acceptance record: first REAL source adapter (`CNStockQuoteHistoricalAdapter`, local historical store → P14-B) added **inside the already-pinned `information/adapters.py`** (the P14-E golden file-set pin rejects new information/ files; no golden/harness change, no new file). Source identity = the already-registered `cn_stock_quote` (no registry change); `available_time` carried verbatim from store rows (store contract mandates explicit availability; trade day 16:00 +08:00 declared vendor publication); `ingested_at` caller-supplied and kept out of `raw_payload` (cross-run idempotency, evidence identity stability); missing availability REJECTED (durable audit), never invented | Full pytest 597 passed (double run identical); real-data smoke: 1,633 rows accepted / replay 1,633 DUPLICATE / 0 mutations / PIT query exact |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
@@ -2602,3 +2603,62 @@ authority and did not make this decision.
   next authorized work: **R3-A — Local Historical Store → P14-B real source adapter**, reusing
   the accepted P14-B/C/D/E authority chain with **no semantic change**; P14-F remains
   NOT AUTHORIZED; P13-T remains STOPPED / NOT EXECUTED; P13-U remains PROTECTED.
+
+## R3-A — Local Historical Store → P14-B Real Source Adapter — IMPLEMENTED — 2026-10-04
+
+**Authorization.** Owner-instructed start (immediately after the P14-E implementation
+acceptance record above), with the explicit constraint: **no P14-B/P14-C/P14-D/P14-E semantic
+redesign — reuse the accepted authority chain**. Status: **IMPLEMENTATION COMPLETE — PENDING
+INDEPENDENT ACCEPTANCE** (this record is not an acceptance decision).
+
+**Implementation (additive, minimal footprint).**
+`src/astock_v2/information/adapters.py` extended with `CNStockQuoteHistoricalAdapter` — the
+first REAL source adapter of the information layer:
+
+- **Source identity**: `cn_stock_quote` — already registered in the P14-A `SOURCE_REGISTRY`
+  (A_SHARE_MARKET category, `market_daily` freshness policy). **No registry change**, so
+  normalization accepts the records through the existing P14-A gates unchanged.
+- **Availability semantics** (the core R3-A decision): the local historical store's own source
+  contract MANDATES an explicit `available_time` per row (`data/local_store.py` refuses rows
+  without one) and the stored rows carry the declared vendor publication time (trade day
+  16:00 +08:00 — the same declaration as the accepted `CNIndexDailyAdapter` fixture). The
+  adapter carries it **verbatim**: no derivation, no back-fill from event_time/ingested_at.
+  A store row without `available_time` violates the store contract and is REJECTED with a
+  durable audit event — never silently ingested as unresolved.
+- **`ingested_at`** is caller-supplied per the adapter contract and deliberately kept OUT of
+  `raw_payload`: re-ingesting the same store data under a different ingestion run stays
+  DUPLICATE (never RAW_MUTATION_DETECTED), and evidence identity remains stable (P14E-001).
+- **Identity**: one store row (symbol × trade date) = one raw record with
+  `source_id = "{symbol}:{event_time}"`; distinct trade dates are distinct information events
+  (P14-D lineage contract). `raw_payload` = the verbatim store row (provenance: vendor source
+  string, raw_ref snapshot hash, quality flag included).
+- **Governance note**: the adapter was placed INSIDE the already-pinned `adapters.py` because
+  the P14-E golden file-set pin (P14E-P-001 enforcement,
+  `tests/contracts/p14e/golden/core.py::PINNED_INFO_FILES`) rejects ANY new `information/` file;
+  no golden/harness change and no new file were needed.
+
+**Tests.** `tests/test_p14b_historical_adapter.py` — 14 tests, all tmp_path-built (CI-offline;
+no gitignored data file read): registered-source metadata, verbatim fetch (determinism,
+symbol scoping), availability verbatim + RESOLVED, missing-availability rejection,
+ingestion accept/report, cross-run idempotency (different `ingested_at` → DUPLICATE),
+RAW_MUTATION_DETECTED with original preserved, durable audit reload, EMPTY_SUCCESS,
+and the accepted PIT chain E2E (`to_information_record` → `run_query`: inclusive 16:00
+boundary, 15:30 pre-availability exclusion, day-3 NOT_YET_AVAILABLE) plus `normalize()`
+acceptance.
+
+**Verification.** Full pytest **597 passed / 2 warnings / 0 failed** (double run identical);
+P14-C/D/E audits exit 0; P13-M regression 3 passed. Real-data smoke (read-only, not a
+committed test): symbol 000001, **1,633 real rows** (2020-01-02 → 2026-09-24) →
+accepted=1633 / rejected=0; replay with a different `ingested_at` → 1,633 DUPLICATE /
+0 mutations; `run_query` at as_of=2020-02-03T16:00 → exactly 17 visible / 1,616
+NOT_YET_AVAILABLE.
+
+**Boundary note.** Ingesting stored rows dated 2026-09-23/24 into RAW STORAGE is storage, not
+research consumption (P14-B invariant: "Raw storage is NOT research admissibility"); research
+queries against the virgin zone remain fail-fast guarded (`assert_research_zone`).
+
+**Gate:**
+- R3-A Real Source Adapter: **IMPLEMENTATION COMPLETE — PENDING INDEPENDENT ACCEPTANCE**
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
