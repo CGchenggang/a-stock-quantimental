@@ -14,12 +14,6 @@
 >       P14-A visible_revisions 的同 revision 比较符据此修正
 >       （其 docstring 本已声明 earliest，实现与之矛盾，且无任何
 >       P14-A 测试冻结相反语义）
-> v1.2: REPAIR-002 增补（additive）——§9 新增顶层 selection 键：
->       P14-D 在解析时点由 P14-A 选择规则落定 selection/rejection
->       标签并随 result 发射；records / provenance / excluded /
->       counts / result_id 语义与排序键全部不变。授权依据：P14-E
->       Production Implementation REPAIR-002（P14-E 必须消费已解析
->       selection state，不得从完整 lineage 重推导版本选择）
 
 ---
 
@@ -148,13 +142,6 @@ UNRESOLVED_AVAILABILITY   available_time 缺失（复用 P14-C 分类，不新�
 query          查询本身的规范化回显（entity / information_type / as_of / source）
 records        可见记录列表，每条含 provenance（见 §10）
 excluded       未进入结果的记录及原因（§7）
-selection      已解析的 selection/rejection state（v1.2 增补）：
-               {selected: [provenance + selection_reason],
-                rejected: [provenance + rejection_reason]}。
-               selected 与 records 一一对应；rejected 仅为可见但未
-               被选中的记录——PIT 排除记录不进入 rejected（仍走
-               excluded）。标签词表与 §8 选择规则同源（pit.py），
-               由 P14-D 在解析时点落定，消费方（P14-E）逐字使用。
 counts         {visible, excluded, examined}
 result_id      规范化序列化的 SHA-256
 ```

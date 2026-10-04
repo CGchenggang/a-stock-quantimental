@@ -32,7 +32,6 @@ from .normalization import normalize
 from .pit import (
     admissible_records,
     is_admissible,
-    resolve_selection,
     visible_revisions,
 )
 from .provenance import (
@@ -99,7 +98,6 @@ __all__ = [
     "BUNDLE_SCHEMA_VERSION",
     "EXCLUSION_NOT_YET_AVAILABLE", "EXCLUSION_OUTSIDE_AS_OF",
     "EXCLUSION_UNRESOLVED_AVAILABILITY",
-    "provenance_issues", "provenance_summary", "resolve_selection",
-    "select_asof",
+    "provenance_issues", "provenance_summary", "select_asof",
     "spec_for", "to_research_record", "visible_revisions",
 ]

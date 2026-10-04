@@ -443,7 +443,6 @@ def test_create_bundle_never_executes_pit_or_selection(monkeypatch):
     monkeypatch.setattr(pit_mod, "is_admissible", _boom)
     monkeypatch.setattr(pit_mod, "visible_revisions", _boom)
     monkeypatch.setattr(pit_mod, "admissible_records", _boom)
-    monkeypatch.setattr(pit_mod, "resolve_selection", _boom)
     monkeypatch.setattr(rq_mod, "run_query", _boom)
     b = create_bundle(result, records)
     assert b["counts"]["evidence"] == 1
@@ -456,13 +455,11 @@ def test_evidence_source_has_no_pit_or_selection_calls():
     import astock_v2.information.evidence as ev_mod
     text = Path(ev_mod.__file__).read_text(encoding="utf-8")
     for token in ("is_admissible(", "visible_revisions(",
-                  "select_lineage(", "run_query(", "admissible_records(",
-                  "resolve_selection("):
+                  "select_lineage(", "run_query(", "admissible_records("):
         assert token not in text, token
 
 
-# ----------------------------------- REPAIR-002: pure consumption of the
-# resolved selection/rejection state
+# ----------------------------------- REPAIR-001: authority-consistency guard
 
 def test_create_bundle_requires_selected_record_in_authority():
     """P14-E consumes the resolved result 1:1 — a selected record with no
@@ -474,84 +471,44 @@ def test_create_bundle_requires_selected_record_in_authority():
         create_bundle(result, [])
 
 
-def test_create_bundle_requires_resolved_selection_state():
-    """REPAIR-002: P14-E consumes the resolved selection/rejection state —
-    a result without it (or with unlabeled entries) is not a resolved
-    result."""
-    records = [_rec("cn_stock_quote", "q-1")]
-    result = _resolve(records, _query())
-    stripped = {k: v for k, v in result.items() if k != "selection"}
+def test_create_bundle_rejects_candidate_outranking_winner():
+    """A visible candidate with a higher revision than the resolved
+    winner means records ≠ result → authority fail-fast."""
+    winner = _rec("cn_stock_quote", "q-w", revision=0,
+                  payload={"close": 10.0}, value=10.0)
+    result = _resolve([winner], _query())
+    smuggled = _rec("cn_stock_quote", "q-w", revision=1,
+                    event="2026-03-03T15:00:00+08:00",
+                    available="2026-03-03T16:00:00+08:00",
+                    ingested="2026-03-03T16:05:00+08:00",
+                    payload={"close": 20.0}, value=20.0)
     with pytest.raises(ValueError, match="authority_violation"):
-        create_bundle(stripped, records)
-    half = dict(result)
-    half["selection"] = {"selected": result["selection"]["selected"]}
+        create_bundle(result, [winner, smuggled])
+
+
+def test_create_bundle_rejects_canonical_outranking_winner():
+    """Same revision + same available_time, but the record P14-D did NOT
+    select is the canonical-smaller copy → records ≠ result."""
+    loser = _rec("cn_stock_quote", "q-can", payload={"v": 1.0},
+                 ingested="2026-03-02T16:05:00+08:00")
+    winner = _rec("cn_stock_quote", "q-can", payload={"v": 1.0},
+                  ingested="2026-03-02T17:05:00+08:00")
+    result = _resolve([winner], _query())
     with pytest.raises(ValueError, match="authority_violation"):
-        create_bundle(half, records)
-    bare = dict(result)
-    bare["selection"] = {"selected": [{"source": "cn_stock_quote"}],
-                         "rejected": []}
+        create_bundle(result, [loser, winner])
+
+
+def test_create_bundle_rejects_earlier_tie_than_winner():
+    """Same revision but an earlier available_time than the resolved
+    winner → impossible under the P14-A rule → fail-fast."""
+    winner = _rec("cn_stock_quote", "q-tie2", revision=1,
+                  available="2026-03-03T16:00:00+08:00",
+                  ingested="2026-03-03T16:05:00+08:00",
+                  payload={"v": 1.0})
+    earlier = _rec("cn_stock_quote", "q-tie2", revision=1,
+                   available="2026-03-02T16:00:00+08:00",
+                   ingested="2026-03-03T17:05:00+08:00",
+                   payload={"v": 1.0})
+    result = _resolve([winner], _query())
     with pytest.raises(ValueError, match="authority_violation"):
-        create_bundle(bare, records)
-
-
-def test_create_bundle_rejects_uncovered_selected_record():
-    """Every selected record must be covered by the resolved selection
-    state — an unlabeled records entry is an authority violation, never a
-    silently unlabeled bundle."""
-    records = [_rec("cn_stock_quote", "q-1")]
-    result = _resolve(records, _query())
-    stripped = dict(result)
-    stripped["selection"] = {"selected": [], "rejected": []}
-    with pytest.raises(ValueError, match="authority_violation"):
-        create_bundle(stripped, records)
-
-
-def test_create_bundle_anchors_trace_to_authority():
-    """Resolved rejections are anchored to the P14-B authoritative
-    records — a rejection citing no authoritative record is an identity
-    failure (the trace never cites unanchored records)."""
-    keep = _rec("cn_stock_quote", "q-keep", revision=1,
-                event="2026-03-03T15:00:00+08:00",
-                available="2026-03-03T16:00:00+08:00",
-                ingested="2026-03-03T16:05:00+08:00",
-                payload={"close": 11.0}, value=11.0)
-    drop = _rec("cn_stock_quote", "q-keep", revision=0,
-                payload={"close": 10.0}, value=10.0)
-    result = _resolve([drop, keep], _query())
-    assert len(result["selection"]["rejected"]) == 1
-    with pytest.raises(ValueError, match="identity_failure"):
-        create_bundle(result, [keep])
-
-
-def test_bundle_consumes_p14d_resolved_labels_verbatim():
-    """REPAIR-002 core proof: the bundle carries P14-D's resolved labels
-    as-is. Rewriting the resolved selection state rewrites the bundle —
-    consumption, not re-derivation."""
-    records = [
-        _rec("cn_stock_quote", "q-verbatim", revision=0,
-             payload={"close": 10.0}, value=10.0),
-        _rec("cn_stock_quote", "q-verbatim", revision=1,
-             event="2026-03-03T15:00:00+08:00",
-             available="2026-03-03T16:00:00+08:00",
-             ingested="2026-03-03T16:05:00+08:00",
-             payload={"close": 11.0}, value=11.0),
-    ]
-    result = _resolve(records, _query())
-    b = create_bundle(result, records)
-    assert (b["evidence"][0]["selection_reason"]
-            == result["selection"]["selected"][0]["selection_reason"]
-            == SELECTION_HIGHEST)
-    assert (b["candidate_trace"][0]["rejection_reason"]
-            == result["selection"]["rejected"][0]["rejection_reason"]
-            == REJECTED_LOWER)
-    # flip the resolved labels -> the bundle follows them verbatim
-    flipped = json.loads(json.dumps(result))
-    flipped["selection"]["selected"][0]["selection_reason"] = \
-        "SELECTED_CANONICAL_TIEBREAK"
-    flipped["selection"]["rejected"][0]["rejection_reason"] = \
-        "REJECTED_CANONICAL_TIEBREAK"
-    b2 = create_bundle(flipped, records)
-    assert b2["evidence"][0]["selection_reason"] == \
-        "SELECTED_CANONICAL_TIEBREAK"
-    assert b2["candidate_trace"][0]["rejection_reason"] == \
-        "REJECTED_CANONICAL_TIEBREAK"
+        create_bundle(result, [winner, earlier])
