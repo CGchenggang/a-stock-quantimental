@@ -33,13 +33,13 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-004 | PASS | Production Implementation Contract accepted (Design Gate, `144b38f`); reverse-trace FOUR-CLASS frozen; Production Implementation remains separately gated |
 | P14-E-005 | PASS | Independently accepted Contract Draft at `70634cbe`; P14-D authority-aligned `create_bundle(query_result, authoritative_evidence_records)`; production implementation remains NOT AUTHORIZED |
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
-| P14-E Production Impl | REPAIR-003 BLOCKED | Runtime at the REPAIR-001 accepted form (`e546e3f`) + test-only Test E adversarial completion `9b7bf34`; REPAIR-001 (PIT-safe candidate_trace, mandatory reload P14-B authority) verified positive; REPAIR-002 FAIL (governance: modified frozen P14-D surface); REPAIR-003 = byte-identical revert `9de24f1` + integration-surface authorization request `docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md` (DRAFT, not implemented) + mandated feasibility verification: **no compliant label source exists without modifying P14-D → BLOCKED; P14-D integration-surface authorization required** | Golden/Harness independently accepted at `17afd2d` |
+| P14-E Production Impl | REPAIR-003 BLOCKED | Runtime at the REPAIR-001 form (`e546e3f`, itself under the `286f3a9` FAIL verdict for in-P14-E label re-derivation) + test-only Test E adversarial completion `9b7bf34`; REPAIR-001 verified-positive properties (PIT-safe candidate_trace, mandatory reload P14-B authority) intact; REPAIR-002 FAIL (governance: modified frozen P14-D surface); REPAIR-003 = byte-identical revert `9de24f1` + integration-surface authorization request `docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md` (DRAFT, not implemented) + mandated feasibility verification: **no compliant label source exists without modifying P14-D → BLOCKED; P14-D integration-surface authorization required** | Golden/Harness independently accepted at `17afd2d` |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`9b7bf34` — P14-E Production Implementation REPAIR-003 (governance revert `9de24f1` + integration-surface contract DRAFT `4b326b4` + test-only Test E adversarial completion `9b7bf34`). Status-sync convention: this file's Current Commit records the newest content commit at authoring time; the docs-only REPAIR-003 BLOCKED record commit on top of it is the final `main` HEAD at submission and is finalized by the acceptance record, which is the authoritative setter of the actual final HEAD (sha fixed-point is physically impossible inside a commit's own tree).
+`9b7bf34` — P14-E Production Implementation REPAIR-003 (governance revert `9de24f1` + integration-surface contract DRAFT `4b326b4` + test-only Test E adversarial completion `9b7bf34`). Status-sync convention: this file's Current Commit records the newest content commit at authoring time; the docs-only REPAIR-003 BLOCKED record commits on top of it are finalized by the acceptance record, which is the authoritative setter of the actual final HEAD (sha fixed-point is physically impossible inside a commit's own tree).
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
@@ -2415,8 +2415,12 @@ implementation.
 
 ### Retained state (preservation audit per the repair task)
 
-- Runtime remains the REPAIR-001 independently accepted implementation
-  (`e546e3f`) plus the test-only Test E adversarial completion (`9b7bf34`).
+- Runtime remains at the REPAIR-001 form (`e546e3f`) — itself under the
+  `286f3a9` FAIL verdict for in-P14-E label re-derivation, which is exactly
+  the defect only the authorized integration surface can remove — plus the
+  test-only Test E adversarial completion (`9b7bf34`). The verified-positive
+  REPAIR-001 properties (PIT-safe candidate_trace, mandatory P14-B reload
+  authority) are intact.
 - PIT safety: post-as-of records are carried as P14-D exclusions and never
   enter `candidate_trace` nor receive `REJECTED_*`
   (`test_candidate_trace_pit_safe_no_post_as_of_leak`,
@@ -2434,8 +2438,8 @@ implementation.
   `test_evidence_source_has_no_pit_or_selection_calls`,
   `test_p14e_does_not_rerun_p14d_selection`) lock that P14-E re-executes no
   PIT/selection functions, but the label-restatement comparisons remain in
-  P14-E per the REPAIR-001 accepted form until the authorized integration
-  surface replaces them with verbatim consumption.
+  P14-E (the `286f3a9` architecture/authority violation) until the
+  authorized integration surface replaces them with verbatim consumption.
 
 ### Verification evidence (working tree `9b7bf34`, 2026-10-04)
 
@@ -2460,10 +2464,10 @@ independently re-verified here. Upon explicit authorization and independent
 acceptance of that contract, the verified-positive REPAIR-002 P14-E
 consumption implementation (`5dbc9c4` P14-E side) is restored verbatim per
 that contract's §4/§6. Until then the P14-E handoff remains at the
-REPAIR-001 accepted form.
+REPAIR-001 form, under the `286f3a9` architecture FAIL verdict.
 
 **Gate:**
-- **P14-E Production Implementation: REPAIR-003 BLOCKED** (pending P14-D integration-surface authorization)
+- **P14-E Production Implementation: REPAIR-003 BLOCKED** (pending P14-D integration-surface authorization; underlying implementation verdict FAIL / REPAIR REQUIRED per `286f3a9` architecture finding)
 - P14-E/P14-D integration surface: DRAFT / NOT AUTHORIZED / NOT IMPLEMENTED
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
