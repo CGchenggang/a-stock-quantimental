@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-E Production Implementation — REPAIR-003 IMPLEMENTED (governance revert `9de24f1` + integration-surface authorization request `4b326b4` DRAFT) / AWAITING INDEPENDENT ACCEPTANCE (production accepted NOT YET GRANTED; P14-F NOT AUTHORIZED)**; P14-E-006 Golden/Harness — PASS / INDEPENDENTLY ACCEPTED (`17afd2d`); P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
+**P14-E Production Implementation — REPAIR-003 BLOCKED (governance revert `9de24f1` verified intact; integration surface `4b326b4` remains DRAFT — separate P14-D authorization REQUIRED; no P14-D modification made — see the REPAIR-003 BLOCKED Record) / production accepted NOT YET GRANTED; P14-F NOT AUTHORIZED**; P14-E-006 Golden/Harness — PASS / INDEPENDENTLY ACCEPTED (`17afd2d`); P14-E-005 Contract Draft — PASS / INDEPENDENTLY ACCEPTED (`70634cbe`); P14-E-004 — PASS / INDEPENDENTLY ACCEPTED (`144b38f`); P14-D — PASS / INDEPENDENTLY ACCEPTED
 
 P14-D-REPAIR-001 was submitted at `7a5b29cb2a7c0ae22bc8dccff35a3c56856839ac` and independently accepted on 2026-10-01. The three prior blockers (Contract governance, same-revision version tie, and exact-head CI evidence) are closed; see the P14-D-REPAIR-001 Independent Acceptance section below.
 
@@ -33,13 +33,13 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-004 | PASS | Production Implementation Contract accepted (Design Gate, `144b38f`); reverse-trace FOUR-CLASS frozen; Production Implementation remains separately gated |
 | P14-E-005 | PASS | Independently accepted Contract Draft at `70634cbe`; P14-D authority-aligned `create_bundle(query_result, authoritative_evidence_records)`; production implementation remains NOT AUTHORIZED |
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
-| P14-E Production Impl | REPAIR-003 IMPLEMENTED | Runtime at `1282810`; REPAIR-001 (PIT-safe candidate_trace, mandatory reload P14-B authority) verified positive; REPAIR-002 FAIL (governance: modified frozen P14-D surface); REPAIR-003 = byte-identical revert of all P14-D/P14-A/P14-E surfaces to the reviewed `cc9f1e3` state + integration-surface authorization request `docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md` (DRAFT, not implemented) | Golden/Harness independently accepted at `17afd2d` |
+| P14-E Production Impl | REPAIR-003 BLOCKED | Runtime at the REPAIR-001 accepted form (`e546e3f`) + test-only Test E adversarial completion `9b7bf34`; REPAIR-001 (PIT-safe candidate_trace, mandatory reload P14-B authority) verified positive; REPAIR-002 FAIL (governance: modified frozen P14-D surface); REPAIR-003 = byte-identical revert `9de24f1` + integration-surface authorization request `docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md` (DRAFT, not implemented) + mandated feasibility verification: **no compliant label source exists without modifying P14-D → BLOCKED; P14-D integration-surface authorization required** | Golden/Harness independently accepted at `17afd2d` |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`4b326b4` — P14-E Production Implementation REPAIR-003 submission (governance revert `9de24f1` + integration-surface contract DRAFT). Status-sync convention: this file's Current Commit records the newest content commit at authoring time; docs-only bookkeeping commits on top of it are finalized by the acceptance record, which is the authoritative setter of the actual final HEAD (sha fixed-point is physically impossible inside a commit's own tree).
+`9b7bf34` — P14-E Production Implementation REPAIR-003 (governance revert `9de24f1` + integration-surface contract DRAFT `4b326b4` + test-only Test E adversarial completion `9b7bf34`). Status-sync convention: this file's Current Commit records the newest content commit at authoring time; the docs-only REPAIR-003 BLOCKED record commit on top of it is the final `main` HEAD at submission and is finalized by the acceptance record, which is the authoritative setter of the actual final HEAD (sha fixed-point is physically impossible inside a commit's own tree).
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
@@ -2330,7 +2330,140 @@ handoff remains at the REPAIR-001 accepted form and the architecture
 repair is redesigned.
 
 **Gate:**
-- P14-E Production Implementation: REPAIR-003 IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE
+- P14-E Production Implementation: ~~REPAIR-003 IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE~~ — **SUPERSEDED by the BLOCKED record below**
+- P14-E/P14-D integration surface: DRAFT / NOT AUTHORIZED / NOT IMPLEMENTED
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
+
+## P14-E Production Implementation REPAIR-003 — BLOCKED Record — 2026-10-04
+
+**Verdict: REPAIR-003 BLOCKED.** The mandated feasibility checks (priority 1:
+consume an existing resolved state; priority 2: a P14-E-local adapter) were
+executed against the reverted, independently accepted architecture and both
+are infeasible without modifying frozen P14-D surfaces.
+
+```text
+REPAIR-003 BLOCKED
+
+Reason:
+The accepted P14-D surface does not expose the resolved
+selection/rejection state required by P14-E without modifying
+the frozen P14-D authority.
+
+No P14-D modification was made.
+```
+
+### Feasibility check 1 — direct consumption of the existing accepted state (NOT POSSIBLE)
+
+The frozen P14-D output (`run_query`, verified at the reverted state) is
+`{query, records, excluded, counts, result_id}` where `records` carries the
+**selected winners only** (P14-A provenance projection) and `excluded`
+carries the PIT/scope exclusions. It contains **no** `selection_reason`, no
+`rejection_reason`, and no visible-loser records. `pit.py` exposes only
+`is_admissible` / `admissible_records` / `visible_revisions` (winners map) —
+no label vocabulary. A repo-wide scan confirms the frozen label vocabulary
+(`SELECTED_*` / `REJECTED_*`) exists only in (a) `evidence.py`'s own
+derivation — the lineage re-derivation the REPAIR-002 verdict removed and
+condemned — and (b) the Golden engine `tests/contracts/p14e/golden/core.py`,
+which is the test-scope semantic acceptance authority (P14E-P-023), is
+barred from the runtime module set (P14E-P-001), and derives labels from its
+own records — it is not a P14-D state source. **The accepted P14-E contract
+(P14E-P-007, frozen) requires verbatim labels on every evidence and every
+candidate-trace entry; the accepted P14-D surface does not emit them.**
+
+### Feasibility check 2 — P14-E-local adapter/handoff (NOT POSSIBLE without violating frozen authority)
+
+A label is a pure function of (visible lineage candidates, resolved winner)
+under the frozen comparisons (revision, available_time, canonical_json).
+Any P14-E-side producer must either re-apply those comparisons — exactly the
+"second implementation of P14-D version-selection semantics" the REPAIR-002
+verdict removed — or re-execute PIT/version-selection authority calls inside
+P14-E, which the REPAIR-003 task and the verdict's preserved property
+("no P14-E lineage re-selection") both forbid. REPAIR-002's own design kept
+a single selection-semantics source precisely by placing the classification
+NEXT TO the rule (`pit.resolve_selection`) and emitting the state from
+`run_query`; relocating that logic into P14-E recreates the condemned
+defect, and a new runtime file would violate the frozen module layout
+(P14E-P-001). The mandated verbatim-consumption proof (Test B: flipping the
+resolved label flips the bundle) is satisfiable only when labels are DATA in
+the resolved state; a recomputing adapter contradicts it by construction.
+
+### REPAIR-002 (`5dbc9c4`) change classification (mandated by the repair task)
+
+- **P14-E legitimate repair** (independently reviewed as verified positive,
+  "conceptually sound and preserves the existing selection semantics"):
+  `evidence.py` rewritten as a pure consumer — lineage-walk /
+  complement-inference / label-derivation machinery deleted;
+  `selection_reason` by identity-key lookup from the resolved state;
+  `candidate_trace` a verbatim field projection of `selection.rejected`;
+  `authority_violation` for unlabeled/under-resolved results;
+  `identity_failure` for records absent from the P14-B authority; plus the
+  P14-E regression coverage.
+- **P14-D unauthorized modification** (the governance violation):
+  `pit.py` (+6 label constants + `resolve_selection()`),
+  `research_query.py` (top-level `selection` emission; `result_id`
+  coverage), P14-D design contract §9 (v1.2), P14-D harness
+  (key-set assertion + `test_p14d_011`).
+
+The legitimate half is not operational without the unauthorized half:
+restoring only the P14-E consumer would sever the real pipeline (every real
+`run_query` result lacks `selection`, so `create_bundle` would fail-fast
+`authority_violation` unconditionally); restoring both re-commits the
+governance violation. Neither is authorized — hence this record, not an
+implementation.
+
+### Retained state (preservation audit per the repair task)
+
+- Runtime remains the REPAIR-001 independently accepted implementation
+  (`e546e3f`) plus the test-only Test E adversarial completion (`9b7bf34`).
+- PIT safety: post-as-of records are carried as P14-D exclusions and never
+  enter `candidate_trace` nor receive `REJECTED_*`
+  (`test_candidate_trace_pit_safe_no_post_as_of_leak`,
+  `test_selection_reason_not_mislabeled_by_future_revision`).
+- P14-B authority: `EvidenceStore.reload()` mandatory RawStore verification
+  (missing store / missing ingestion_id / payload-hash mismatch /
+  adversarial hash-mismatched authority row via `9b7bf34`); no
+  `EvidenceStore(path)` bypass (`test_store_requires_raw_authority_path`).
+- FOUR-CLASS reverse-trace taxonomy unchanged; deterministic behavior
+  unchanged.
+- Not retained (the blocked deliverable): verbatim consumption of
+  authority-emitted selection/rejection labels and the literal Test B.
+  The existing monkeypatch/static-scan tests
+  (`test_create_bundle_never_executes_pit_or_selection`,
+  `test_evidence_source_has_no_pit_or_selection_calls`,
+  `test_p14e_does_not_rerun_p14d_selection`) lock that P14-E re-executes no
+  PIT/selection functions, but the label-restatement comparisons remain in
+  P14-E per the REPAIR-001 accepted form until the authorized integration
+  surface replaces them with verbatim consumption.
+
+### Verification evidence (working tree `9b7bf34`, 2026-10-04)
+
+- `python -m pytest -q -ra` → **581 passed / 2 warnings / 0 failed**.
+- P13-M regression `tests/test_industry_relative.py` → **3 passed**.
+- `audit_p14c_contract.py` → PASS, 0 hard + 0 soft (61/61/61 closure).
+- `audit_p14d_contract.py` → PASS (10 contract / 10 matrix / 11 golden /
+  11 harness).
+- `audit_p14e_contract.py` → PASS (17/17 contract-matrix closure, 26/26
+  golden checks, `p13_t: STOPPED`, `p13_u: PROTECTED`, production
+  implementation files authorized set unchanged).
+- Revert integrity: `git diff cc9f1e3..HEAD` over the seven governance
+  files is empty except the test-only `9b7bf34` addition (+22 lines in
+  `tests/test_p14e_production_impl.py`).
+
+### Standing authorization request (unchanged, not implemented)
+
+`docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md`
+(DRAFT, `4b326b4`) remains the pending preferred-approach authorization
+request; its §1 documents the same three-way constraint conclusion
+independently re-verified here. Upon explicit authorization and independent
+acceptance of that contract, the verified-positive REPAIR-002 P14-E
+consumption implementation (`5dbc9c4` P14-E side) is restored verbatim per
+that contract's §4/§6. Until then the P14-E handoff remains at the
+REPAIR-001 accepted form.
+
+**Gate:**
+- **P14-E Production Implementation: REPAIR-003 BLOCKED** (pending P14-D integration-surface authorization)
 - P14-E/P14-D integration surface: DRAFT / NOT AUTHORIZED / NOT IMPLEMENTED
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
