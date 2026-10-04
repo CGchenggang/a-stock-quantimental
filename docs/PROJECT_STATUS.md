@@ -2666,6 +2666,20 @@ queries against the virgin zone remain fail-fast guarded (`assert_research_zone`
 
 ## R4-A — Evidence-backed Research Agent Loop — IMPLEMENTED — 2026-10-04
 
+> **R4-A-NARROW-REPAIR-001 (2026-10-04):** the independent acceptance found one substantive
+> implementation defect — realized max drawdown extracted closes from the P14-B ``value``
+> scalar projection, which fails when a historical-quote record's ``value`` field carries the
+> OHLCV structure (the actual historical-quote data shape), yielding
+> ``realized_drawdown = None / expected_drawdown = 0.0``. Fixed inside
+> `agent/research_run.py` only: closes are now extracted from the record's
+> ``raw_payload["value"]["close"]`` (the repo's existing OHLCV structure) with the scalar
+> projection as fallback — no second PIT rule, no store bypass, no P14-D/E/R3-A change.
+> Two targeted tests added (OHLCV-structure records produce the real −0.25 drawdown and the
+> RiskEngine flag where the pre-repair code produced 0.0; drawdown uses only visible closes
+> at the as_of boundary, future bars excluded AND recorded). Full pytest 611 passed (double
+> run identical); audits exit 0; P13-M 3 passed. Status remains READY FOR INDEPENDENT
+> ACCEPTANCE.
+
 **Authorization.** Owner-instructed product task following the roadmap audit and the R3-A
 delivery: "the first truly runnable, testable, reproducible Evidence-backed Research Agent
 Loop" — **integration of existing accepted components, not new infrastructure**. Status:
