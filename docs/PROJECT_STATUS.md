@@ -2799,7 +2799,15 @@ batch replay, stable ordering under input reordering + target deduplication, fai
 unaffected), ledger continuity (3 rows, evidence identity preserved), empty batch.
 
 **Verification.** Full pytest **619 passed / 2 warnings / 0 failed** (double run identical);
-P14-C/D/E audits exit 0; P13-M regression 3 passed. Real-data smoke (read-only): batch
+P14-C/D/E audits exit 0; P13-M regression 3 passed. Exact-head GitHub Actions CI evidence:
+workflow `tests`, run **`37218390765`** (event=push, completed / **success**),
+`head_sha == 1a29852b64935b342467998b315fd0e00c332648` (exact match **YES**), all required
+steps green — Full pytest suite, Contract Harness audits (P14-C / P14-D / P14-E), P13-M
+pooled industry regression (both jobs);
+https://github.com/CGchenggang/a-stock-quantimental/actions/runs/37218390765.
+P13-T remains STOPPED / NOT EXECUTED and P13-U remains PROTECTED (the accepted boundary
+guards are exercised in-suite and by the P14-E audit's `p13_t`/`p13_u` checks). Real-data
+smoke (read-only): batch
 [000001, 000002] at 2020-02-03T16:00+08:00 → 2 OK (17 visible bars each), per-symbol results
 independent (different momentum/drawdown), replay identical INCLUDING reversed input order,
 ledger 2 rows with evidence identity.
