@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; P14-E Production Implementation is now **AUTHORIZED FOR IMPLEMENTATION / NOT YET INDEPENDENTLY ACCEPTED**; P14-F NOT AUTHORIZED.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; P14-E Production Implementation is now **INTEGRATION IMPLEMENTED — PENDING INDEPENDENT ACCEPTANCE** (implementation commit `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; REPAIR-002 verified delta restored verbatim per contract §2+§3+§4); P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -32,13 +32,15 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | P14-E-005 | PASS | Independently accepted Contract Draft at `70634cbe`; P14-D authority-aligned `create_bundle(query_result, authoritative_evidence_records)`; production implementation remains NOT AUTHORIZED |
 | P14-E-006 Golden/Harness | PASS | Independently accepted Golden/Harness design and implementation gate at `17afd2d`; production implementation remains NOT AUTHORIZED |
 | P14-D → P14-E Selection State Integration Contract v2 | PASS | Independently accepted at `51a769f`; separate Human Authorization required before implementation; P14-E production implementation remains NOT AUTHORIZED |
-| P14-E Production Impl | REPAIR-003 BLOCKED | Runtime at the REPAIR-001 form (`e546e3f`, itself under the `286f3a9` FAIL verdict for in-P14-E label re-derivation) + test-only Test E adversarial completion `9b7bf34`; REPAIR-001 verified-positive properties (PIT-safe candidate_trace, mandatory reload P14-B authority) intact; REPAIR-002 FAIL (governance: modified frozen P14-D surface); REPAIR-003 = byte-identical revert `9de24f1` + integration-surface authorization request `docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md` (DRAFT, not implemented) + mandated feasibility verification: **no compliant label source exists without modifying P14-D → BLOCKED; P14-D integration-surface authorization required** | Golden/Harness independently accepted at `17afd2d` |
+| P14-E Production Impl | INTEGRATION IMPLEMENTED — PENDING ACCEPTANCE | REPAIR-003 BLOCKED (independently confirmed) resolved via the authorized Integration Contract v2 (`51a769f`): Human Authorization granted → REPAIR-002 verified delta restored verbatim (`69cfe2a`) — P14-D emits the resolved selection state (pit label constants + `resolve_selection`, `run_query` `selection` key, P14-D contract v1.2, harness additive assertions, `__init__` export) and P14-E is a pure verbatim consumer (all label re-derivation machinery deleted); REPAIR-003 Test E adversarial regression retained; P14-B mandatory reload authority unchanged | Golden/Harness independently accepted at `17afd2d` |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
 ## Current Commit
 
-`51a769f0a50632c5b8d71f4247d5a60ee2847012` — independently accepted P14-D → P14-E Selection State Integration Contract v2 (docs-only). Exact-head CI run `37185144953` is green and matches this SHA. **Human Authorization for the separately scoped integration implementation was granted on 2026-10-04 by the project owner; implementation remains subject to the exact scope in Contract v2 and subsequent Independent Acceptance.**
+`51a769f0a50632c5b8d71f4247d5a60ee2847012` — independently accepted P14-D → P14-E Selection State Integration Contract v2 (docs-only). Exact-head CI run `37185144953` is green and matches this SHA. **Human Authorization for the separately scoped integration implementation was granted on 2026-10-04 by the project owner; implementation remains subject to the exact scope in Contract v2 and subsequent Independent Acceptance.
+
+`69cfe2a86d23352e9f74cf7454aad6cf59135e7b` — P14-D → P14-E Integration Contract v2 implementation (Human Authorization of contract `51a769f0a50632c5b8d71f4247d5a60ee2847012`; REPAIR-002 verified delta restored verbatim + REPAIR-003 Test E regression retained). Status-sync convention: this file's Current Commit records the newest content commit at authoring time; docs-only bookkeeping commits on top of it are finalized by the acceptance record, which is the authoritative setter of the actual final HEAD (sha fixed-point is physically impossible inside a commit's own tree).**
 
 P14-E-005 Contract Draft remains independently accepted at `70634cbe9e8086d325c2cff7efd377461d3d746a`.
 
@@ -2493,8 +2495,75 @@ that contract's §4/§6. Until then the P14-E handoff remains at the
 REPAIR-001 form, under the `286f3a9` architecture FAIL verdict.
 
 **Gate:**
-- **P14-E Production Implementation: REPAIR-003 BLOCKED** (pending P14-D integration-surface authorization; underlying implementation verdict FAIL / REPAIR REQUIRED per `286f3a9` architecture finding)
+- **P14-E Production Implementation: REPAIR-003 BLOCKED** (pending P14-D integration-surface authorization; underlying implementation verdict FAIL / REPAIR REQUIRED per `286f3a9` architecture finding) — **RESOLVED 2026-10-04: the integration surface was independently accepted and Human-Authorized; implementation delivered — see the Integration Contract v2 Implementation section below**
 - P14-E/P14-D integration surface: DRAFT / NOT AUTHORIZED / NOT IMPLEMENTED
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
+
+## P14-D → P14-E Integration Contract v2 — Implementation — 2026-10-04
+
+**Authorization chain.** REPAIR-003 BLOCKED (independently confirmed) →
+Integration Contract amended to independent-acceptance readiness
+(`51a769f`) → Contract **PASS / INDEPENDENTLY ACCEPTED** (acceptance
+record commit `006780705fd93579b89141109de7353593608711`) → **Human
+Authorization GRANTED** (record commit
+`3ec2b86d2deb52c439f6e861576162e17916ea13`) → this implementation.
+Per the contract's four-stage separation: **Implementation Complete ≠
+Independent Acceptance**.
+
+**Implemented content = contract §2+§3+§4 exact delta** — the
+independently reviewed REPAIR-002 change set (`5dbc9c4`) restored
+verbatim, with the two contract-specified deviations:
+
+- P14-D integration surface: `pit.py` (+6 frozen label constants next
+  to the rule + `resolve_selection()` classifying the already-resolved
+  mapping; existing functions byte-identical); `research_query.py`
+  (top-level `selection` emission — {selected, rejected} full
+  provenance projection + label in frozen deterministic order;
+  result_id covers the state; records/excluded/counts semantics and
+  sort keys unchanged; PIT-excluded records stay in `excluded`);
+  `__init__.py` (export-only re-export); P14-D design contract v1.2
+  (§9 additive `selection` documentation; v1.2 authorization-basis
+  line cites Integration Contract v2 per its §6); P14-D harness
+  (top-level key-set assertion extension + `test_p14d_011`).
+- P14-E restoration surface: `evidence.py` pure consumer —
+  `_selection_reason` / `_rejection_reason` / `_visible_candidates` /
+  `_check_candidate_consistent` deleted; `selection_reason` consumed
+  verbatim from the resolved state by identity-key lookup;
+  `candidate_trace` = order-preserving verbatim field projection of
+  `selection.rejected`; `authority_violation` (missing/unresolved/
+  uncovered resolved state) and `identity_failure` (records absent
+  from the P14-B authority) gates intact; label vocabulary re-exported
+  from the authority, never classified; reverse-trace FOUR-CLASS and
+  mandatory `EvidenceStore` RawStore verification unchanged;
+  `tests/test_p14e_production_impl.py` verbatim suite plus the
+  REPAIR-003 Test E adversarial regression retained (no regression
+  deleted).
+
+**Scope gate.** The implementation commit (`69cfe2a`, rebased onto the
+acceptance/authorization records) touches exactly the 7
+contract-authorized files (+318/−181). No P14-B / P14-C / P13-T /
+P13-U / P14-F / production-domain file was touched.
+
+**Verification.** Full pytest **583 passed / 2 warnings / 0 failed**
+(double run identical, 583/583); P14-C audit exit 0 (61/61/61); P14-D
+audit exit 0; P14-E audit exit 0 (17/17 contract-matrix closure, 26/26
+golden checks); P13-M regression 3 passed. Mandated coverage verified
+present: verbatim consumption
+(`test_bundle_consumes_p14d_resolved_labels_verbatim`),
+no-second-selection-authority (monkeypatch
+`test_create_bundle_never_executes_pit_or_selection` + static scan
+`test_evidence_source_has_no_pit_or_selection_calls`), PIT safety
+(`test_candidate_trace_pit_safe_no_post_as_of_leak`,
+`test_selection_reason_not_mislabeled_by_future_revision`),
+RawStore authority four failure modes (missing store / missing
+ingestion_id / hash mismatch / adversarial hash-mismatched row), and
+determinism (double run + `test_bundle_determinism` +
+`test_p14d_006_deterministic_result`).
+
+**Gate:**
+- P14-D → P14-E Integration: **IMPLEMENTATION COMPLETE — PENDING INDEPENDENT ACCEPTANCE** (this record is not an acceptance decision)
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
