@@ -56,6 +56,26 @@ def _observed_symbols(raw_store) -> set:
     return {r.symbol for r in raw_store.records() if r.symbol}
 
 
+def run_frozen_universe_validation(as_ofs: Sequence[str], *,
+                                   historical_store=None, raw_store,
+                                   ingested_at: str | None = None,
+                                   lookback: int = 20,
+                                   universe_path: str | Path =
+                                   DEFAULT_UNIVERSE_FILE) -> dict:
+    """Formal R4-C entry point: validate against the FROZEN universe.
+
+    Loads the frozen 76-stock universe committed at
+    ``data/industry/validation_universe_76.txt`` (independent audits read
+    the same file from the Exact HEAD) and delegates to
+    :func:`run_validation` unchanged — no new orchestration.
+    """
+    universe = load_universe(universe_path)
+    return run_validation(universe["symbols"], as_ofs,
+                          historical_store=historical_store,
+                          raw_store=raw_store, ingested_at=ingested_at,
+                          lookback=lookback)
+
+
 def run_validation(symbols: Sequence[str], as_ofs: Sequence[str], *,
                    historical_store=None, raw_store,
                    ingested_at: str | None = None,

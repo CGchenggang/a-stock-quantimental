@@ -22,6 +22,7 @@ import random
 from astock_v2.agent.research_validation import (
     DEFAULT_UNIVERSE_FILE,
     load_universe,
+    run_frozen_universe_validation,
     run_validation,
 )
 from astock_v2.data.catalog import AssetScope, DataLayer, HistoricalRecord
@@ -261,3 +262,35 @@ def test_no_p13_registry_mutation(tmp_path):
         text = source.read_text(encoding="utf-8")
         assert "calibration_registry" not in text
         assert "decision_policy_registry" not in text
+
+
+# ------------------------------------ NARROW-REPAIR-001: frozen universe evidence
+
+def test_frozen_universe_committed_identity():
+    """The frozen 76-stock universe is IN the repository: exactly 76
+    unique, canonically ordered symbols, with the stable audited identity
+    universe-d8c5016b1ded0984 — read from the committed file, not from a
+    hard-coded list."""
+    assert DEFAULT_UNIVERSE_FILE.is_file(), (
+        "frozen universe file must exist in the repository checkout")
+    universe = load_universe(DEFAULT_UNIVERSE_FILE)
+    symbols = universe["symbols"]
+    assert len(symbols) == 76
+    assert len(set(symbols)) == 76
+    assert symbols == sorted(symbols)
+    assert universe["universe_id"] == "universe-d8c5016b1ded0984"
+    # determinism: loading twice yields the identical universe
+    assert load_universe(DEFAULT_UNIVERSE_FILE) == universe
+
+
+def test_frozen_entry_point_uses_committed_universe(tmp_path):
+    """The formal R4-C entry point validates against the committed frozen
+    universe: expected == 76 and the universe identity matches the audit
+    value (tmp store has no data -> honest DATA_INCOMPLETE, 76 missing)."""
+    raw = RawStore(tmp_path / "raw_records.jsonl")
+    result = run_frozen_universe_validation(
+        [AS_OF], raw_store=raw, ingested_at=INGESTED_AT, lookback=3)
+    assert result["universe"]["universe_id"] == "universe-d8c5016b1ded0984"
+    assert result["summary"]["expected"] == 76
+    assert result["status"] == "DATA_INCOMPLETE"
+    assert result["summary"]["missing_data"] == 76
