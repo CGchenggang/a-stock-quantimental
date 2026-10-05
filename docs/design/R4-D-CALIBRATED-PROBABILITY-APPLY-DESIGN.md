@@ -161,7 +161,27 @@ P13-U PROTECTED unchanged. No performance claims: applying the
 calibration makes the probability honest, not alpha (P13-R: no policy
 beat hold-all).
 
-## 13. Acceptance Criteria
+## 13. Raw-Model Application Authority — NOT FROZEN (NARROW-REPAIR-001)
+
+NARROW-REPAIR-001 audit (Exact HEAD `0406abc`): the apply path's `p_raw`
+source has **no frozen forward-applicable artifact**. P13-O fold models
+were transient; `p13p/incremental_models.json` is OOS metric comparisons
+(A/B/C/D), not parameters; the only persisted prediction records
+(`oos_predictions_76.json`) are HISTORICAL_OOS_PREDICTION and forbidden
+as runtime input (R4D-003c). The P13-Q calibration is variant-POOLED —
+no calibration↔variant/feature binding is recorded. Evidence inventory
+with audited sha256 values:
+`docs/artifacts/R4-D-APPLY-ARTIFACT-EVIDENCE.md`.
+
+Consequence: **R4-D = BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN.**
+A future authorized phase must produce a variant-bound, feature-bound
+MODEL_APPLICATION artifact (re-fitted under the accepted protocol with a
+fresh a-priori window decision) and append its evidence row; only that
+unblocks implementation. New invariants R4D-002a/002b/003a/003b/003c and
+golden G11–G16 (contract v2) freeze the requirement; runtime
+auto-selection of variant/calibration/policy is forbidden.
+
+## 14. Acceptance Criteria
 
 See contract §12 checklist (mirrors task §18 — all items answered
 above; implementation explicitly NOT authorized by this design).

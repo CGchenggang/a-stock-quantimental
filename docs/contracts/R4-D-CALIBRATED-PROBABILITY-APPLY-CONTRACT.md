@@ -7,6 +7,14 @@
 >
 > 修订历史：
 > v1: 初稿（R4-D-DESIGN-001，设计 gate；审计基线 Exact HEAD `264c59a`）
+> v2: NARROW-REPAIR-001（2026-10-05）——独立验收 FAIL 后的三闭环修复：
+>     区分三类 artifact（历史 OOS 预测 / 模型应用 / 校准）；新增
+>     R4D-002a/002b/003a/003b/003c；golden 增补 G11–G16；建立
+>     docs/artifacts/R4-D-APPLY-ARTIFACT-EVIDENCE.md 证据文件。
+>     审计结论：仓库内不存在可前向应用的 frozen raw-model
+>     artifact（P13-O 折内权重未持久化；p13p 文件为指标对比非
+>     模型参数）→ R4-D = BLOCKED — RAW MODEL APPLY AUTHORITY
+>     NOT FROZEN（§13）。文档-only，零生产代码。
 
 ---
 
@@ -43,6 +51,37 @@ implement. Normative invariants `R4D-001…R4D-020`.
   `factor_list` of `p13q/analysis_config.json` (sha256 `f0602bb9…`):
   momentum, volatility, trend, volume_ratio, industry_relative_return_5,
   industry_relative_return_20.
+- **R4D-002a (raw-model application authority)**: the runtime `p_raw` source is a
+  MODEL_APPLICATION artifact — a frozen, forward-applicable set of fitted model
+  parameters with complete feature mapping and version identity. **Audit
+  conclusion (Exact HEAD `0406abc`): no such artifact exists in this repository**
+  (P13-O fold weights were transient; `p13p/incremental_models.json` holds OOS
+  metric comparisons, not parameters). Implementation authorization is therefore
+  BLOCKED per R4D-003b — no runtime may retrain, refit, or fabricate `p_raw`.
+- **R4D-002b (variant identity)**: the exact `model_variant` ∈ {baseline,
+  industry_5, industry_20, industry_5_20} MUST be frozen in the future
+  MODEL_APPLICATION artifact. Auto-selection (best/latest/first/highest-metric/
+  arbitrary) is forbidden at runtime AND at contract level. **Audit finding**: the
+  P13-Q calibration is variant-POOLED (no variant dimension in
+  `p13q/analysis_config.json` / `probability_audit.json`) → the
+  calibration↔variant binding is UNRESOLVED until a variant-bound recalibration
+  is issued by a future authorized phase.
+- **R4D-003a (calibration binding)**: a calibration artifact is apply-usable only
+  against the exact raw-model variant and feature set it was fitted for. The
+  current P13-Q registry (variant-pooled) is NOT yet bound; binding requires the
+  future artifact pair (variant-bound MODEL_APPLICATION + variant-bound
+  calibration re-issue) with matching `model_variant` + `feature_set_id`.
+- **R4D-003b (reproducibility gate)**: R4-D implementation authorization requires
+  a MODEL_APPLICATION artifact independently frozen and auditable per
+  `docs/artifacts/R4-D-APPLY-ARTIFACT-EVIDENCE.md` (identity fields: artifact_id,
+  sha256, model_id/version/variant, feature_set_id, protocol, scope, status,
+  provenance). Until that act, **R4-D = BLOCKED — RAW MODEL APPLY AUTHORITY NOT
+  FROZEN**.
+- **R4D-003c (historical/forward separation)**: HISTORICAL_OOS_PREDICTION
+  artifacts (`oos_predictions_76.json`) MUST NOT be used as `p_raw` for any
+  current or future research run — they are records of past runs, not a forward
+  model. Supplying one where a forward artifact is required is
+  `INELIGIBLE("historical_prediction_as_model")` (G16) and fails closed.
 - **R4D-006 (PIT/evidence)**: P14-D remains the sole PIT/selection
   authority; P14-E the sole evidence/provenance authority. R4-D adds NO
   time filter and NO second visibility rule; virgin protection stays
@@ -136,7 +175,14 @@ calibration unavailable → NOT_AVAILABLE · G3 policy unavailable →
 NO_ACTION + reason · G4 as_of < split_date → INELIGIBLE(temporal) · G5
 as_of > RESEARCH_END → INELIGIBLE(temporal) · G6 symbol out of scope ·
 G7 feature mismatch · G8 replay byte-identical · G9 ledger provenance
-complete (R4D-013 fields) · G10 registry bytes unchanged by apply.
+complete (R4D-013 fields) · G10 registry bytes unchanged by apply · G11 raw-model artifact missing →
+NOT_AVAILABLE, no fabricated p_raw · G12 model_variant mismatch →
+INELIGIBLE(`model_variant_mismatch`) · G13 calibration bound to a different
+variant → INELIGIBLE(`calibration_model_mismatch`) · G14 feature-set
+identity mismatch → INELIGIBLE(`feature_set_mismatch`) · G15 frozen-artifact
+hash mismatch → FAIL CLOSED (abort, no output) · G16 historical OOS
+prediction artifact supplied where a forward model artifact is required →
+REJECTED / NOT_AVAILABLE (R4D-003c).
 
 ## 10. Harness
 
@@ -154,10 +200,36 @@ P14-F, no holdout use, no performance claims (P13-R: no policy
 significantly beat hold-all — a calibrated probability is honesty, not
 alpha).
 
+## 13. Raw-Model Application Authority — NOT FROZEN (blocker record)
+
+Audit at Exact HEAD `0406abc` (R4-D-NARROW-REPAIR-001): **no forward-applicable
+frozen raw-model artifact exists in this repository.** P13-O fold weights were
+transient (fit_predict returns predictions; weights discarded); the only persisted
+model-adjacent files are HISTORICAL_OOS_PREDICTION records (forbidden as p_raw by
+R4D-003c) and OOS metric comparisons (not parameters). The P13-Q calibration is
+variant-pooled with no binding record.
+
+```text
+R4-D BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN
+
+R4-D Contract cannot authorize implementation until a raw-model
+application authority (MODEL_APPLICATION artifact, variant-bound and
+feature-bound, with independent evidence per
+docs/artifacts/R4-D-APPLY-ARTIFACT-EVIDENCE.md) is frozen by a future
+authorized phase.
+```
+
+This is a legal outcome, not a failure: R4D-002a/002b/003a/003b/003c and
+G11–G16 define exactly what must exist before re-acceptance can authorize
+implementation. Everything else in this contract (semantics, eligibility
+states, read-only boundary, provenance chain, fallback rules) is already
+specified and remains frozen text.
+
 ## 12. Acceptance Checklist (task §18 mapping)
 
 [×] Existing probability/calibration/policy authorities identified
-    (R4D-002/003/004) · [×] Probability semantics frozen (R4D-001) ·
+    (R4D-002/003/004) · [ ] **raw-model application authority frozen
+    (R4D-002a/003b) — UNMET: BLOCKED** · [×] Probability semantics frozen (R4D-001) ·
     [×] Calibration semantics frozen (R4D-003/007) · [×] Apply
     eligibility (R4D-008) · [×] PIT/temporal rule (R4D-006/R4D-008-E3) ·
     [×] Model/calibration/policy version rules (R4D-002/003/004) · [×]
