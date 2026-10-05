@@ -2937,6 +2937,19 @@ below).
 4. NO_ACTION × 76 is the expected conservative outcome (uncalibrated);
    R4-C makes no performance claim and writes no registry.
 
+> **R4-C-NARROW-REPAIR-001 (2026-10-05):** the frozen 76-stock universe is now committed to
+> the repository (`data/industry/validation_universe_76.txt`, force-added past the
+> `data/industry/` gitignore — documented exception, P13-S schema precedent). Content verified
+> against the audited identity: exactly 76 unique, canonically sorted symbols,
+> `universe_id = universe-d8c5016b1ded0984` — the same file used by the real-data 76/76 smoke.
+> Clean-clone audit: `git clone` + checkout of the repair commit + the committed loader yields
+> 76 symbols / the audit identity without any local gitignored data. The formal R4-C entry
+> point `run_frozen_universe_validation` loads the committed universe and delegates to
+> `run_validation` unchanged (no orchestration/PIT/batch semantic change). Two identity tests
+> added (committed-file identity + formal-entry-point). Full pytest 631 passed (double run
+> identical); audits exit 0; P13-M 3 passed. NO historical market data committed. R4-C status
+> remains READY FOR INDEPENDENT ACCEPTANCE.
+
 **Gate:**
 - R4-C 76-Stock Research Validation Loop: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE**
 - R4-B: PASS / INDEPENDENTLY ACCEPTED (owner decision, recorded on instruction)
