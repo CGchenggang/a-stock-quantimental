@@ -19,12 +19,15 @@ provenance and a NEW freeze record. No retroactive identity changes.
 - `model_id` — stable semantic name assigned in the pre-training
   authorization record (e.g. `p13o-forward-logistic`); never derived from
   results.
-- `model_version` — content-addressed: `sha256(bytes of the frozen
-  parameter artifact)`, short prefix recorded in the manifest. Any byte
-  change = new model_version = new artifact (identity is immutable; one
-  model_id may accrete multiple versions but an authorization binds ONE).
-- The artifact hash IS part of identity; the git commit is **provenance
-  only** (never identity).
+- `model_version` — the **full lowercase SHA-256 hex digest (64 chars)
+  of the canonical frozen parameter artifact bytes** (canonical
+  serialization, design §6). Identity and hash are the same string;
+  shortened display forms are non-normative and never used for
+  identity/binding/lookup/eligibility/governance. Any byte change = new
+  model_version = new artifact (identity is immutable; one model_id may
+  accrete multiple versions but an authorization binds ONE).
+- The artifact hash IS identity; the git commit is **provenance only**
+  (never identity).
 - `MODEL_APPLICATION_MANIFEST` (committed evidence) binds
   artifact_sha256 ↔ model_id/model_version ↔ every identity field.
 
@@ -80,14 +83,33 @@ ONE weight vector + bias fitted on the entire training window. The
 walk-forward fold machinery remains a VALIDATION instrument only; mixing
 fold collections with forward apply is forbidden (P13O-F-013).
 
-## 6. Feature Contract (P13O-F-014..016)
+## 6. Prediction Semantics, Scope & Canonical Serialization (P13O-F-016a..016c)
+
+- **Prediction semantics (normatively frozen for the NEW model)**:
+  target = next trading day close-up direction; horizon =
+  next_trading_day; positive_class = next_return > 0. Manifest literals
+  must match verbatim; mismatch → INELIGIBLE.
+- **Scope (normative manifest field)**: {universe_id (= frozen
+  `universe-d8c5016b1ded0984` lineage), sorted unique 6-char-zero-padded
+  symbols, scope_sha256 over the canonical scope JSON}. Artifact bound
+  at freeze; mismatch → INELIGIBLE("scope_mismatch"); consumed by the
+  forward-selection rule — no implicit scope.
+- **Canonical serialization**: artifact = parameters-only JSON object
+  {artifact_type, bias, feature_names (ordered), model_family, weights
+  (positional)}; UTF-8 no BOM, no trailing newline; sort_keys=True,
+  ensure_ascii=False, compact separators; float64 shortest round-trip;
+  negative zero → 0.0; NaN/Infinity forbidden; hash input = exact
+  canonical bytes. Determinism (G20) is executable: same authorized
+  inputs → same bytes → same SHA-256 → same model_version.
+
+## 7. Feature Contract (P13O-F-014..016)
 
 `feature_set_id = "fs-" + sha256(canonical [name, definition_version]
 list)`. The manifest stores the exact ordered feature list. Any
 feature_set_id / feature_order / preprocessing mismatch → `INELIGIBLE`
 (no auto-adjustment) — mirrors R4-D G7/G14.
 
-## 7. Forward Model Selection (P13O-F-017 — executable rule)
+## 8. Forward Model Selection (P13O-F-017 — executable rule)
 
 With a single frozen artifact the rule is:
 
@@ -105,7 +127,7 @@ Strict `<` is deliberate (future-leakage guard). No tie-breaking is
 needed by construction (one authorized artifact); a second eligible
 artifact would be a governance error → fail closed (G11).
 
-## 8. Calibration Design (P13O-F-018..021)
+## 9. Calibration Design (P13O-F-018..021)
 
 Existing P13-Q is variant-pooled with unresolved binding → it is **NOT
 the future model's calibration**. A NEW calibration artifact must be
@@ -117,7 +139,7 @@ window), fit boundary, AND the binding tuple
 any binding field → INELIGIBLE (G12/G13/G14). The calibration artifact
 gets its own sha256 + manifest + evidence row.
 
-## 9. Artifact Manifest & Integrity (P13O-F-022..024)
+## 10. Artifact Manifest & Integrity (P13O-F-022..024)
 
 `MODEL_APPLICATION_MANIFEST` fields (nulls written explicitly as `null`,
 never omitted): artifact_type, artifact_id, artifact_sha256, model_id,
@@ -126,12 +148,13 @@ model_version, model_family, variant, feature_set_id, feature_names
 training_start, training_end, research_end, training_protocol_id, seed,
 weights (ordered), bias, calibration_id, calibration_binding, provenance,
 source_commit, created_at (execution metadata — outside research
-identity), freeze_status. Integrity chain: artifact bytes → sha256 →
+identity), freeze_status, scope {universe_id, symbols, scope_sha256}
+(P13O-F-016b). Integrity chain: artifact bytes → sha256 →
 manifest → manifest hash → committed evidence record
 (`docs/artifacts/`). Hash mismatch → FAIL CLOSED; never regenerate,
 retrain, or substitute (G02/G19/G20).
 
-## 10. R4-D Unblock Conditions (P13O-F-025)
+## 11. R4-D Unblock Conditions (P13O-F-025)
 
 C1 unique variant (pre-registered) · C2 frozen protocol · C3
 deterministic artifact (double-run byte-identical) · C4 complete feature
@@ -142,7 +165,7 @@ exact-head CI. ALL satisfied → `R4-D APPLY = ELIGIBLE FOR AUTHORIZATION`
 — final unlock still requires Human Authorization. Never an automatic
 R4-D PASS.
 
-## 11. Golden Cases
+## 12. Golden Cases
 
 G01–G20 per contract §11 (missing artifact, hash mismatch, model_id/
 version mismatch, variant/feature_set/order/preprocessing mismatch,
@@ -151,7 +174,7 @@ calibration mis-binding ×3, P13-T/U contamination attempt, historical
 OOS predictions as model artifact, missing weights/bias,
 manifest/artifact inconsistency, non-deterministic generation).
 
-## 12. Authority Boundaries
+## 13. Authority Boundaries
 
 P13-Q owns calibration research (its successor issues the new
 calibration); P13-R owns policies (untouched); P14-D remains the sole

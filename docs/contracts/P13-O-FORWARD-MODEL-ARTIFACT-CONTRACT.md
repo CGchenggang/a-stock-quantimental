@@ -8,6 +8,11 @@
 > 修订历史：
 > v1: 初稿（P13-O-FORWARD-MODEL-001，设计 gate；基线 Exact HEAD `3cdd1ee`；
 >     前置事实：P13-O-ARTIFACT-001 = PASS / NOT RECOVERABLE）
+> v2: NARROW REPAIR（2026-10-05，P13-O-FORWARD-MODEL-002）——四处闭环：
+>     R1 scope 规范字段（P13O-F-016b + F-022 schema）；R2 预测语义
+>     规范冻结（P13O-F-016a）；R3 规范序列化（P13O-F-016c）；
+>     R4 model_version = 全长小写 SHA-256（P13O-F-002 修订）。
+>     文档-only，零生产代码。
 
 ---
 
@@ -26,10 +31,15 @@ Normative invariants `P13O-F-001..P13O-F-026`.
 - **P13O-F-001**: `model_id` is a stable semantic name assigned in the
   pre-training authorization record; never derived from metrics or
   results.
-- **P13O-F-002**: `model_version` = short prefix of
-  `sha256(frozen parameter artifact bytes)` — content-addressed. The
-  artifact hash IS identity. Any byte change → new model_version (new
-  artifact); one authorization binds exactly ONE version.
+- **P13O-F-002**: `model_version` = the **full lowercase SHA-256 hex
+  digest (64 characters) of the canonical frozen parameter artifact
+  bytes** (canonicalization per P13O-F-016c) — content-addressed. The
+  artifact hash IS identity; identity and hash are the same string —
+  there is no separate "short" identity. Any byte change → new
+  model_version (new artifact); one authorization binds exactly ONE
+  version. Shortened display forms (e.g. 12-char prefixes) are
+  explicitly NON-NORMATIVE and MUST NOT be used for identity, binding,
+  lookup, eligibility, or governance.
 - **P13O-F-003**: identity is immutable; retroactive identity changes of
   the frozen NOT-RECOVERABLE P13-O are forbidden.
 - **P13O-F-004**: a git commit is provenance only, never identity. The
@@ -42,7 +52,10 @@ Normative invariants `P13O-F-001..P13O-F-026`.
   explicit pre-training Human Authorization; the decision is recorded in
   that authorization BEFORE any fit executes.
 - **P13O-F-006**: the decision is immutable after recording; runtime and
-  training code must refuse any other variant.
+  training code must refuse any other variant. Automatic variant
+  selection (best / latest / first / highest-metric / arbitrary) is
+  forbidden at BOTH training time and apply time; the training entry
+  point must assert the authorized variant and fail closed otherwise.
 - **P13O-F-007**: train-multiple-variants-then-select is model selection
   and belongs ONLY to a research-comparison protocol; its output can
   never become the apply artifact. Selecting on validation results is
@@ -88,16 +101,60 @@ Normative invariants `P13O-F-001..P13O-F-026`.
 - **P13O-F-016**: preprocessing is recorded explicitly (default:
   `"identity"`); a future preprocessing change is a new
   feature_set_id + new authorization.
+- **P13O-F-016a (prediction semantics — normatively frozen)**: the NEW
+  model's prediction semantics are frozen to exactly:
+  `target = "next trading day close-up direction"`;
+  `horizon = "next_trading_day"`;
+  `positive_class = "next_return > 0"`. The manifest fields
+  `target` / `horizon` / `positive_class` MUST equal these literals
+  verbatim; any other value → `INELIGIBLE("prediction_semantics_mismatch")`.
+  This is a normative invariant of the NEW artifact — historical P13-O
+  metadata is NOT relied upon.
+- **P13O-F-016b (scope — normative manifest field)**: `scope` is a
+  REQUIRED manifest object: `{"universe_id": <string>, "symbols":
+  [<sorted unique 6-char-zero-padded symbol strings>], "scope_sha256":
+  <sha256 of the canonical scope JSON>}`. Canonicalization: symbols
+  deduplicated, zero-padded to 6 characters, sorted ascending (the
+  frozen-universe loader semantics); canonical scope JSON =
+  `json.dumps({"symbols": symbols, "universe_id": universe_id},
+  sort_keys=True, ensure_ascii=False, separators=(",", ":"))`;
+  `universe_id` MUST equal the frozen
+  `universe-d8c5016b1ded0984` for the current authorization lineage.
+  Binding: the artifact is bound to this scope at freeze. Mismatch
+  (scope_sha256, universe_id, or symbol not in `symbols`) →
+  `INELIGIBLE("scope_mismatch")`. Forward selection (P13O-F-017)
+  consumes exactly this field — no implicit scope exists.
+- **P13O-F-016c (canonical artifact serialization)**: the frozen
+  parameter artifact is a single JSON object serialized canonically:
+  UTF-8, no BOM, no trailing newline; `json.dumps(..., sort_keys=True,
+  ensure_ascii=False, separators=(",", ":"))` (lexicographic key order);
+  floats are float64 serialized via shortest round-trip representation;
+  negative zero is canonicalized to `0.0` before serialization; NaN and
+  Infinity are forbidden (presence → generation failure). Artifact
+  schema (parameters ONLY — execution metadata such as created_at/seed
+  lives in the manifest, never in the artifact):
+  `{"artifact_type": "MODEL_APPLICATION", "bias": <float>,
+    "feature_names": [<exact ordered feature names>],
+    "model_family": <string>, "weights": [<float, per feature_names
+    order>]}`. The `weights` array is positional in `feature_names`
+  order. Hash input = exactly these canonical bytes; there is no
+  environment-dependent serialization. Determinism (G20) is executable:
+  double-fit on the same authorized inputs → identical canonical bytes
+  → identical SHA-256 → identical model_version.
 
 ## 7. Forward Model Selection (executable rule)
 
 - **P13O-F-017**: with the single authorized artifact, eligible ⇔
   artifact hash matches manifest AND variant matches the authorization
-  AND feature_set_id matches the packet AND `manifest.training_end <
-  as_of` (STRICT — label availability makes the model knowable only
-  after training_end) AND symbol ∈ manifest scope. Exactly one
-  artifact exists → selected; none eligible → `NOT_AVAILABLE`; more
-  than one eligible → governance error, FAIL CLOSED.
+  AND feature_set_id matches the packet AND prediction semantics match
+  (P13O-F-016a) AND `manifest.training_end < as_of` (STRICT — label
+  availability makes the model knowable only after training_end) AND
+  `symbol ∈ manifest.scope.symbols` AND the resolved
+  `manifest.scope` hash/universe_id match the authorized scope
+  (P13O-F-016b). Exactly one artifact exists → selected; none eligible
+  → `NOT_AVAILABLE`; more than one eligible → governance error, FAIL
+  CLOSED. Every field consumed by this rule is normatively defined in
+  P13O-F-016a/016b/022 — no implicit fields.
 
 ## 8. Calibration (new artifact; P13-Q NOT auto-reused)
 
@@ -125,8 +182,9 @@ Normative invariants `P13O-F-001..P13O-F-026`.
   target, horizon, positive_class, training_start, training_end,
   research_end, training_protocol_id, seed, weights (ordered), bias,
   calibration_id, calibration_binding, provenance, source_commit,
-  created_at (execution metadata only), freeze_status}. Non-applicable
-  fields are explicit `null` — never omitted.
+  created_at (execution metadata only), freeze_status,
+  scope (P13O-F-016b: {universe_id, symbols, scope_sha256})}.
+  Non-applicable fields are explicit `null` — never omitted.
 - **P13O-F-023**: integrity chain: artifact bytes → sha256 → manifest →
   manifest hash → committed evidence record (`docs/artifacts/`).
   `created_at` is execution metadata and NEVER part of research
@@ -150,7 +208,7 @@ Normative invariants `P13O-F-001..P13O-F-026`.
 **P13O-F-026**: G01 missing artifact → NOT_AVAILABLE · G02 artifact hash
 mismatch → FAIL CLOSED · G03 model_id mismatch → INELIGIBLE · G04
 model_version mismatch → INELIGIBLE · G05 variant mismatch → INELIGIBLE
-· G06 feature_set mismatch → INELIGIBLE · G07 feature_order mismatch →
+· G06 feature_set mismatch → INELIGIBLE · G07 feature_order / prediction-semantics / scope mismatch →
 INELIGIBLE · G08 preprocessing mismatch → INELIGIBLE · G09
 training_end after as_of → INELIGIBLE(temporal) · G10 no eligible
 forward model → NOT_AVAILABLE · G11 ambiguous eligible models → FAIL

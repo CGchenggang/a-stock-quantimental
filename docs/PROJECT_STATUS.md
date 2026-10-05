@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) — PASS / INDEPENDENTLY ACCEPTED**; **R4-A (Evidence-backed Research Agent Loop) — PASS / INDEPENDENTLY ACCEPTED** (including R4-A-NARROW-REPAIR-001; acceptance decisions by the project owner, recorded on owner instruction — see the R3-A/R4-A acceptance record below); **R4-B (Research Agent Batch & Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (deterministic multi-symbol batch with failure isolation and pre-ingestion replay fix; acceptance decision by the project owner, recorded on owner instruction with the R4-C task; exact-head CI evidence runs `37218390765` / `37247950628`); **R4-C (76-Stock Research Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (frozen-universe deterministic validation over the accepted R4-B batch; real-data smoke 76/76 OK, byte-identical replay; acceptance decision by the project owner, recorded on owner instruction with the R4-D task — see the R4-C acceptance note in the R4-C section); **R4-D (Calibrated Probability Apply-Path) — CONTRACT ACCEPTED / APPLY = BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN** (contract v2 per NARROW-REPAIR-001: three-artifact taxonomy, R4D-002a/b + 003a/b/c, G11–G16, artifact-evidence file); **P13-O ARTIFACT AUDIT (P13-O-ARTIFACT-001) = PASS / INDEPENDENTLY ACCEPTED = NOT RECOVERABLE** (owner decision, recorded on owner instruction with the P13-O-FORWARD-MODEL task); **P13-O-FORWARD-MODEL-001 = CONTRACT / DESIGN DRAFT — READY FOR INDEPENDENT CONTRACT ACCEPTANCE** (NEW forward-apply model artifact governance: identity scheme, pre-registered variant authority, three pre-registered windows, frozen protocol, single-final-model, executable forward-selection rule, new bound calibration, manifest+integrity chain, G01–G20, R4-D unblock conditions C1–C12 — design only, NOTHING trained/created/authorized); P14-F NOT AUTHORIZED.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) — PASS / INDEPENDENTLY ACCEPTED**; **R4-A (Evidence-backed Research Agent Loop) — PASS / INDEPENDENTLY ACCEPTED** (including R4-A-NARROW-REPAIR-001; acceptance decisions by the project owner, recorded on owner instruction — see the R3-A/R4-A acceptance record below); **R4-B (Research Agent Batch & Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (deterministic multi-symbol batch with failure isolation and pre-ingestion replay fix; acceptance decision by the project owner, recorded on owner instruction with the R4-C task; exact-head CI evidence runs `37218390765` / `37247950628`); **R4-C (76-Stock Research Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (frozen-universe deterministic validation over the accepted R4-B batch; real-data smoke 76/76 OK, byte-identical replay; acceptance decision by the project owner, recorded on owner instruction with the R4-D task — see the R4-C acceptance note in the R4-C section); **R4-D (Calibrated Probability Apply-Path) — CONTRACT ACCEPTED / APPLY = BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN** (contract v2 per NARROW-REPAIR-001: three-artifact taxonomy, R4D-002a/b + 003a/b/c, G11–G16, artifact-evidence file); **P13-O ARTIFACT AUDIT (P13-O-ARTIFACT-001) = PASS / INDEPENDENTLY ACCEPTED = NOT RECOVERABLE** (owner decision, recorded on owner instruction with the P13-O-FORWARD-MODEL task); **P13-O-FORWARD-MODEL-001 = CONTRACT / DESIGN DRAFT — NARROW REPAIR COMPLETE — READY FOR INDEPENDENT CONTRACT RE-ACCEPTANCE** (NEW forward-apply model artifact governance: identity scheme, pre-registered variant authority, three pre-registered windows, frozen protocol, single-final-model, executable forward-selection rule, new bound calibration, manifest+integrity chain, G01–G20, R4-D unblock conditions C1–C12; contract v2 closes the four review defects — scope manifest field (P13O-F-016b), normatively frozen prediction semantics (P13O-F-016a), canonical artifact serialization (P13O-F-016c), full-digest model_version (P13O-F-002) — with a 23-point secondary consistency review passed; design only, NOTHING trained/created/authorized); P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -3026,7 +3026,7 @@ exist; probability semantics exists and is referenced verbatim.
 **Gate:**
 - R4-D: **CONTRACT ACCEPTED / APPLY = BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN** (implementation NOT authorized; no PASS recorded)
 - **P13-O ARTIFACT AUDIT: PASS / INDEPENDENTLY ACCEPTED = NOT RECOVERABLE** (owner decision 2026-10-05, recorded on instruction)
-- **P13-O-FORWARD-MODEL-001: CONTRACT / DESIGN DRAFT — READY FOR INDEPENDENT CONTRACT ACCEPTANCE** (design-only; nothing trained; R4-D APPLY remains BLOCKED)
+- **P13-O-FORWARD-MODEL-001: CONTRACT / DESIGN DRAFT — NARROW REPAIR COMPLETE — READY FOR INDEPENDENT CONTRACT RE-ACCEPTANCE** (design-only; nothing trained; R4-D APPLY remains BLOCKED)
 - R4-A / R4-B / R4-C: PASS / INDEPENDENTLY ACCEPTED (unchanged by this phase)
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
@@ -3085,3 +3085,42 @@ P13O-F-000..027).
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
+
+## P13-O-FORWARD-MODEL-001 — Narrow Contract Repair (002) — 2026-10-05
+
+Independent review of the P13-O-FORWARD-MODEL-001 contract found four
+closure defects; engineering integrity was PASS. Narrow docs-only repair
+(contract v2 + design amendments):
+
+- **R1 — scope closure**: `scope` is now a normative manifest object
+  (P13O-F-016b: {universe_id, symbols (sorted unique 6-char-zero-padded),
+  scope_sha256 over canonical scope JSON}; universe_id bound to the
+  frozen `universe-d8c5016b1ded0984` lineage) and F-017's forward
+  selection consumes exactly the defined fields — no implicit fields.
+- **R2 — prediction semantics frozen**: new invariant P13O-F-016a —
+  target = next trading day close-up direction; horizon =
+  next_trading_day; positive_class = next_return > 0; manifest literals
+  must match verbatim; mismatch → INELIGIBLE.
+- **R3 — canonical serialization**: new invariant P13O-F-016c —
+  parameters-only JSON artifact; UTF-8 no BOM no trailing newline;
+  sort_keys + compact separators; float64 shortest round-trip; negative
+  zero → 0.0; NaN/Infinity forbidden; execution metadata excluded from
+  the artifact; hash input = exact canonical bytes → G20 is executable.
+- **R4 — model_version**: full lowercase SHA-256 hex digest of the
+  canonical artifact bytes; shortened display forms explicitly
+  non-normative (never identity/binding/lookup/eligibility/governance).
+
+Secondary consistency review: 23 mechanical checks passed (F-017
+consumes only defined fields; G01–G20 and C1–C12 intact; integrity
+chain closed; P14-D/E, P13-Q/R authorities unchanged; P13-T/U
+protected; historical/forward separation intact; git-commit-as-identity
+absent; no post-fit variant selection — P13O-F-006 strengthened with an
+explicit auto-selection prohibition; no validation leakage; no virgin
+contamination).
+
+Verification: full pytest 631 passed / 0 failed; P14-C/D/E audits exit
+0; git diff --check clean. Production code NONE; registry NONE.
+P13-O-FORWARD-MODEL-001 = CONTRACT / DESIGN DRAFT — NARROW REPAIR
+COMPLETE — READY FOR INDEPENDENT CONTRACT RE-ACCEPTANCE (no PASS
+recorded). R4-D unchanged: CONTRACT ACCEPTED / APPLY BLOCKED. P14-F NOT
+AUTHORIZED; P13-T STOPPED; P13-U PROTECTED.
