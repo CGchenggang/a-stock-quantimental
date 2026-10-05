@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) — PASS / INDEPENDENTLY ACCEPTED**; **R4-A (Evidence-backed Research Agent Loop) — PASS / INDEPENDENTLY ACCEPTED** (including R4-A-NARROW-REPAIR-001; acceptance decisions by the project owner, recorded on owner instruction — see the R3-A/R4-A acceptance record below); **R4-B (Research Agent Batch & Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (deterministic multi-symbol batch with failure isolation and pre-ingestion replay fix; acceptance decision by the project owner, recorded on owner instruction with the R4-C task; exact-head CI evidence runs `37218390765` / `37247950628`); **R4-C (76-Stock Research Validation Loop) — IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE** (frozen-universe deterministic validation over the accepted R4-B batch; real-data smoke 76/76 OK, byte-identical replay); P14-F NOT AUTHORIZED.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) — PASS / INDEPENDENTLY ACCEPTED**; **R4-A (Evidence-backed Research Agent Loop) — PASS / INDEPENDENTLY ACCEPTED** (including R4-A-NARROW-REPAIR-001; acceptance decisions by the project owner, recorded on owner instruction — see the R3-A/R4-A acceptance record below); **R4-B (Research Agent Batch & Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (deterministic multi-symbol batch with failure isolation and pre-ingestion replay fix; acceptance decision by the project owner, recorded on owner instruction with the R4-C task; exact-head CI evidence runs `37218390765` / `37247950628`); **R4-C (76-Stock Research Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (frozen-universe deterministic validation over the accepted R4-B batch; real-data smoke 76/76 OK, byte-identical replay; acceptance decision by the project owner, recorded on owner instruction with the R4-D task — see the R4-C acceptance note in the R4-C section); **R4-D (Calibrated Probability Apply-Path) — DESIGN COMPLETE — READY FOR INDEPENDENT CONTRACT ACCEPTANCE** (design + normative contract delivered; existing P13-Q/P13-R frozen artifacts audited as the authorities; implementation NOT authorized); P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -36,7 +36,8 @@ P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 | R3-A Real Source Adapter | PASS / INDEPENDENTLY ACCEPTED | Owner-authorized start after the P14-E acceptance record: first REAL source adapter (`CNStockQuoteHistoricalAdapter`, local historical store → P14-B) added **inside the already-pinned `information/adapters.py`** (the P14-E golden file-set pin rejects new information/ files; no golden/harness change, no new file). Source identity = the already-registered `cn_stock_quote` (no registry change); `available_time` carried verbatim from store rows (store contract mandates explicit availability; trade day 16:00 +08:00 declared vendor publication); `ingested_at` caller-supplied and kept out of `raw_payload` (cross-run idempotency, evidence identity stability); missing availability REJECTED (durable audit), never invented | Full pytest 597 passed (double run identical); real-data smoke: 1,633 rows accepted / replay 1,633 DUPLICATE / 0 mutations / PIT query exact |
 | R4-A Evidence-backed Research Agent Loop | PASS / INDEPENDENTLY ACCEPTED | First end-to-end research loop (`agent/research_run.py`, new file, zero modifications to accepted surfaces): as_of → idempotent R3-A ingestion → P14-D `run_query` → P14-E `create_bundle` → factor inputs = VISIBLE records only → existing factors/risk/regime → reused `ResearchPacket`/orchestrator → conservative decision (uncalibrated ⇒ RESEARCH/NO_ACTION; probability honestly NOT_AVAILABLE; regime honestly UNKNOWN) → reused append-only `RecommendationLedger` with evidence identity in `input_snapshot`. 12 tests: E2E, PIT (exclusion recorded, inclusive boundary), evidence traceability, byte-identical replay (same store and across independent stores), symbol isolation (other symbol examined→OUTSIDE_AS_OF only), virgin-zone fail-fast, honest empty window. R4-A-NARROW-REPAIR-001: drawdown extraction from the OHLCV structure (see the R4-A section) | Full pytest 609→611 passed (double run identical); real-data smoke 000001: 42 visible bars → factors computed (vol 0.3442 annualized), risk flags honest, replay identical, ledger row carries bundle/result/evidence identity |
 | R4-B Research Agent Batch & Validation Loop | PASS / INDEPENDENTLY ACCEPTED | Pure-orchestration batch runner (`agent/research_batch.py`, new file, zero modifications to accepted surfaces): (symbols × as_ofs) → deduplicated targets sorted by (symbol, as_of) → **one idempotent pre-ingestion of ALL target symbols** (fixes the batch-position store-growth hazard that would otherwise make replay order-dependent) → per-target independent R4-A `run_research` → per-target failure isolation (FAILED + error recorded, never swallowed, batch proceeds) → batch result {batch_id, run_parameters, results[], summary{ok/failed/actions}} → `append_batch_to_ledger` via the existing R4-A append path (FAILED targets append nothing). 8 tests: multi-symbol batch, symbol isolation, PIT isolation across as_ofs, byte-identical replay, stable ordering + dedup, failure isolation (virgin-zone fail-fast trigger), ledger continuity, empty batch | Full pytest 619 passed (double run identical); real-data smoke: 000001+000002 batch → 2 OK, reversed-input replay identical, per-symbol results independent, ledger 2 rows with evidence identity |
-| R4-C 76-Stock Research Validation Loop | IMPLEMENTED — PENDING ACCEPTANCE | Validation runner over the accepted R4-B batch (`agent/research_validation.py`, new file, zero modifications to accepted surfaces): frozen-universe loader (BOM-safe, order-insensitive `universe_id`) → one `run_research_batch` call for the (symbols × as_ofs) cross product → explicit completeness (expected/observed/missing/coverage from authoritative P14-B records; missing = DATA_INCOMPLETE, never silently skipped) → per-result identity projection → deterministic manifest with content digest → byte-identical replay. 10 tests (A–J): universe loading, completeness reporting, batch integration (spy proves `run_research_batch` is called), ordering (normal/reversed/shuffled), replay, PIT boundary, virgin fail-fast per-target, failure isolation, no-registry-mutation (P13-Q/P13-R digests unchanged). NO P13-T execution; NO virgin consumption (validation is engineering regression, not holdout evaluation) | Full pytest 629 passed (double run identical); real-data smoke: 76/76 expected=observed (0 missing, status OK), 76 OK / 0 failed, all NO_ACTION, evidence 1541–1631 per run, replay byte-identical, manifest `data/industry/r4c/validation_manifest.json` (validation_id `r4c-e08499eed73f764b`) |
+| R4-C 76-Stock Research Validation Loop | PASS / INDEPENDENTLY ACCEPTED | Validation runner over the accepted R4-B batch (`agent/research_validation.py`, new file, zero modifications to accepted surfaces): frozen-universe loader (BOM-safe, order-insensitive `universe_id`) → one `run_research_batch` call for the (symbols × as_ofs) cross product → explicit completeness (expected/observed/missing/coverage from authoritative P14-B records; missing = DATA_INCOMPLETE, never silently skipped) → per-result identity projection → deterministic manifest with content digest → byte-identical replay. 10 tests (A–J): universe loading, completeness reporting, batch integration (spy proves `run_research_batch` is called), ordering (normal/reversed/shuffled), replay, PIT boundary, virgin fail-fast per-target, failure isolation, no-registry-mutation (P13-Q/P13-R digests unchanged). NO P13-T execution; NO virgin consumption (validation is engineering regression, not holdout evaluation) | Full pytest 629 passed (double run identical); real-data smoke: 76/76 expected=observed (0 missing, status OK), 76 OK / 0 failed, all NO_ACTION, evidence 1541–1631 per run, replay byte-identical, manifest `data/industry/r4c/validation_manifest.json` (validation_id `r4c-e08499eed73f764b`) |
+| R4-D Calibrated Probability Apply-Path | DESIGN — PENDING CONTRACT ACCEPTANCE | Contract/Design gate ONLY (no code): existing authorities audited at Exact HEAD `264c59a` — P13-M label (next trading day close-up, `local_pipeline.py`), P13-O model identity (git `4d79210…`, protocol 252/20/20/1, seed 20260929), P13-Q calibration registry (`calibration_registry.json` sha256 `643a3dcd…`, split_date 2025-01-01, platt slope/intercept pinned in `calibration_methods.json`), P13-R policy registry (8 frozen policies, sha256 `361791f8…`); apply method = platt only (sigmoid(a+b·logit(p)), isotonic params incomplete → ineligible, raw never a probability source); eligibility E1–E5 (readable/status/temporal/feature-set/scope) with exhaustive states CALIBRATED / NOT_AVAILABLE / INELIGIBLE(reason) — no silent fallback; registry READ-ONLY; ledger provenance chain completed; single R4-A touch defined (orchestrator consumes the resolver block instead of legacy p_up[5]) deferred to implementation under separate authorization. Deliverables: docs/design/R4-D-CALIBRATED-PROBABILITY-APPLY-DESIGN.md + docs/contracts/R4-D-CALIBRATED-PROBABILITY-APPLY-CONTRACT.md (R4D-001..019, golden G1–G10, minimal harness group planned) | Audit answers all 13 task questions from real artifacts; no STOP conditions triggered; P13-T STOPPED; P13-U PROTECTED; R4-A/B/C unchanged; zero production code changes |
 
 **Important:** P13-U PASS does not mean P13-T PASS. P13-T remains pending until the frozen virgin zone reaches an executable holdout condition without contamination.
 
@@ -2951,8 +2952,52 @@ below).
 > remains READY FOR INDEPENDENT ACCEPTANCE.
 
 **Gate:**
-- R4-C 76-Stock Research Validation Loop: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE**
+- R4-C 76-Stock Research Validation Loop: **PASS / INDEPENDENTLY ACCEPTED** (owner decision 2026-10-05, recorded on instruction with the R4-D task; ZCODE is not the acceptance authority)
 - R4-B: PASS / INDEPENDENTLY ACCEPTED (owner decision, recorded on instruction)
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
+
+## R4-C — Independent Acceptance — 2026-10-05
+
+**Decision: PASS / INDEPENDENTLY ACCEPTED.** Decided by the **project owner** (acceptance
+authority), communicated with the R4-D task ("R4-A 与 R4-B 已经完成并通过独立验收 … R4-C =
+PASS / INDEPENDENTLY ACCEPTED"); recorded in-repo by ZCODE on the owner's explicit instruction
+— ZCODE is not the acceptance authority. Accepted implementation: `53d5ccf` (validation
+runner + 10 tests) + NARROW-REPAIR-001 `a1a8d32` (frozen universe committed to Exact HEAD,
+universe identity independently auditable from a clean clone). Exact-head CI evidence: runs
+`37250329280` (HEAD `682dde0…`), `37269524609` (HEAD `a1a8d32…`), `37270134995` (HEAD
+`264c59a…`) — all completed / success. Real-data smoke: 76/76 expected=observed, 0 missing,
+76 OK / 0 failed, replay byte-identical.
+
+## R4-D — Calibrated Probability Apply-Path — DESIGN COMPLETE — 2026-10-05
+
+**Scope.** Owner-instructed Contract/Design gate ONLY (no implementation). Deliverables:
+`docs/design/R4-D-CALIBRATED-PROBABILITY-APPLY-DESIGN.md` (D1) and
+`docs/contracts/R4-D-CALIBRATED-PROBABILITY-APPLY-CONTRACT.md` (D2, normative R4D-001..019).
+
+**Audit (all 13 task questions answered from real artifacts at Exact HEAD `264c59a`):**
+calibration authority = P13-Q `calibration_registry.json` (sha256-pinned by its manifest;
+split_date 2025-01-01; platt fitted slope/intercept pinned in `calibration_methods.json`);
+probability semantics = P13-M frozen label (next trading day close-up); model identity =
+P13-O config (git `4d79210…`, protocol 252/20/20/1, seed 20260929); policy authority = P13-R
+registry (8 frozen policies, sha256-pinned); R4-A NOT_AVAILABLE point = `research_run.py`
+model block; decision point = `agent/orchestrator.py` research_state (legacy `p_up[5]`
+scaffold — semantically misaligned with the next-trading-day horizon; the contract defines
+the single minimal R4-A integration delta, deferred to implementation under separate
+authorization). Key findings: platt is the only registry-complete apply method (isotonic
+step curve not persisted → ineligible; raw never a probability source); the calibrated
+feature set is 6 factors vs R4-A's current 4 → `feature_set_mismatch` is today's honest
+state until the packet carries the calibrated set; temporal eligibility = split_date ≤ as_of
+≤ RESEARCH_END per the ACCEPTED P13-Q a-priori protocol (no second time filter invented).
+
+**No STOP conditions triggered** (§17): temporal metadata sufficient (registry
+split_date + training/evaluation periods + status_rule); frozen manifest-pinned artifacts
+exist; probability semantics exists and is referenced verbatim.
+
+**Gate:**
+- R4-D: **DESIGN COMPLETE — READY FOR INDEPENDENT CONTRACT ACCEPTANCE** (implementation NOT authorized; no PASS recorded)
+- R4-A / R4-B / R4-C: PASS / INDEPENDENTLY ACCEPTED (unchanged by this phase)
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
