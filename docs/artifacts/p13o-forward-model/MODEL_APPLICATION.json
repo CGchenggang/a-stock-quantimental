@@ -1,0 +1,1 @@
+{"artifact_type":"MODEL_APPLICATION","bias":-0.135236840320142,"feature_names":["momentum","volatility","trend","volume_ratio","industry_relative_return_5","industry_relative_return_20"],"model_family":"unregularized_binary_logistic","weights":[-0.010751918948003914,0.023428091430548876,-0.013818932486082331,-0.02635588574586267,-0.002145305489515557,-0.00550166937555921]}
