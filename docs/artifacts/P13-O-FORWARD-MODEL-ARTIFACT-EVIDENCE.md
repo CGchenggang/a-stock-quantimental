@@ -50,7 +50,10 @@ manifest sha256:  041c5552733b2c81586385d4ddfe40989004c6904daa4db64c2d4adab9c713
                   (post F-022 closure; pre-repair value e1993c3f9dd0ed1bbc8fa8e405c386b63ee5fac1f0652fa7116775d0aeab6dd4)
                   (canonical bytes; binds artifact_sha256 ↔ model identity ↔ variant ↔
                    feature_set ↔ scope ↔ windows ↔ protocol/seed ↔ calibration binding;
-                   weights carried as weights_sha256, bias verbatim; created_at = null)
+                   carries the ordered weights (identical to MODEL_APPLICATION.json,
+                   original order, positionally bound to feature_names) + weights_sha256
+                   (canonical SHA-256 of that ordered vector) + bias verbatim;
+                   created_at = null)
 windows (verbatim half-open):
     training    [2020-01-02, 2025-01-01)   last decision date used: 2024-12-30
     calibration [2025-01-01, 2025-07-01)   last decision date used: 2025-06-30
@@ -97,11 +100,12 @@ calibration window.
   `build_local_factor_rows` + `build_universe_industry_relative_context_maps`
   (the frozen feature definitions — blob-verified at HEAD).
 - Integrity chain: artifact bytes → SHA-256 (`97602f4d…`) →
-  MODEL_APPLICATION_MANIFEST (sha256 `e1993c3f…`) → CALIBRATION
+  MODEL_APPLICATION_MANIFEST (sha256 `041c5552…713a2`) → CALIBRATION
   (`6e341fcd…`) → CALIBRATION_MANIFEST (`b758015a…`) → this committed
   evidence record. All links re-verified by
-  `tests/test_p13o_forward_model_execution.py` (19 golden checks,
-  G21–G30 + positive chain).
+  `tests/test_p13o_forward_model_execution.py` — **28 golden checks
+  passed** (21 existing, including G21–G30 and the positive
+  manifest-chain check, + 8 F-022 manifest-weights closure checks).
 - Double-fit: two independent full executions (separate processes) —
   all four artifact files **byte-identical** (G29 PASS).
 - Virgin-zone scan: max decision date used anywhere = **2025-06-30**
