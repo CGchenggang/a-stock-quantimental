@@ -5,7 +5,7 @@
 
 ## Current Phase
 
-**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) — PASS / INDEPENDENTLY ACCEPTED**; **R4-A (Evidence-backed Research Agent Loop) — PASS / INDEPENDENTLY ACCEPTED** (including R4-A-NARROW-REPAIR-001; acceptance decisions by the project owner, recorded on owner instruction — see the R3-A/R4-A acceptance record below); **R4-B (Research Agent Batch & Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (deterministic multi-symbol batch with failure isolation and pre-ingestion replay fix; acceptance decision by the project owner, recorded on owner instruction with the R4-C task; exact-head CI evidence runs `37218390765` / `37247950628`); **R4-C (76-Stock Research Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (frozen-universe deterministic validation over the accepted R4-B batch; real-data smoke 76/76 OK, byte-identical replay; acceptance decision by the project owner, recorded on owner instruction with the R4-D task — see the R4-C acceptance note in the R4-C section); **R4-D (Calibrated Probability Apply-Path) — CONTRACT ACCEPTED / APPLY = BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN** (contract v2 per NARROW-REPAIR-001: three-artifact taxonomy, R4D-002a/b + 003a/b/c, G11–G16, artifact-evidence file); **P13-O ARTIFACT AUDIT (P13-O-ARTIFACT-001) = PASS / INDEPENDENTLY ACCEPTED = NOT RECOVERABLE** (owner decision, recorded on owner instruction with the P13-O-FORWARD-MODEL task); **P13-O-FORWARD-MODEL-001 = PASS / INDEPENDENTLY ACCEPTED = CONTRACT + DESIGN**; **AUTHORIZATION-PRECHECK = PASS / INDEPENDENTLY ACCEPTED; AUTHORIZATION-CANDIDATES = PASS / INDEPENDENTLY ACCEPTED; HUMAN-AUTHORIZATION RECORD = FROZEN / HUMAN AUTHORIZED FOR FUTURE TRAINING** (variant = industry_5_20 via lineage/feature-contract continuity — explicitly NOT a performance optimization; feature_set_id = `fs-d1f3bdca…3afe` computed per P13O-F-014/016c from the blob-pinned definition versions; scope_sha256 = `b7d807a3…64c1`; windows C-W1 frozen verbatim with label-availability exclusion rules recorded) (NEW forward-apply model artifact governance: identity scheme, pre-registered variant authority, three pre-registered windows, frozen protocol, single-final-model, executable forward-selection rule, new bound calibration, manifest+integrity chain, G01–G20, R4-D unblock conditions C1–C12; contract v2 closes the four review defects — scope manifest field (P13O-F-016b), normatively frozen prediction semantics (P13O-F-016a), canonical artifact serialization (P13O-F-016c), full-digest model_version (P13O-F-002) — with a 23-point secondary consistency review passed; design only, NOTHING trained/created/authorized); P14-F NOT AUTHORIZED.
+**P14-D → P14-E Selection State Integration Contract — PASS / INDEPENDENTLY ACCEPTED (51a769f0a50632c5b8d71f4247d5a60ee2847012)**; **Human Authorization GRANTED for the separately scoped integration implementation**; **P14-E Production Implementation — PASS / INDEPENDENTLY ACCEPTED** (implementation `69cfe2a86d23352e9f74cf7454aad6cf59135e7b`; acceptance decision by the project owner on 2026-10-04, recorded on owner instruction — see the acceptance record below); **R3-A (Local Historical Store → P14-B real source adapter) — PASS / INDEPENDENTLY ACCEPTED**; **R4-A (Evidence-backed Research Agent Loop) — PASS / INDEPENDENTLY ACCEPTED** (including R4-A-NARROW-REPAIR-001; acceptance decisions by the project owner, recorded on owner instruction — see the R3-A/R4-A acceptance record below); **R4-B (Research Agent Batch & Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (deterministic multi-symbol batch with failure isolation and pre-ingestion replay fix; acceptance decision by the project owner, recorded on owner instruction with the R4-C task; exact-head CI evidence runs `37218390765` / `37247950628`); **R4-C (76-Stock Research Validation Loop) — PASS / INDEPENDENTLY ACCEPTED** (frozen-universe deterministic validation over the accepted R4-B batch; real-data smoke 76/76 OK, byte-identical replay; acceptance decision by the project owner, recorded on owner instruction with the R4-D task — see the R4-C acceptance note in the R4-C section); **R4-D (Calibrated Probability Apply-Path) — CONTRACT ACCEPTED / APPLY = BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN** (contract v2 per NARROW-REPAIR-001: three-artifact taxonomy, R4D-002a/b + 003a/b/c, G11–G16, artifact-evidence file); **P13-O ARTIFACT AUDIT (P13-O-ARTIFACT-001) = PASS / INDEPENDENTLY ACCEPTED = NOT RECOVERABLE** (owner decision, recorded on owner instruction with the P13-O-FORWARD-MODEL task); **P13-O-FORWARD-MODEL-001 = PASS / INDEPENDENTLY ACCEPTED = CONTRACT + DESIGN**; **AUTHORIZATION-PRECHECK + AUTHORIZATION-CANDIDATES = PASS / INDEPENDENTLY ACCEPTED; HUMAN-AUTHORIZATION RECORD = FROZEN; **P13-O-FORWARD-MODEL-EXECUTION-001 = IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE** (executed at `91382faf…` under the frozen parameters: variant industry_5_20, 6-factor set, windows C-W1, protocol p13o-logistic-gd-500x0.05-v1 — ONE MODEL_APPLICATION artifact CREATED AND FROZEN: model_version `97602f4d…664` (= canonical artifact bytes SHA-256, 84,466 training rows), ONE bound CALIBRATION artifact CREATED AND FROZEN: platt a=0.22697/b=2.27417 on 8,389 calibration rows, bound to the model version; deterministic double-fit byte-identical; max decision date used anywhere 2025-06-30 (< virgin_start); P13-Q pooled calibration NOT reused; R4-D APPLY = BLOCKED unchanged) (NEW forward-apply model artifact governance: identity scheme, pre-registered variant authority, three pre-registered windows, frozen protocol, single-final-model, executable forward-selection rule, new bound calibration, manifest+integrity chain, G01–G20, R4-D unblock conditions C1–C12; contract v2 closes the four review defects — scope manifest field (P13O-F-016b), normatively frozen prediction semantics (P13O-F-016a), canonical artifact serialization (P13O-F-016c), full-digest model_version (P13O-F-002) — with a 23-point secondary consistency review passed; design only, NOTHING trained/created/authorized); P14-F NOT AUTHORIZED.
 
 P13-T remains STOPPED / NOT EXECUTED. P13-U remains PROTECTED.
 
@@ -3027,7 +3027,8 @@ exist; probability semantics exists and is referenced verbatim.
 - R4-D: **CONTRACT ACCEPTED / APPLY = BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN** (implementation NOT authorized; no PASS recorded)
 - **P13-O ARTIFACT AUDIT: PASS / INDEPENDENTLY ACCEPTED = NOT RECOVERABLE** (owner decision 2026-10-05, recorded on instruction)
 - **P13-O-FORWARD-MODEL-001: PASS / INDEPENDENTLY ACCEPTED = CONTRACT + DESIGN** (status-line fix; normative content unchanged)
-- **HUMAN-AUTHORIZATION RECORD: FROZEN / HUMAN AUTHORIZED FOR FUTURE TRAINING** — TRAINING EXECUTION = NOT YET EXECUTED; MODEL_APPLICATION artifact = NOT CREATED; calibration = NOT CREATED; model_version = NOT YET AVAILABLE; R4-D APPLY = BLOCKED
+- **HUMAN-AUTHORIZATION RECORD: FROZEN / HUMAN AUTHORIZED FOR FUTURE TRAINING**
+- **P13-O-FORWARD-MODEL-EXECUTION-001: IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE** — MODEL_APPLICATION CREATED AND FROZEN (model_version `97602f4d…664`); CALIBRATION CREATED AND FROZEN (bound); deterministic double-fit PASS (byte-identical); virgin contamination NONE; R4-D APPLY = BLOCKED (unchanged; implementation NOT AUTHORIZED)
 - R4-A / R4-B / R4-C: PASS / INDEPENDENTLY ACCEPTED (unchanged by this phase)
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
@@ -3125,3 +3126,54 @@ P13-O-FORWARD-MODEL-001 = CONTRACT / DESIGN DRAFT — NARROW REPAIR
 COMPLETE — READY FOR INDEPENDENT CONTRACT RE-ACCEPTANCE (no PASS
 recorded). R4-D unchanged: CONTRACT ACCEPTED / APPLY BLOCKED. P14-F NOT
 AUTHORIZED; P13-T STOPPED; P13-U PROTECTED.
+
+## P13-O-FORWARD-MODEL-EXECUTION-001 — IMPLEMENTATION COMPLETE — 2026-10-06
+
+**Authorization.** Owner-instructed execution of the FROZEN Human
+Authorization Record (variant industry_5_20, 6-factor set, windows C-W1,
+protocol p13o-logistic-gd-500x0.05-v1, seed 20260929) — "Execute the
+Human-Authorized Forward Model and Freeze ONE Auditable
+MODEL_APPLICATION Artifact". Status: **IMPLEMENTATION COMPLETE — READY
+FOR INDEPENDENT ACCEPTANCE** (this record is not an acceptance decision).
+
+**Executed content.**
+`scripts/run_p13o_forward_model_fit.py` (authorized executor) +
+`src/astock_v2/model/forward_model.py` (canonical serializer, manifest
+builder, identity verifier — no fitting, no R4-D apply path) +
+`tests/test_p13o_forward_model_execution.py` (19 golden checks) + the
+committed artifacts:
+
+- **MODEL_APPLICATION** (ONE artifact, frozen):
+  `docs/artifacts/p13o-forward-model/MODEL_APPLICATION.json`, sha256 /
+  model_version `97602f4d9a794587e5e1a01357c5504c1323bcb7b73032c0f0d8db3abe8ed664`
+  (canonical bytes per P13O-F-016c — parameters only, 375 bytes);
+  manifest `MODEL_APPLICATION_MANIFEST.json` (sha256 `e1993c3f…`).
+- **CALIBRATION** (bound): `CALIBRATION.json` (sha256 `6e341fcd…`) —
+  platt a=0.22696568443636966, b=2.274174209586145 (the accepted P13-Q
+  numerical protocol via `run_p13q_analysis.py::fit_platt`, applied to
+  THIS model's raw outputs on 8,389 calibration-window rows), binding
+  tuple {model_id, model_version, model_variant, feature_set_id};
+  manifest `CALIBRATION_MANIFEST.json` (sha256 `b758015a…`). The pooled
+  P13-Q artifact was NOT reused (P13O-F-018).
+
+**Guards executed.** Frozen identity re-verified in-process before
+fitting (feature_set_id `fs-d1f3bdca…3afe`, scope sha256 `b7d807a3…64c1`,
+definition blobs `0582f91e…`/`0b6c0f14…` — all exact matches); windows
+verbatim half-open with the frozen label-availability exclusions (last
+decision dates 2024-12-30 / 2025-06-30); context data truncated to
+`< 2026-09-23` before assembly; post-fit virgin scan: max decision date
+used anywhere = **2025-06-30** (virgin contamination NONE); deterministic
+double-fit (two separate process executions): all four artifact files
+**byte-identical**; identity verification G21–G30 all pass.
+
+**Verification.** Full pytest **650 passed / 2 warnings / 0 failed**
+(double run identical); P14-C/D/E audits exit 0; P13-M regression 3
+passed; git diff --check clean. R4-D APPLY = BLOCKED (unchanged);
+P14-F NOT AUTHORIZED; P13-T STOPPED; P13-U PROTECTED.
+
+**Gate:**
+- P13-O-FORWARD-MODEL-EXECUTION-001: **IMPLEMENTATION COMPLETE — READY FOR INDEPENDENT ACCEPTANCE**
+- R4-D: CONTRACT ACCEPTED / APPLY BLOCKED (IMPLEMENTATION NOT AUTHORIZED)
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
