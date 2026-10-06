@@ -141,6 +141,7 @@ def build_manifest(*, artifact_sha256: str, model_family: str,
         "research_end": windows["research_end"],
         "training_protocol_id": protocol_id,
         "seed": seed,
+        "weights": [float(w) for w in weights],
         "weights_sha256": sha256_hex(canonical_bytes(weights)),
         "bias": float(bias),
         "scope": scope,
@@ -179,8 +180,28 @@ def verify_artifact(artifact_bytes: bytes, manifest: dict, *,
     # G19: manifest/artifact parameter consistency
     if artifact.get("feature_names") != manifest.get("feature_names"):
         failures.append("manifest_artifact_feature_mismatch")
-    if artifact.get("weights") != manifest.get("weights_sha256") and \
-            sha256_hex(canonical_bytes(artifact.get("weights"))) != \
+
+    # G-F022-1: manifest MUST carry the ordered weights (F-022 closure)
+    manifest_weights = manifest.get("weights")
+    if not isinstance(manifest_weights, list) or not manifest_weights:
+        failures.append("manifest_weights_missing")
+    else:
+        artifact_weights = artifact.get("weights")
+        # G-F022-2: length equality
+        if len(manifest_weights) != len(artifact_weights or []):
+            failures.append("manifest_weights_length_mismatch")
+        # G-F022-3: exact ordered equality with the artifact (no sorting)
+        if manifest_weights != artifact_weights:
+            failures.append("manifest_weights_order_or_value_mismatch")
+        # G-F022-4: manifest weights hash must equal weights_sha256
+        if sha256_hex(canonical_bytes(manifest_weights)) != \
+                manifest.get("weights_sha256"):
+            failures.append("weights_sha256_inconsistent")
+        # G-F022-5: positional binding feature_names[i] <-> weights[i]
+        if len(artifact.get("feature_names") or []) != len(manifest_weights):
+            failures.append("weights_feature_order_binding_mismatch")
+    # legacy cross-check against the artifact weights (defense in depth)
+    if sha256_hex(canonical_bytes(artifact.get("weights"))) != \
             manifest.get("weights_sha256"):
         failures.append("manifest_artifact_weights_mismatch")
     if artifact.get("bias") != manifest.get("bias"):

@@ -35,11 +35,19 @@ target/horizon/
 positive_class:   next trading day close-up direction / next_trading_day / next_return > 0
 ```
 
+> **NARROW-REPAIR-001 (2026-10-06):** F-022 manifest schema closure — the manifest now
+> carries the ordered `weights` (equal to the artifact vector, positionally bound to
+> feature_names) alongside `weights_sha256`; the verifier enforces G-F022-1..5; 8 new
+> golden tests. The MODEL_APPLICATION and CALIBRATION SHAs are UNCHANGED (no retraining,
+> no parameter change); only the manifest SHA legitimately changed
+> (`e1993c3f…dd4` → `041c5552…713a2`).
+
 ## MODEL_APPLICATION_MANIFEST
 
 ```text
 path:             docs/artifacts/p13o-forward-model/MODEL_APPLICATION_MANIFEST.json
-manifest sha256:  e1993c3f9dd0ed1bbc8fa8e405c386b63ee5fac1f0652fa7116775d0aeab6dd4
+manifest sha256:  041c5552733b2c81586385d4ddfe40989004c6904daa4db64c2d4adab9c713a2
+                  (post F-022 closure; pre-repair value e1993c3f9dd0ed1bbc8fa8e405c386b63ee5fac1f0652fa7116775d0aeab6dd4)
                   (canonical bytes; binds artifact_sha256 ↔ model identity ↔ variant ↔
                    feature_set ↔ scope ↔ windows ↔ protocol/seed ↔ calibration binding;
                    weights carried as weights_sha256, bias verbatim; created_at = null)

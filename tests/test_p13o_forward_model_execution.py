@@ -20,8 +20,11 @@ ART_DIR = Path(__file__).resolve().parents[1] / "docs" / "artifacts" / \
     "p13o-forward-model"
 FROZEN_MODEL_VERSION = \
     "97602f4d9a794587e5e1a01357c5504c1323bcb7b73032c0f0d8db3abe8ed664"
+# NARROW-REPAIR-001: manifest SHA legitimately changed with the F-022
+# schema closure (ordered weights added); the MODEL_APPLICATION and
+# CALIBRATION SHAs are frozen and MUST NOT change.
 FROZEN_MANIFEST_SHA = \
-    "e1993c3f9dd0ed1bbc8fa8e405c386b63ee5fac1f0652fa7116775d0aeab6dd4"
+    "041c5552733b2c81586385d4ddfe40989004c6904daa4db64c2d4adab9c713a2"
 FROZEN_CAL_SHA = \
     "6e341fcd906bfbb72a34e3e33fadc7a1c152051e571a2ab90726c55d68142bc9"
 FROZEN_CAL_MANIFEST_SHA = \
@@ -280,3 +283,120 @@ def test_negative_zero_and_nan_canonicalization():
     with pytest.raises(ValueError):
         fm.serialize_model_application(model_family="t", feature_names=["a"],
                                        weights=[float("inf")], bias=0.0)
+
+
+# ------------------------- NARROW-REPAIR-001: F-022 manifest weights closure
+
+def _repaired_manifest() -> dict:
+    _, manifest = _load("MODEL_APPLICATION_MANIFEST.json")
+    return manifest
+
+
+def test_f022_manifest_contains_ordered_weights():
+    """F-022 closure: the manifest carries the ordered weights, equal to
+    the artifact vector, positionally bound to feature_names."""
+    data, _ = _load("MODEL_APPLICATION.json")
+    manifest = _repaired_manifest()
+    artifact = json.loads(data.decode("utf-8"))
+    assert isinstance(manifest["weights"], list)
+    assert manifest["weights"] == artifact["weights"]
+    assert len(manifest["weights"]) == len(manifest["feature_names"])
+    assert fm.verify_artifact(data, manifest, as_of="2025-01-02") == []
+
+
+def test_f022_t1_missing_weights_fails_closed():
+    data, _ = _load("MODEL_APPLICATION.json")
+    manifest = _repaired_manifest()
+    del manifest["weights"]
+    failures = fm.verify_artifact(data, manifest)
+    assert "manifest_weights_missing" in failures
+
+
+def test_f022_t2_weight_order_mutation_fails_closed():
+    data, _ = _load("MODEL_APPLICATION.json")
+    manifest = _repaired_manifest()
+    manifest["weights"][0], manifest["weights"][1] =         manifest["weights"][1], manifest["weights"][0]
+    failures = fm.verify_artifact(data, manifest)
+    assert "manifest_weights_order_or_value_mismatch" in failures
+    assert "weights_sha256_inconsistent" in failures  # order changes the hash
+
+
+def test_f022_t3_weight_value_mutation_fails_closed():
+    data, _ = _load("MODEL_APPLICATION.json")
+    manifest = _repaired_manifest()
+    manifest["weights"][2] = 99.0
+    failures = fm.verify_artifact(data, manifest)
+    assert "manifest_weights_order_or_value_mismatch" in failures
+    assert "weights_sha256_inconsistent" in failures
+
+
+def test_f022_t4_weights_sha256_mutation_fails_closed():
+    data, _ = _load("MODEL_APPLICATION.json")
+    manifest = _repaired_manifest()
+    manifest["weights_sha256"] = "0" * 64  # weights untouched, hash wrong
+    failures = fm.verify_artifact(data, manifest)
+    assert "weights_sha256_inconsistent" in failures
+    # order/value are still correct — no order/value failure fired
+    assert "manifest_weights_order_or_value_mismatch" not in failures
+
+
+def test_f022_t5_artifact_weight_mutation_fails_closed():
+    """Mutate the ARTIFACT weight but keep the manifest: the artifact hash
+    check fails first, and the weights cross-check confirms the mismatch."""
+    data, _ = _load("MODEL_APPLICATION.json")
+    artifact = json.loads(data.decode("utf-8"))
+    artifact["weights"][0] = 42.0
+    mutated_bytes = fm.canonical_bytes(artifact)
+    manifest = _repaired_manifest()
+    failures = fm.verify_artifact(mutated_bytes, manifest)
+    assert "artifact_hash_mismatch" in failures
+    assert "model_version_mismatch" in failures
+    assert "manifest_artifact_weights_mismatch" in failures
+
+
+def test_f022_t6_canonical_hash_stability():
+    manifest = _repaired_manifest()
+    h1 = fm.sha256_hex(fm.canonical_bytes(manifest["weights"]))
+    h2 = fm.sha256_hex(fm.canonical_bytes(json.loads(
+        fm.canonical_bytes(manifest["weights"]).decode("utf-8"))))
+    assert h1 == h2 == manifest["weights_sha256"]
+    # rebuild from frozen parameters reproduces the on-disk manifest bytes
+    artifact = json.loads((ART_DIR / "MODEL_APPLICATION.json")
+                          .read_bytes().decode("utf-8"))
+    mb, msha, _ = fm.build_manifest(
+        artifact_sha256=manifest["artifact_sha256"],
+        model_family=manifest["model_family"],
+        variant=manifest["model_variant"],
+        feature_set_id=manifest["feature_set_id"],
+        feature_names=manifest["feature_names"],
+        weights=artifact["weights"], bias=artifact["bias"],
+        windows={k: manifest[k] for k in (
+            "training_start", "training_end", "calibration_start",
+            "calibration_end", "validation_start", "validation_end",
+            "research_end")},
+        protocol_id=manifest["training_protocol_id"],
+        seed=manifest["seed"], scope=manifest["scope"],
+        calibration_binding=manifest["calibration_binding"],
+        provenance=manifest["provenance"],
+        source_commit=manifest["source_commit"])
+    on_disk = (ART_DIR / "MODEL_APPLICATION_MANIFEST.json").read_bytes()
+    assert mb == on_disk
+    assert msha == "041c5552733b2c81586385d4ddfe40989004c6904daa4db64c2d4adab9c713a2"
+
+
+def test_f022_t7_frozen_artifact_unchanged():
+    data, _ = _load("MODEL_APPLICATION.json")
+    assert fm.sha256_hex(data) ==         "97602f4d9a794587e5e1a01357c5504c1323bcb7b73032c0f0d8db3abe8ed664"
+
+
+def test_f022_t8_model_version_unchanged():
+    _, manifest = _repaired_manifest() if False else _load(
+        "MODEL_APPLICATION_MANIFEST.json")
+    assert manifest["model_version"] == manifest["artifact_sha256"] ==         "97602f4d9a794587e5e1a01357c5504c1323bcb7b73032c0f0d8db3abe8ed664"
+    cal_data = (ART_DIR / "CALIBRATION.json").read_bytes()
+    assert fm.sha256_hex(cal_data) == FROZEN_CAL_SHA
+    assert fm.verify_calibration_binding(
+        json.loads((ART_DIR / "CALIBRATION_MANIFEST.json").read_text(encoding="utf-8")),
+        model_version=FROZEN_MODEL_VERSION,
+        variant=fm.FROZEN_MODEL_VARIANT,
+        feature_set_id=fm.FROZEN_FEATURE_SET_ID) == []
