@@ -3254,6 +3254,11 @@ not status claims):**
 **AI handoff.** A concise takeover entry point was created at
 `docs/AI_HANDOFF.md` (index + forbidden actions + first action;
 PROJECT_STATUS.md remains the single source of truth for full history).
+Closure-commit CI (this handoff consolidation itself): exact-head run
+`37467733718` @ `5f61ba088a64bca2b631b1596dfe3dd283896f4a`, completed /
+success (pytest and p13m jobs) — distinct from the P13-O execution
+acceptance evidence at `c9e498fa…` (run `37443951421`), which remains
+the historical acceptance record for that baseline.
 
 **Gate:**
 - P13-O Forward Model lineage: CONTRACT → ARTIFACT AUDIT → EXECUTION (+2 narrow repairs) ALL PASS / INDEPENDENTLY ACCEPTED

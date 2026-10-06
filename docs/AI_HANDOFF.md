@@ -3,7 +3,10 @@
 > PURPOSE: the first document a new AI session reads. It is an INDEX and a
 > rulebook — NOT a history copy. The single source of truth for full
 > project history is `docs/PROJECT_STATUS.md`.
-> Last consolidated: 2026-10-06 at Exact HEAD `c9e498fa014a2761f451c777c1a597f387ca904e`.
+> Last consolidated: 2026-10-06 at Exact HEAD `5f61ba088a64bca2b631b1596dfe3dd283896f4a`
+> (the commit that created this handoff; its predecessor
+> `c9e498fa014a2761f451c777c1a597f387ca904e` is the independently accepted
+> P13-O Forward Model Execution baseline).
 
 ## 1. Repository
 
@@ -11,9 +14,12 @@
 
 ## 2. Exact HEAD
 
-`c9e498fa014a2761f451c777c1a597f387ca904e` — the independently accepted
-state at consolidation time. ALWAYS re-verify with `git rev-parse HEAD`
-and `git fetch` before working; never assume this SHA is still current.
+`5f61ba088a64bca2b631b1596dfe3dd283896f4a` — the commit that created
+this handoff document (its parent
+`c9e498fa014a2761f451c777c1a597f387ca904e` is the independently accepted
+P13-O Forward Model Execution state). ALWAYS re-verify with
+`git rev-parse HEAD` and `git fetch` before working; never assume this
+SHA is still current.
 
 ## 3. Accepted phases (all PASS / INDEPENDENTLY ACCEPTED)
 
