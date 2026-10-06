@@ -1,138 +1,177 @@
-# P13-O Forward Model — Human Authorization Record (DRAFT) — 2026-10-05
+# P13-O Forward Model — Human Authorization Record (FROZEN) — 2026-10-05
 
-> STATUS: **PROPOSED AUTHORIZATION — NOT YET EXECUTED**.
-> This is the formal authorization RECORD DRAFT prepared for the project
-> owner's final explicit approval. NOTHING in it authorizes execution by
-> its existence: **TRAINING AUTHORIZATION = NOT YET EXECUTED**. No
-> training, fitting, calibration, threshold optimization, or artifact
-> creation has been performed or is authorized by this document alone.
-> Baseline: Exact HEAD `2235471` (CANDIDATES = PASS / INDEPENDENTLY
-> ACCEPTED).
+> STATUS: **FROZEN / HUMAN AUTHORIZED FOR FUTURE TRAINING**
+>
+> Revision history:
+> v1 (draft, commit `0da4b45`): PROPOSED authorization parameters.
+> v2 (this record, FROZEN): parameter set FROZEN per the project owner's
+> Human Authorization (P13-O-FORWARD-MODEL-HUMAN-AUTHORIZATION-001);
+> feature_set_id and scope_sha256 COMPUTED per P13O-F-014/016b/016c;
+> label-availability exclusion rules recorded per P13O-F-009.
+>
+> **This record authorizes the PARAMETER FREEZE for a future training
+> phase. It does NOT record any execution:**
+>
+> ```text
+> TRAINING EXECUTION:            NOT YET EXECUTED
+> MODEL_APPLICATION artifact:    NOT CREATED
+> model_version:                 NOT YET AVAILABLE
+> CALIBRATION artifact:          NOT CREATED
+> R4-D:                          CONTRACT ACCEPTED / APPLY BLOCKED
+>                                (IMPLEMENTATION NOT AUTHORIZED)
+> ```
 
-## 一、Proposed authorization parameters（拟授权参数，逐字冻结草案）
+## 一、Frozen identity & parameters
 
 ```text
 model_id:              p13o-forward-logistic
+model_version:         NOT YET AVAILABLE
 model_variant:         industry_5_20
-feature_set (ordered):
-    1. momentum
-    2. volatility
-    3. trend
-    4. volume_ratio
-    5. industry_relative_return_5
-    6. industry_relative_return_20
-training_start:        2020-01-02
-training_end:          2025-01-01
-calibration_start:     2025-01-01
-calibration_end:       2025-07-01
-validation_start:      2025-07-01
-validation_end:        2026-09-22
-research_end:          2026-09-22
-virgin_start:          2026-09-23
+feature_set_id:        fs-d1f3bdca3d9b8ba784496b63a240831d3112f1121423198f058ab9328e3a3afe
 training_protocol_id:  p13o-logistic-gd-500x0.05-v1
 scope:                 universe-d8c5016b1ded0984
-scope file:            data/industry/validation_universe_76.txt
+scope_sha256:          b7d807a318996e5b4623e82d07a4575143feb8fbdc141ed5c0bd62a0e6a764c1
 seed:                  20260929
-prediction semantics:
-    target         = next trading day close-up direction
-    horizon        = next_trading_day
-    positive_class = next_return > 0
 ```
 
-## 二、Time-interval semantics（逐字冻结，不得改写）
+- **model_version = NOT YET AVAILABLE**: it is the full lowercase SHA-256
+  of the canonical frozen MODEL_APPLICATION artifact bytes (P13O-F-002)
+  and can only be computed at the future freeze. Not generated, not
+  simulated, not pre-claimed.
+- **feature_set_id = `fs-d1f3bdca…3afe`** — COMPUTED per P13O-F-014 +
+  P13O-F-016c from the canonical ordered `[name, definition_version]`
+  list below (canonical bytes → SHA-256, prefixed `"fs-"`). Not guessed,
+  not shortened.
+- **scope_sha256 = `b7d807a3…64c1`** — SHA-256 of the canonical scope
+  JSON (P13O-F-016b): `{"symbols":[<76 sorted symbols>],
+  "universe_id":"universe-d8c5016b1ded0984"}`.
+
+## 二、Variant authority（P13O-F-005/006）
+
+```text
+variant = industry_5_20        — by Human Authorization
+```
+
+This variant is NOT: metric selection · Brier selection · latest
+selection · first selection · automatic selection · validation
+selection. Train-all-then-pick is forbidden (P13O-F-007); the variant
+MUST NOT change after validation results are observed. Authorized
+rationale (verbatim): **it is consistent with the existing P13-Q
+calibrated 6-factor feature lineage — lineage / feature-contract
+continuity; this is NOT a historical-performance optimization.**
+
+## 三、Frozen feature set (order = weight-vector order)
+
+```text
+1. momentum
+2. volatility
+3. trend
+4. volume_ratio
+5. industry_relative_return_5
+6. industry_relative_return_20
+```
+
+**definition_version convention** (the repository has no pre-existing
+feature-version mechanism — audited): `definition_version =
+"<defining source file path>@<git blob sha of that file at the frozen
+HEAD>"` — unambiguous and auditable via `git cat-file`:
+
+| features | definition_version |
+|---|---|
+| momentum, volatility, trend, volume_ratio | `src/astock_v2/local_pipeline.py@0582f91ef406d329c7ce3d7460db8f467c20ef75` |
+| industry_relative_return_5, industry_relative_return_20 | `scripts/run_local_industry_relative_oos.py@0b6c0f140fad636a50cee67d2502d6ce27adc5cb` |
+
+**Canonical hashed input** (the exact bytes hashed for
+feature_set_id):
+
+```json
+[["momentum","src/astock_v2/local_pipeline.py@0582f91ef406d329c7ce3d7460db8f467c20ef75"],["volatility","src/astock_v2/local_pipeline.py@0582f91ef406d329c7ce3d7460db8f467c20ef75"],["trend","src/astock_v2/local_pipeline.py@0582f91ef406d329c7ce3d7460db8f467c20ef75"],["volume_ratio","src/astock_v2/local_pipeline.py@0582f91ef406d329c7ce3d7460db8f467c20ef75"],["industry_relative_return_5","scripts/run_local_industry_relative_oos.py@0b6c0f140fad636a50cee67d2502d6ce27adc5cb"],["industry_relative_return_20","scripts/run_local_industry_relative_oos.py@0b6c0f140fad636a50cee67d2502d6ce27adc5cb"]]
+```
+
+## 四、Frozen time windows & label availability（P13O-F-008/009）
+
+Interval semantics frozen VERBATIM (half-open as written):
 
 ```text
 training    = [2020-01-02, 2025-01-01)
 calibration = [2025-01-01, 2025-07-01)
 validation  = [2025-07-01, 2026-09-22]
+research_end = 2026-09-22
+virgin_start = 2026-09-23
 ```
 
-Half-open intervals exactly as written — no alternative
-inclusive/exclusive combination is permitted.
+**Label-availability exclusion rule** (P13O-F-009; the label of decision
+day t is the NEXT trading day's close, so a row is included only when
+its label closes on or before its window's boundary date). Verified
+against the real trading calendar (all dates below confirmed as trading
+days in the local store):
 
-**Validation last actual decision date**: `2026-09-21`（周一）— the
-trading day strictly before `validation_end`; its label closes
-**2026-09-22**（周二，research zone 内）— label availability satisfied
-(P13O-F-009). No decision date in any window is on or after
-`virgin_start` (2026-09-23).
+| window | first decision date | last INCLUDED decision date | label close of last row | boundary-excluded decision rows |
+|---|---|---|---|---|
+| training [2020-01-02, 2025-01-01) | 2020-01-02 | **2024-12-30** (Mon) | 2024-12-31 (≤ boundary) | 2024-12-31 — its label would close 2025-01-02 > boundary |
+| calibration [2025-01-01, 2025-07-01) | 2025-01-02 | **2025-06-30** (Mon) | 2025-07-01 (≤ boundary) | 2025-07-01 — belongs to validation |
+| validation [2025-07-01, 2026-09-22] | 2025-07-01 | **2026-09-21** (Mon) | 2026-09-22 (≤ boundary) | 2026-09-22 — its label would close 2026-09-23 (past boundary AND first virgin date) |
 
-## 三、Variant authority（P13O-F-005/006）
+No decision date on or after 2026-09-23 exists in any window. The
+boundary decision rows listed above are explicitly EXCLUDED by the
+label-availability rule and MUST NOT be silently re-included at training
+time.
+
+## 五、Frozen scope（P13O-F-016b）
 
 ```text
-model_variant = industry_5_20
+universe_id  = universe-d8c5016b1ded0984   (loader convention, matches frozen value)
+scope file   = data/industry/validation_universe_76.txt   (committed at a1a8d32)
+symbol count = 76 (unique, 6-digit canonical, sorted — verified)
+scope_sha256 = b7d807a318996e5b4623e82d07a4575143feb8fbdc141ed5c0bd62a0e6a764c1
 ```
 
-This variant is the **Human Authorization decision**. It is NOT:
-metric selection · Brier selection · latest selection · first selection
-· automatic selection · validation selection. The variant MUST NOT be
-changed after validation results are observed (P13O-F-007 — such a
-change is leakage and is BLOCKED).
+## 六、Frozen training protocol（P13O-F-012）
 
-Feature-set implication (consistency fact, recorded at precheck):
-this variant's ordered feature tuple coincides with the P13-Q
-calibrated 6-factor `factor_list` (config sha256 `f0602bb9…`); the NEW
-bound calibration (P13O-F-018/019) is still mandatory — the coincidence
-grants nothing.
+`training_protocol_id = "p13o-logistic-gd-500x0.05-v1"`:
+unregularized binary logistic regression · full-batch gradient descent ·
+500 epochs · learning rate 0.05 · zero initialization (weights + scalar
+bias) · float64 · stable sigmoid (clip ±30) · no scaler · preprocessing
+= identity · rows sorted by `(decision_time, symbol)` · one row per
+`(symbol, decision_time)` · missing-factor rows dropped
+deterministically · **SINGLE FINAL MODEL** fitted on the whole training
+window · no fold-model collection as production artifact.
 
-## 四、feature_set_id（生成于 artifact 冻结时；不得提前伪造）
+**seed = 20260929** — execution/manifest metadata only; the protocol is
+deterministic full-batch GD and the seed is NOT a model-selection
+mechanism.
 
-Per P13O-F-014 + P13O-F-016c:
+**prediction semantics** (verbatim, P13O-F-016a): `target = "next
+trading day close-up direction"` · `horizon = "next_trading_day"` ·
+`positive_class = "next_return > 0"`.
+
+## 七、Authorization semantics（两层区分）
 
 ```text
-feature_set_id = "fs-" + SHA256( canonical_json([
-    ["momentum",    <definition_version>],
-    ["volatility",  <definition_version>],
-    ["trend",       <definition_version>],
-    ["volume_ratio",<definition_version>],
-    ["industry_relative_return_5", <definition_version>],
-    ["industry_relative_return_20",<definition_version>],
-]) )
+Proposed / Candidate:      recorded in AUTHORIZATION-CANDIDATES (accepted)
+Final Human Authorization: THIS RECORD — the parameter freeze above
+TRAINING EXECUTION:        NOT YET EXECUTED
+MODEL_APPLICATION artifact: NOT CREATED
+model_version:             NOT YET AVAILABLE
+Calibration artifact:      NOT CREATED
 ```
 
-- The ordered names above are the authorized order (weight-vector order).
-- `<definition_version>` candidate lineage: `p13m-local-pipeline-v1`
-  (the historical definitions); the exact values are confirmed at the
-  execution-authorization record — NOT guessed here.
-- `feature_set_id` is COMPUTED at artifact-generation time from the
-  canonical frozen list. **No hash is pre-computed or claimed in this
-  draft; no short hash is permitted.**
+This record authorizes the parameter freeze for a FUTURE training phase;
+it does not record any execution and does not make the model "ready" or
+"calibrated".
 
-## 五、model_version
+## 八、R4-D & boundaries（unchanged）
 
 ```text
-model_version = NOT YET AVAILABLE
-```
-
-Reason: `model_version` is the full lowercase SHA-256 of the canonical
-frozen MODEL_APPLICATION artifact bytes (P13O-F-002) and can only be
-computed after the future freeze. It is not generated, simulated, or
-pre-claimed here.
-
-## 六、Authorization states（两层区分）
-
-```text
-PROPOSED AUTHORIZATION   = the parameter set in §一 (this draft)
-EXECUTION AUTHORIZATION  = NOT GRANTED YET
-
-TRAINING AUTHORIZATION   = NOT YET EXECUTED
-CALIBRATION AUTHORIZATION = NOT YET EXECUTED
-```
-
-This record becomes EXECUTION- BINDING only upon the project owner's
-final explicit approval of THIS draft (at which point the training
-phase may start under the frozen parameters, C1–C2 satisfied).
-
-## 七、R4-D / boundaries (unchanged)
-
-```text
-R4-D   = CONTRACT ACCEPTED / APPLY BLOCKED (IMPLEMENTATION NOT AUTHORIZED)
+R4-D   = CONTRACT ACCEPTED / APPLY BLOCKED
+R4-D implementation = NOT AUTHORIZED
 P14-F  = NOT AUTHORIZED
 P13-T  = STOPPED / NOT EXECUTED
 P13-U  = PROTECTED
 ```
 
-No candidate in this record touches the virgin zone; all window decision
-dates ≤ 2026-09-22 (research_end). P14-D remains the sole PIT/selection
-authority; P14-E the sole evidence/provenance authority; P13-Q the
-calibration research authority (its successor issues the new bound
-calibration); P13-R the policy authority.
+Human Authorization Record 完成 ≠ R4-D implementation authorization.
+P14-D remains the sole PIT/selection authority; P14-E the sole
+evidence/provenance authority; P13-Q the calibration research authority
+(its successor issues the new bound calibration under a separate
+authorization); P13-R the policy authority.

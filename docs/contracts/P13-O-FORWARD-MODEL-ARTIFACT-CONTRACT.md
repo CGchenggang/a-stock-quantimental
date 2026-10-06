@@ -1,8 +1,9 @@
 # P13-O Forward Model Artifact — Contract
 
-> STATUS: DRAFT — P13-O-FORWARD-MODEL-001 — awaiting independent Contract acceptance.
-> **Training / artifact creation / R4-D unblock are NOT AUTHORIZED** until this
-> contract passes independent acceptance AND the owner grants Human Authorization.
+> STATUS: PASS / INDEPENDENTLY ACCEPTED — P13-O-FORWARD-MODEL-001 CONTRACT + DESIGN.
+> **Training / artifact creation remain unauthorized until the Human
+> Authorization Record is executed** (P13O-F-027: C1–C12 then final Human
+> Authorization); this status line records the CONTRACT acceptance only.
 > Companion design: `docs/design/P13-O-FORWARD-MODEL-ARTIFACT-DESIGN.md`.
 >
 > 修订历史：

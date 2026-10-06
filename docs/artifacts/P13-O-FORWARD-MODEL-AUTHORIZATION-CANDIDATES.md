@@ -1,6 +1,7 @@
 # P13-O Forward Model — Human Authorization Candidates — 2026-10-05
 
-> STATUS: CANDIDATES RECORD — audited at Exact HEAD `2235471`
+> STATUS: CANDIDATES RECORD — audited at Exact HEAD
+> `223547146fbe01bee1167a1ee84b1a394b2e5989`
 > (P13-O-FORWARD-MODEL-001 = PASS / INDEPENDENTLY ACCEPTED / CONTRACT+DESIGN;
 > AUTHORIZATION-PRECHECK = PASS / INDEPENDENTLY ACCEPTED).
 > NO training, fitting, calibration, threshold optimization, or artifact
