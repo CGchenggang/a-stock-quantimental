@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal executable governance gates for Parallel Agent Governance v2.1.
-
-Checks a task manifest and verifies that a worker diff stays inside WRITE_SET
-and outside FORBIDDEN_SET. The script intentionally uses only the Python
-standard library so it can run in CI without extra dependencies.
-"""
+"""Minimal executable governance gates for Parallel Agent Governance v2.1."""
 
 from __future__ import annotations
 
@@ -17,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 
-ALLOWED_AGENTS = {"AI2", "AI3"}
+ALLOWED_AGENTS = {"AI1", "AI2", "AI3"}
 REQUIRED_MANIFEST_KEYS = {
     "task_id",
     "agent",
@@ -44,8 +39,8 @@ def normalize(path: str) -> str:
 
 def matches(path: str, patterns: list[str]) -> bool:
     path = normalize(path)
-    for pattern in patterns:
-        pattern = normalize(pattern)
+    for raw_pattern in patterns:
+        pattern = normalize(raw_pattern)
         if fnmatch.fnmatchcase(path, pattern):
             return True
         if pattern.endswith("/**") and (
@@ -83,12 +78,13 @@ def load_manifest(path: Path) -> dict[str, Any]:
     acceptance = data["acceptance"]
     if not isinstance(acceptance, dict):
         fail("acceptance must be an object")
+
     gates = set(acceptance.get("gates", []))
     missing_gates = REQUIRED_GATES - gates
     if missing_gates:
         fail(f"acceptance.gates missing: {sorted(missing_gates)}")
 
-    if not data["base_commit"] or data["base_commit"] == "REPLACE_WITH_BASE_COMMIT":
+    if not data["base_commit"] or data["base_commit"] == "FREEZE_TO_REAL_COMMIT_SHA":
         fail("base_commit must be frozen to a real commit SHA")
 
     return data
@@ -105,6 +101,7 @@ def changed_files(base: str, head: str) -> list[str]:
         )
     except subprocess.CalledProcessError as exc:
         fail(f"git diff failed: {exc.stderr.strip()}")
+
     return [normalize(line) for line in result.stdout.splitlines() if line.strip()]
 
 
@@ -119,6 +116,7 @@ def run_scope_gate(manifest: dict[str, Any], files: list[str]) -> int:
         print("FORBIDDEN_SET violations:")
         for path in forbidden:
             print(f"  - {path}")
+
     if out_of_scope:
         print("WRITE_SET violations:")
         for path in out_of_scope:
