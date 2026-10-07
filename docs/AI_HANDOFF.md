@@ -56,9 +56,15 @@ P14-D→P14-E Integration Contract + implementation.
 
 ## 6. Current phase
 
-**R4-D = CONTRACT ACCEPTED / APPLY BLOCKED — ELIGIBLE FOR
-AUTHORIZATION** (P13O-F-027 conditions C1–C12 all satisfied; the APPLY
-unlock is a Human Authorization act that has NOT been granted).
+**R4-D = CONTRACT ACCEPTED / APPLY IMPLEMENTED / INDEPENDENTLY ACCEPTED /
+GOVERNANCE CLOSED** (Lead Agent independent acceptance recorded at
+`08b0396…`, governance-closure commit; the R4-D contract itself is
+ACCEPTED — see §10). P14-F remains NOT AUTHORIZED.
+
+Historical snapshot (baseline `5f61ba0…`, 2026-10-06): at that point
+R4-D was CONTRACT ACCEPTED / APPLY BLOCKED / ELIGIBLE FOR AUTHORIZATION
+— this baseline-time state was superseded by the Human Authorization
+and execution chain recorded in §10/§11.
 
 ## 7. Current research boundary
 
@@ -102,17 +108,25 @@ authorization. Never edit these values in place.
 
 ## 10. R4-D status
 
-CONTRACT ACCEPTED (v2, R4D-001..019) / APPLY BLOCKED / IMPLEMENTATION
-NOT AUTHORIZED — but **ELIGIBLE FOR AUTHORIZATION** (C1–C12 satisfied).
-The R4-D implementation is a single minimal integration point
-(orchestrator consumes the resolver's probability block instead of the
-legacy `p_up[5]` key) and requires explicit Human Authorization first.
+**Current state: CONTRACT ACCEPTED (v2, R4D-001..019) / APPLY IMPLEMENTED
+/ INDEPENDENTLY ACCEPTED / GOVERNANCE CLOSED** (Lead Agent independent
+acceptance recorded at `08b0396…`; implementation commit `caa3576…`,
+apply_path.py + the single R4-A integration point; frozen artifacts
+unchanged; registry READ-ONLY throughout).
+
+Historical snapshot (baseline `5f61ba0…`, 2026-10-06): at that point
+R4-D was CONTRACT ACCEPTED / APPLY BLOCKED / IMPLEMENTATION NOT
+AUTHORIZED — but ELIGIBLE FOR AUTHORIZATION (C1–C12 satisfied). The
+implementation is a single minimal integration point (orchestrator
+consumes the resolver's probability block instead of the legacy
+`p_up[5]` key) and was executed after the explicit Human Authorization.
 
 ## 11. Human Authorization status
 
 Granted historically: P14-D→P14-E integration implementation; P13-O
-forward-model parameters (FROZEN record); EXECUTION-001. NOT granted:
-R4-D APPLY unlock; R4-D implementation; P14-F (NOT AUTHORIZED); P13-T
+forward-model parameters (FROZEN record); **R4-D APPLY
+(R4-D-APPLY-HUMAN-AUTHORIZATION-001 — GRANTED, consumed by the
+accepted implementation)**. NOT granted: P14-F (NOT AUTHORIZED); P13-T
 execution. Authorization decisions belong to the project owner — never
 inferred from tests passing.
 
