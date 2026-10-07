@@ -8,6 +8,11 @@
 ## Core flow
 AI1 allocates two independent tasks -> AI2 and AI3 execute in isolated worktrees/branches -> both report READY_FOR_AI1_AUDIT -> AI1 performs integration audit -> AI1 integrates -> AI1 independently accepts -> main.
 
+> Vocabulary note (v2.2 addendum §4): `READY_FOR_AI1_AUDIT` in this v1
+> protocol is a deprecated display alias of the canonical state
+> `READY_FOR_AUDIT`. The canonical 11-state vocabulary is defined in
+> `governance/TASK-STATE-MACHINE-v2.md`.
+
 ## Hard rules
 1. AI2/AI3 never modify main directly.
 2. Each worker uses a dedicated worktree.
