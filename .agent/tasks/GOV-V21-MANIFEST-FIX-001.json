@@ -1,0 +1,36 @@
+{
+  "task_id": "GOV-V21-MANIFEST-FIX-001",
+  "agent": "AI1",
+  "base_commit": "76243822a9623183d2e4b0823782abe1f0d189a4",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [
+    ".agent/task.json",
+    "scripts/governance_gate.py",
+    ".github/workflows/governance-gate.yml",
+    "governance/EXECUTION-GUIDE-v2.1.md"
+  ],
+  "write_set": [
+    ".agent/task.json",
+    ".agent/tasks/GOV-V21-MANIFEST-FIX-001.json",
+    "scripts/governance_gate.py",
+    ".github/workflows/governance-gate.yml",
+    "governance/EXECUTION-GUIDE-v2.1.md"
+  ],
+  "forbidden_set": [
+    "src/**",
+    "data/**",
+    "tests/**"
+  ],
+  "shared_interfaces": [],
+  "acceptance": {
+    "tests": [
+      "python scripts/governance_gate.py --base 76243822a9623183d2e4b0823782abe1f0d189a4 --head HEAD"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  }
+}

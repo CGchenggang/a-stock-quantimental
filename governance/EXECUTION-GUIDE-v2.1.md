@@ -8,7 +8,7 @@ The baseline tag `governance-v2.0` remains unchanged.
 
 ## Required task manifest
 
-Every governed worker task must carry a real `.agent/task.json` manifest.
+Every governed worker PR must carry exactly one PR-local task manifest under `.agent/tasks/*.json`. The manifest is review metadata and is not kept as a shared task state on `main`.
 
 The manifest freezes:
 - task_id
@@ -20,7 +20,7 @@ The manifest freezes:
 - shared_interfaces
 - acceptance gates
 
-Use `.agent/task-template.json` as the starting template.
+Use `.agent/task-template.json` as the starting template. Name the PR-local file with its task ID, for example `.agent/tasks/TASK-001.json`.
 
 ## Scope Gate
 
@@ -43,7 +43,7 @@ The gate fails when:
 
 `.github/workflows/governance-gate.yml` runs the Scope Gate on pull requests targeting `main`.
 
-A worker PR therefore cannot pass the governance gate unless its declared scope matches its actual changed files.
+The workflow discovers exactly one `.agent/tasks/*.json` file from the PR diff. The manifest itself is excluded from its own WRITE_SET check; all other changed files must match WRITE_SET and must not match FORBIDDEN_SET.
 
 ## Responsibility
 
