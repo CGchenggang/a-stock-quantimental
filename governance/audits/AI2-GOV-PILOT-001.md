@@ -88,3 +88,77 @@ Audit performed against exact audited HEAD:
 Final task status: CONFLICT
 
 No repair, authorization, merge, or acceptance action was performed. DONE is not acceptance; final acceptance remains AI1-only.
+
+---
+
+## Re-execution Verification (2026-10-07, second AI2 executor run)
+
+A second independent AI2 execution re-inspected the governance corpus and
+verified every finding above in place, without repairing any of them.
+
+### READ_SET coverage correction
+The original report lists 9 READ_SET files. The governance corpus at
+BASE_COMMIT contains 12 rule files. This run inspected all 12 independently;
+the three additional files confirm the original conclusions and add no
+contradiction:
+
+- governance/WORKTREE-BRANCH-RULES-v1.md — "Never share a working directory
+  between agents", branch naming, and the single approved BASE_COMMIT
+  lifecycle are consistent with PROTOCOL-v1 and PARALLEL-GOVERNANCE-v2.
+  Both pilot branches start from 29403bc, satisfying this rule.
+- governance/ZCODE-A2-PROMPT-v1.md / governance/ZCODE-A3-PROMPT-v1.md —
+  worker role separation (dimension 7) re-confirmed from the role
+  definitions themselves.
+- Self-compliance note (minor, observed): commits on this branch use
+  conventional messages ("governance: ...", "audit: ...") instead of the
+  required `[AI2][<TASK-ID>] <short description>` format from
+  ZCODE-A2-PROMPT-v1. Recorded here; not repaired.
+
+### Corrected finding 5 — Shared Interface Lock semantics: CONFLICT -> WARN
+The original text states the owner of REQUESTED -> LOCKED is not explicitly
+defined. That half is incorrect: SHARED-INTERFACE-LOCK-v2 states
+"AI1 grants or rejects the lock.", which explicitly assigns lock granting
+(REQUESTED -> LOCKED) to AI1. The remaining gaps are real but are
+underspecification, not contradiction:
+
+- the lifecycle line does not draw the rejection edge (REQUESTED -> UNLOCKED);
+- the owner of AUDITING -> UNLOCKED is undefined (TASK-STATE-MACHINE-v2
+  reserves the task state AUDITING to AI1, but that is a task-state rule,
+  not a lock-state rule);
+- PARALLEL-GOVERNANCE-v2 §3 summarizes the lifecycle without REQUESTED —
+  a compatible shorthand, not a contradiction.
+
+Dimension 5 is downgraded to WARN on this basis.
+
+### Corrected Gate Assessment
+- Authority ownership: PASS
+- Authorization / implementation / acceptance ordering: WARN
+- State-machine consistency: WARN
+- Task-template consistency: CONFLICT
+- Shared Interface Lock semantics: WARN (downgraded from CONFLICT)
+- AI1 final authority: PASS
+- AI2/AI3/ZCODE role separation: PASS
+- Forbidden-set enforcement: WARN
+- Main/source-of-truth rules: PASS
+- v1/v2 semantic consistency: CONFLICT
+
+Overall audit result remains: **CONFLICT**. Dimensions 4 and 10 are genuine
+structural contradictions (v1 template requires FORBIDDEN_SET and a
+4-vocabulary status line, v2 schema requires shared_interfaces and
+structured acceptance while omitting forbidden_set; 4-state vs 11-state
+lifecycle vocabulary), so the downgrade of dimension 5 does not change the
+overall result.
+
+### Scope / CI facts at final HEAD
+- Final branch HEAD:
+  fe8fca66fbef6eeb3fef638e1e572d7a44216b5b — 2 commits ahead of BASE_COMMIT
+  29403bc3a87fc8b885f9589dd265fe19fbdbf5b5; both commits touch only
+  governance/audits/AI2-GOV-PILOT-001.md. The original "exactly 1 commit
+  ahead" statement was accurate at its audited HEAD
+  5e1e29b84bcc0c7b0b4dfca0ca1388e71e94b773 and is superseded by this pin.
+- CI: no workflow runs exist for this branch HEAD. tests.yml at BASE_COMMIT
+  triggers only on push/pull_request to main, so worker-branch pushes do not
+  invoke CI; governance-gate.yml was added to main after BASE_COMMIT and is
+  absent on this branch.
+- No file outside governance/audits/AI2-GOV-PILOT-001.md was modified, no
+  finding was repaired, nothing was merged, and acceptance remains AI1-only.
