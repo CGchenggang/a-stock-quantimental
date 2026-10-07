@@ -52,7 +52,7 @@ def matches(path: str, patterns: list[str]) -> bool:
 
 
 def changed_files(base: str, head: str) -> list[str]:
-    command = ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...{head}"]
+    command = ["git", "diff", "--name-only", "--diff-filter=ACMRD", f"{base}...{head}"]
     try:
         result = subprocess.run(
             command,
