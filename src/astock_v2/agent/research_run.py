@@ -51,6 +51,7 @@ from ..factors import (
 )
 from ..data.providers import ProviderResult
 from ..regime import classify_regime
+from ..model.apply_path import resolve_probability
 from ..recommendation import RecommendationRecord
 from ..risk.engine import RiskEngine
 from .orchestrator import ResearchOrchestrator
@@ -194,6 +195,15 @@ def run_research(symbol: str, as_of: str, *,
     quality_score = (quality_complete / len(bundle["evidence"])
                      if bundle["evidence"] else 0.0)
 
+    # R4-D apply path (authorized): resolve the calibrated probability
+    # block from the frozen artifacts. The packet's factor values feed
+    # the feature-set eligibility check (E4) — with the current 4-factor
+    # packet the honest state is INELIGIBLE(feature_set_mismatch) until
+    # the packet carries the calibrated 6-factor set.
+    factor_values = {name: info["value"] for name, info in factors.items()
+                     if info["value"] is not None}
+    probability_block = resolve_probability(symbol, as_of, factor_values)
+
     risk = RiskEngine().evaluate(
         data_quality=quality_score,
         expected_volatility=volatility if volatility is not None else 0.0,
@@ -203,11 +213,6 @@ def run_research(symbol: str, as_of: str, *,
             for rec in visible),
     )
     regime = classify_regime({})  # honest UNKNOWN: no model-grade market inputs
-    probability = {
-        "status": "NOT_AVAILABLE",
-        "reason": "no trained model artifact exists in the accepted src "
-                  "surface; P13-Q calibrators are research-only artifacts",
-    }
 
     evidence_ids = tuple(e["evidence_id"] for e in bundle["evidence"])
     packet = ResearchOrchestrator().build(
@@ -226,11 +231,15 @@ def run_research(symbol: str, as_of: str, *,
         factors=factors,
         events=[],
         model={
-            "status": probability["status"],
-            "reason": probability["reason"],
-            "calibration_status": "NOT_CALIBRATED",
+            "status": probability_block["probability_status"],
+            "reason": probability_block.get("eligibility_reason"),
+            "calibration_status": (
+                "CALIBRATED"
+                if probability_block["probability_status"] == "CALIBRATED"
+                else "NOT_CALIBRATED"),
             "p_up": {},
             "confidence": None,
+            "r4d": probability_block,
             "provenance": (
                 f"result_id:{query_result['result_id']}",
                 f"bundle_id:{bundle['bundle_id']}",
@@ -264,7 +273,7 @@ def run_research(symbol: str, as_of: str, *,
         "counts": query_result["counts"],
         "factors": factors,
         "regime": regime,
-        "probability": probability,
+        "probability": probability_block,
         "risk": {"flags": list(risk.flags), "allowed": risk.allowed,
                  "max_loss_proxy": risk.max_loss_proxy,
                  "realized_drawdown": realized_drawdown},
@@ -294,6 +303,10 @@ def append_to_ledger(run_result: dict, ledger, ingested_at: str) -> dict:
             "ingested_at": ingested_at,
             "evidence_ids": run_result["evidence_ids"],
             "factor_input_source_ids": run_result["factor_input_source_ids"],
+            # R4-D provenance: the full probability block (R4D-009/013) —
+            # Recommendation → Probability → Calibration → Model →
+            # Features → ResearchPacket → P14-E → P14-D stays traceable.
+            "r4d_probability": run_result["probability"],
         },
     )
     return event

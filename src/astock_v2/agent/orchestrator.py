@@ -40,10 +40,21 @@ class ResearchOrchestrator:
 
     def research_state(self, packet: ResearchPacket)->dict[str,Any]:
         quality=float(packet.data_quality.get("score",0.0))
-        calibrated=packet.model.get("calibration_status")=="CALIBRATED"
-        p5=packet.model.get("p_up",{}).get(5,0.5)
+        # R4-D integration point (R4D-014): when the packet carries the
+        # authorized probability block and it is CALIBRATED, the frozen
+        # policy threshold (threshold_platt_p50) decides PAPER_TEST;
+        # legacy packets keep the previous scaffold behavior unchanged.
+        r4d=packet.model.get("r4d") or {}
+        if r4d.get("probability_status")=="CALIBRATED":
+            calibrated=True
+            p5=float(r4d["probability"])
+            threshold=float(r4d.get("probability_threshold",0.5))
+        else:
+            calibrated=packet.model.get("calibration_status")=="CALIBRATED"
+            p5=packet.model.get("p_up",{}).get(5,0.5)
+            threshold=0.60
         if quality<0.75: decision="NO_ACTION"
-        elif calibrated and p5>=0.60: decision="PAPER_TEST"
+        elif calibrated and p5>=threshold: decision="PAPER_TEST"
         else: decision="RESEARCH"
         return {"symbol":packet.symbol,"decision_time":packet.decision_time,
                 "decision_class":decision,"model_output":packet.model.copy(),

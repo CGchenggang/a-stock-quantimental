@@ -85,8 +85,12 @@ def test_end_to_end_research_run(tmp_path):
     assert result["factors"]["momentum"]["value"] is not None
     assert result["factors"]["volatility"]["value"] is not None
     assert result["factors"]["momentum"]["observation_count"] == 25
-    # honest upstream labeling
-    assert result["probability"]["status"] == "NOT_AVAILABLE"
+    # honest upstream labeling (R4-D): the authorized resolver runs; with
+    # this historical as_of (< split_date 2025-01-01) the honest state is
+    # an explicit INELIGIBLE(temporal_below_split) — no silent fallback
+    assert result["probability"]["probability_status"] == "INELIGIBLE"
+    assert result["probability"]["eligibility_reason"] == "temporal_below_split"
+    assert result["probability"]["probability"] is None
     assert result["regime"]["regime"] == "UNKNOWN"
     # the conservative decision rule: uncalibrated -> RESEARCH, no BUY/SELL
     assert result["research_state"]["decision_class"] == "RESEARCH"
