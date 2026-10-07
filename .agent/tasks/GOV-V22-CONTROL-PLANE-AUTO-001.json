@@ -1,0 +1,35 @@
+{
+  "task_id": "GOV-V22-CONTROL-PLANE-AUTO-001",
+  "agent": "AI1",
+  "base_commit": "e33b649189af17547c73a2e131f808c08baa62ed",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [
+    "governance/AI1-CONTROL-PLANE-v2.2.md",
+    "scripts/governance_conflict_gate.py"
+  ],
+  "write_set": [
+    ".agent/active-tasks.json",
+    ".agent/tasks/GOV-V22-CONTROL-PLANE-AUTO-001.json",
+    ".github/workflows/governance-gate.yml",
+    "governance/AI1-CONTROL-PLANE-v2.2.md",
+    "governance/AI1-CONTROL-PLANE-AUTOMATION-v2.2.md",
+    "scripts/governance_state_gate.py",
+    "scripts/test_governance_state_gate.py",
+    "scripts/governance_pr_control_plane_gate.py",
+    "scripts/test_pr_control_plane_v22.py"
+  ],
+  "forbidden_set": [],
+  "shared_interfaces": [],
+  "acceptance": {
+    "tests": [
+      "python scripts/test_governance_state_gate.py",
+      "python scripts/test_pr_control_plane_v22.py"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  }
+}
