@@ -2,9 +2,8 @@
 
 > STATUS: ACCEPTED — R4-D-DESIGN-001 CONTRACT + DESIGN
 > (independently accepted; recorded in docs/PROJECT_STATUS.md).
-> **R4-D APPLY remains BLOCKED / ELIGIBLE FOR AUTHORIZATION** — this
-> accepted status does NOT authorize R4-D APPLY; the APPLY unlock
-> additionally requires explicit Human Authorization.
+> **R4-D APPLY = IMPLEMENTED / INDEPENDENTLY ACCEPTED** (executed under
+> R4-D-APPLY-HUMAN-AUTHORIZATION-001). P14-F remains NOT AUTHORIZED.
 > Companion design: `docs/design/R4-D-CALIBRATED-PROBABILITY-APPLY-DESIGN.md`.
 >
 > 修订历史：
