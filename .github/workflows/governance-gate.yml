@@ -22,6 +22,22 @@ jobs:
             --base "$GITHUB_BASE_SHA" \
             --head "$GITHUB_SHA"
 
+      - name: PR Control Plane Gate
+        run: |
+          MANIFESTS=$(git diff --name-only --diff-filter=ACMRD "$GITHUB_BASE_SHA...$GITHUB_SHA" -- '.agent/tasks/*.json')
+          COUNT=$(printf '%s\n' "$MANIFESTS" | sed '/^$/d' | wc -l)
+          if [ "$COUNT" -ne 1 ]; then
+            echo "FAIL: expected exactly one PR-local task manifest, found $COUNT"
+            exit 1
+          fi
+          python scripts/governance_pr_control_plane_gate.py \
+            --manifest "$MANIFESTS" \
+            --registry ".agent/active-tasks.json"
+
       - name: State Machine Gate
         run: |
           python scripts/test_governance_state_gate.py
+
+      - name: PR Control Plane self-test
+        run: |
+          python scripts/test_pr_control_plane_v22.py
