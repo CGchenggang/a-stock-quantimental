@@ -1,78 +1,75 @@
 # SESSION HANDOFF REPORT
 
-> **Purpose:** This is the **current single handoff summary** for the next Lead Agent (AI3).
->
-> It is intended to make session takeover faster and safer. It is **not an authorization record, not a contract, not an acceptance decision, and not a substitute for independent audit**.
->
-> **Source-of-truth rule:** GitHub repository state is authoritative. Do not trust chat history, previous agent reports, or this handoff summary without independently checking the repository.
->
-> **Maintenance rule:** Keep only the latest handoff report at this path. Replace/update this file at the end of a material Lead-Agent session rather than creating numbered copies.
+> **Purpose:** Current single handoff summary for the next Lead Agent (AI3).  
+> **Authority rule:** GitHub repository state is the only source of truth. This report is a handoff aid, not an authorization record, contract, or acceptance decision. Future agents must independently re-audit the repository.
 
-## 1. Repository / Takeover Point
+## 1. Current Repository / Acceptance Point
 
 - Repository: `CGchenggang/a-stock-quantimental`
-- Default branch: `main`
-- Current verified HEAD at handoff:
-  `63a47dc49f2fe9569bd26db55e84ee9a2cfd95c8`
-- Latest HEAD commit message: `docs(governance): sync final R4-D apply status`
-- This handoff was prepared against the live GitHub repository state.
+- Branch: `main`
+- Current HEAD at this handoff: `08b03969b95464f2171da362898c8e55843ccbc5`
+- HEAD commit: `docs(agent): add current AI3 session handoff report`
+- Parent of current HEAD: `63a47dc49f2fe9569bd26db55e84ee9a2cfd95c8`
+- The current HEAD adds only this handoff document; it does not change production code, tests, data, registries, frozen artifacts, or protected boundaries.
 
-### AI3 first action
+## 2. Independent Acceptance of ZCODE P14-F Readiness Audit
 
-Before doing any implementation or making any acceptance claim:
+**Result: PASS — INDEPENDENTLY ACCEPTED as a READ-ONLY readiness/gap audit.**
 
-1. Verify `main` HEAD independently.
-2. Read this file.
-3. Read `docs/PROJECT_STATUS.md`.
-4. Read the applicable contracts and authorization records.
-5. Inspect the relevant GitHub commits and exact-head CI evidence.
-6. Reconcile any inconsistency found between status documents and the actual repository state.
-7. Produce a fresh takeover assessment before authorizing ZCODE.
+ZCODE task audited:
+`TAKEOVER / READINESS AUDIT — P14-F Readiness / Gap Audit`
 
-**Do not treat this file itself as proof of authorization or acceptance.**
+Independent checks performed against live GitHub state:
 
-## 2. Current Governance State
+1. Current `main` HEAD independently verified as `08b03969...`.
+2. `08b03969...` was independently compared with `63a47dc...`; exactly one file was added:
+   `docs/agent/SESSION_HANDOFF_REPORT.md`.
+3. The live handoff document, `docs/PROJECT_STATUS.md`, R4-D contract, and R4-D Human Authorization record were independently read.
+4. The R4-D contract header states:
+   `R4-D APPLY = IMPLEMENTED / INDEPENDENTLY ACCEPTED`; P14-F remains NOT AUTHORIZED.
+5. The R4-D authorization record explicitly forbids P14-F, P13-T, registry writes, retraining, recalibration, holdout evaluation, policy redesign, and redesign of accepted P14 surfaces.
+6. No P14-F Design Contract file was found at the expected contract/design paths checked during this audit.
+7. Current R4-A research packet path still uses the existing four-factor `_FACTOR_FUNCS` set; the R4-D resolver explicitly requires the frozen six-factor feature set, confirming the reported feature-set integration gap is real.
+8. The live repository contains the frozen R4-D model/calibration authorities and the reported protected temporal boundary; no evidence was found in the audited files that P14-F has been authorized.
+9. Current CI status for HEAD `08b03969...` returned no combined status entries. This does not invalidate a READ-ONLY readiness audit, but it is a required evidence item before any future implementation acceptance.
+10. The audit's conclusion that P14-F must remain unauthorized is consistent with the repository's current governance state.
 
-### R4-D
+### Accepted readiness conclusions
+
+The following ZCODE findings are accepted as valid planning/gap findings:
+
+- P14-F Contract + Acceptance Matrix are prerequisites and are currently missing.
+- A versioned research-only feature registry/schema is not yet established as a P14-F authority.
+- The R4-A packet currently does not supply the complete frozen six-factor set required by the R4-D apply path.
+- Registry identity/binding and feature-set closure must be designed before implementation.
+- Human Authorization must be a separate future governance act.
+- P13-U, the virgin boundary, frozen model/calibration artifacts, and accepted P14-A through P14-E semantics remain protected.
+- P14-F implementation must not start merely because this audit passed.
+
+## 3. Governance State
 
 - R4-D Contract: **ACCEPTED**
 - R4-D APPLY: **IMPLEMENTED / INDEPENDENTLY ACCEPTED**
-- Human Authorization:
-  `R4-D-APPLY-HUMAN-AUTHORIZATION-001`
 - R4-D governance: **CLOSED**
-- Final R4-D status synchronization commit:
-  `63a47dc49f2fe9569bd26db55e84ee9a2cfd95c8`
-- The final commit is docs-only and changes only:
-  `docs/contracts/R4-D-CALIBRATED-PROBABILITY-APPLY-CONTRACT.md`
-- The final header explicitly states that R4-D APPLY is implemented / independently accepted and that P14-F remains not authorized.
-
-### P13
-
 - P13-T: **STOPPED / NOT EXECUTED**
 - P13-U: **PROTECTED**
 - P14-F: **NOT AUTHORIZED**
 - Production approval: **NOT GRANTED**
 
-R4-D acceptance must not be interpreted as authorization for P14-F or as production approval.
+### Important status-document inconsistency
 
-## 3. Frozen / Protected Boundary
+The live `docs/PROJECT_STATUS.md` still contains stale/historical R4-D wording such as `APPLY = BLOCKED / ELIGIBLE FOR AUTHORIZATION`, even though the live R4-D contract and accepted implementation state establish R4-D APPLY as implemented/independently accepted.
 
-The following boundary must be treated as protected unless a future explicit authorization changes it:
+This inconsistency is **not** evidence that R4-D reverted to blocked. It is a documentation synchronization issue that may be repaired separately. It does **not** authorize P14-F and must not be silently broadened into implementation.
+
+## 4. Frozen / Protected Boundary
 
 - `research_end = 2026-09-22`
 - `virgin_start = 2026-09-23`
 - universe: `universe-d8c5016b1ded0984`
 - validation universe: frozen 76-stock universe
-
-Do not consume decision dates >= 2026-09-23 through research pipelines.
-
-Do not use virgin-zone data for research labels, factors, policy discovery, calibration, model development, or unauthorized holdout evaluation.
-
-P13-U research-zone guard must remain intact.
-
-## 4. Frozen R4-D Artifacts
-
-The following authorities were frozen and independently accepted:
+- P13-U research-zone guard remains protected.
+- Frozen R4-D artifacts remain protected:
 
 ```
 MODEL_APPLICATION
@@ -88,133 +85,67 @@ CALIBRATION_MANIFEST
 b758015ade2d6ee1dfe8dfb8d00fd0eb169b589cb932b67414ebeebc5d3f5d7c
 ```
 
-These frozen artifacts must not be silently regenerated, replaced, recalibrated, or re-bound.
+No future P14-F work may consume decision dates >= 2026-09-23 for research labels, factors, policy discovery, calibration, model development, or unauthorized holdout evaluation.
 
-## 5. Important R4-D History
+## 5. Next Phase — Contract-First Gate
 
-- Pre-repair baseline:
-  `18a823539f5142a6a161baf5f1a787a5f1a46a6d`
-- Human authorization record:
-  `R4-D-APPLY-HUMAN-AUTHORIZATION-001`
-- Authorization record commit:
-  `cbf7f14795caf76d67e5ea434c343cd20deac6d5`
-- R4-D implementation:
-  `caa357639f58e6c02296fbb74be01d40e334021a`
-- Historical docs-only supersession repair:
-  `2edd560a159556aaba7f0282147b72e470c8dc8d`
-- Final status-header synchronization:
-  `63a47dc49f2fe9569bd26db55e84ee9a2cfd95c8`
+**Next work is NOT P14-F implementation.**
 
-The final status-header synchronization did **not** alter normative R4-D contract content; it synchronized the header with the already-established accepted implementation state.
+Recommended next phase:
 
-## 6. CI / Independent Acceptance Evidence
+### P14-F Design Contract + Acceptance Matrix — READ/DESIGN ONLY
 
-The latest final status-sync CI evidence was independently checked against the exact HEAD:
+The immediate objective is to turn the accepted readiness gaps into a normative contract/design gate.
 
-- Workflow run: `37558989400`
-- HEAD match: `63a47dc49f2fe9569bd26db55e84ee9a2cfd95c8`
-- Result: completed / success
-- Pytest and P13-M jobs were green.
+The contract should define at minimum:
 
-Earlier R4-D implementation acceptance was also independently audited, including frozen artifact hashes, registry immutability, protected temporal boundary, no retraining/recalibration/holdout consumption, and exact-head CI evidence.
+1. Exact P14-F scope and non-scope.
+2. Research-only feature registry schema, including `name`, `definition_version`, computation identity, and source lineage.
+3. Feature registry identity and `feature_set_id` binding rules.
+4. Exact relationship between the registry and the frozen R4-D MODEL_APPLICATION feature set.
+5. R4-A packet requirements for the six-factor set.
+6. PIT/data-lineage requirements for any newly assembled factor inputs.
+7. Registry READ-ONLY and evolution rules.
+8. Explicit prohibition on modifying frozen MODEL_APPLICATION, CALIBRATION, manifests, policy, or protected P13-U data.
+9. Explicit prohibition on production promotion.
+10. Golden/acceptance matrix and independent acceptance criteria.
+11. Required Human Authorization record, including allowed file set and frozen-boundary restatement.
 
-## 7. Known Documentation Consistency Issue for AI3 to Reconcile
+**No P14-F production implementation should begin before this contract is independently accepted and a separate Human Authorization record exists.**
 
-At the time of this handoff, the live `docs/PROJECT_STATUS.md` contains older R4-D wording that describes R4-D APPLY as:
+## 6. Instructions to ZCODE for the Next Task
 
-> CONTRACT ACCEPTED / APPLY BLOCKED — now ELIGIBLE FOR AUTHORIZATION
+ZCODE should receive a **contract/design-only** task, not an implementation task.
 
-That wording is stale relative to the final accepted repository state at HEAD `63a47dc...`.
+Required behavior:
 
-The current R4-D contract header has already been synchronized to:
+- Read-only/design-only until explicitly authorized otherwise.
+- Do not modify production code.
+- Do not modify data, registry contents, model/calibration artifacts, manifests, policy, thresholds, or P13-U.
+- Do not implement the six-factor packet extension.
+- Do not create or populate a production feature registry.
+- Do not retrain, recalibrate, refit, evaluate virgin/holdout data, or perform production promotion.
+- Do not create a Human Authorization record.
+- Do not self-authorize.
+- Return a contract draft + acceptance matrix + explicit unresolved questions/gates.
+- The Lead Agent must independently accept the contract before any implementation authorization is considered.
 
-> R4-D APPLY = IMPLEMENTED / INDEPENDENTLY ACCEPTED
-
-Therefore, **AI3 must not conclude that R4-D is still blocked merely from the stale PROJECT_STATUS text**.
-
-However, AI3 must also **not assume this handoff statement is correct without verification**. The proper action is to inspect the live repository, the authorization record, the R4-D implementation/acceptance evidence, and exact-head CI, then decide whether a separate status-document repair is warranted.
-
-If such a repair is required, it is a documentation/governance consistency task only and must not be expanded into new implementation work without authorization.
-
-## 8. Governance Laws That Remain Active
-
-The following rules remain mandatory:
+## 7. Handoff / Governance Law
 
 - Implementation Complete != Independent Acceptance
 - Tests Green != Authorization
 - CI PASS != Production Approval
-- Human Authorization must precede authorized implementation.
-- Lead Agent performs architecture, contract, planning, authorization boundary, and independent acceptance.
-- ZCODE performs implementation execution only.
-- No self-authorization.
-- No self-acceptance.
-- Protected/frozen boundaries must not be changed without explicit authorization.
-- P14-F remains unauthorized.
+- Human Authorization precedes authorized implementation.
+- Lead Agent owns architecture, contract, authorization boundary, and independent acceptance.
+- ZCODE executes only within explicitly authorized scope.
+- Protected/frozen boundaries cannot be changed without explicit authorization.
 
-## 9. Recommended Next Phase
+## 8. Final Handoff State
 
-**Do not immediately start new code development.**
+**ZCODE P14-F Readiness / Gap Audit: PASS / INDEPENDENTLY ACCEPTED.**
 
-Recommended next action for AI3:
+**P14-F implementation: NOT AUTHORIZED.**
 
-### P14-F Readiness / Gap Audit — READ ONLY
+**Next gate: P14-F Design Contract + Acceptance Matrix, contract/design-only.**
 
-The purpose is to determine what evidence, contract, scope, dependencies, and explicit Human Authorization would be required before any future P14-F work.
-
-The audit should answer at minimum:
-
-1. What is the exact P14-F scope?
-2. Which existing contracts are prerequisites?
-3. Which accepted interfaces are available?
-4. Which artifacts/data are authoritative?
-5. What remains intentionally protected?
-6. What evidence is missing?
-7. What must be frozen before implementation?
-8. What must be explicitly authorized by the project owner?
-9. What must ZCODE be forbidden from changing?
-10. What independent acceptance criteria should be defined before implementation begins?
-
-This audit is **not authorization to implement P14-F**.
-
-## 10. Handoff Protocol for AI3
-
-AI3 should begin with a read-only takeover audit and produce:
-
-```
-TAKEOVER REPORT
-
-Repository:
-
-HEAD:
-
-Current Phase:
-
-Authorization:
-
-Frozen Boundary:
-
-Protected Boundary:
-
-Evidence State:
-
-Risk:
-
-Recommended Next Action:
-```
-
-Only after the takeover audit and an explicit Human Authorization record should ZCODE receive an implementation task.
-
-## 11. Final Handoff State
-
-At this handoff point:
-
-- R4-D Contract: **ACCEPTED**
-- R4-D APPLY: **IMPLEMENTED / INDEPENDENTLY ACCEPTED**
-- R4-D governance: **CLOSED**
-- P13-T: **STOPPED / NOT EXECUTED**
-- P13-U: **PROTECTED**
-- P14-F: **NOT AUTHORIZED**
-- Production approval: **NOT GRANTED**
-- Frozen R4-D artifacts: **PROTECTED**
-- Protected temporal boundary: **PROTECTED**
-- Recommended next action: **P14-F Readiness / Gap Audit, read-only**
+No production approval is granted by this handoff.
