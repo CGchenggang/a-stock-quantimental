@@ -17,5 +17,18 @@ jobs:
           fetch-depth: 0
 
       - name: Validate task manifest and Scope Gate
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          python scripts/governance_gate.py             --base "$GITHUB_BASE_SHA"             --head "$GITHUB_SHA"
+          if [ -z "$PR_BASE_SHA" ]; then
+            echo "FAIL: PR base SHA could not be resolved from the event context"
+            exit 1
+          fi
+          if [ -z "$PR_HEAD_SHA" ]; then
+            echo "FAIL: PR head SHA could not be resolved from the event context"
+            exit 1
+          fi
+          echo "gate base=${PR_BASE_SHA}"
+          echo "gate head=${PR_HEAD_SHA}"
+          python scripts/governance_gate.py --base "$PR_BASE_SHA" --head "$PR_HEAD_SHA"

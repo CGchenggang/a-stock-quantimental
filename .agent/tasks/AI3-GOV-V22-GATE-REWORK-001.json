@@ -1,0 +1,56 @@
+{
+  "task_id": "AI3-GOV-V22-GATE-REWORK-001",
+  "agent": "AI3",
+  "zcode_agent": "ZCODE-A3",
+  "base_commit": "e33b649189af17547c73a2e131f808c08baa62ed",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [
+    "governance/GOVERNANCE-GATES-v2.md",
+    "governance/PARALLEL-GOVERNANCE-v2.md",
+    "governance/AI1-INTEGRATION-CONTROLLER-v2.md",
+    "governance/INTEGRATION-AUDIT-v1.md",
+    "governance/WORKTREE-BRANCH-RULES-v1.md",
+    "governance/ZCODE-A2-PROMPT-v1.md",
+    "governance/ZCODE-A3-PROMPT-v1.md",
+    "governance/audits/AI3-GOV-PILOT-001.md",
+    "governance/audits/AI2-GOV-PILOT-001.md",
+    "governance/audits/AI3-GATE-VALIDATION-001.md",
+    "governance/audits/AI3-GOV-V22-GATE-DESIGN-001.md",
+    "governance/PARALLEL-GOVERNANCE-v2.2-ADDENDUM.md",
+    "scripts/governance_gate.py",
+    ".github/workflows/governance-gate.yml",
+    ".agent/tasks/AI3-GOV-V22-GATE-IMPLEMENT-001.json"
+  ],
+  "write_set": [
+    "scripts/governance_gate.py",
+    ".github/workflows/governance-gate.yml",
+    "tests/test_governance_gate_v22.py",
+    ".agent/tasks/AI3-GOV-V22-GATE-REWORK-001.json"
+  ],
+  "forbidden_set": [
+    "governance/**",
+    "src/**",
+    "data/**",
+    "pyproject.toml",
+    ".agent/task-template.json"
+  ],
+  "shared_interfaces": [],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "HUMAN-AUTH-V22-PHASE1-AND-EXECUTABLE-IMPLEMENTATION-2026-10-07",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [
+      "python -m pytest -q tests/test_governance_gate_v22.py"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "READY_FOR_AUDIT"
+}
