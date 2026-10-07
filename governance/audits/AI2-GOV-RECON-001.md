@@ -79,6 +79,28 @@ No file outside this report was modified by this task.
 | C2 | v1 documents make the task status vocabulary {IN_PROGRESS, BLOCKED, READY_FOR_AUDIT, REJECTED} (+ alias READY_FOR_AI1_AUDIT) the worker-facing contract | TASK-STATE-MACHINE-v2 defines an 11-state lifecycle as the task state space; the v1 template Status line cannot represent it | template Status line vs state-machine table (AI2 pilot #3/#10) |
 | C3 | Documentation implies glob direct-child semantics for `governance/*.md` (so audit deliverables under `governance/audits/` are not covered) | Executable gate resolves the same pattern as cross-directory: `fnmatch.fnmatchcase('governance/audits/AI2-GOV-RECON-001.md', 'governance/*.md') == True` (re-verified by this run, not taken from AI3 on trust); forbidden check runs over all changed files with no write_set precedence and no manifest exemption | scripts/governance_gate.py `matches()` (fnmatch use) and `run_scope_gate()` (forbidden over all files; only out_of_scope exempts the manifest). Live consequence: the drill-PR gate failures observed by AI3 (#8) |
 
+Live reproduction on this task's own deliverable (post-commit bf72046; real gate,
+temp manifest outside the repo transcribing this task's semantics verbatim —
+`write_set: [governance/audits/AI2-GOV-RECON-001.md]`, `forbidden_set:
+["governance/*.md"]`):
+
+```
+$ python scripts/governance_gate.py --manifest <tmp> \
+    --base e33b649189af17547c73a2e131f808c08baa62ed --head HEAD
+TASK_ID: AI2-GOV-RECON-001
+AGENT: AI2
+MANIFEST: E:\git-ground\tmp-recon-gate-selftest.json
+BASE_COMMIT: e33b649189af17547c73a2e131f808c08baa62ed
+FORBIDDEN_SET violations:
+  - governance/audits/AI2-GOV-RECON-001.md
+FAIL: Scope Gate
+gate exit=1
+```
+
+The gate deterministically blocks this task's own authorized deliverable under
+the v1-template's pattern convention. C3 is therefore proven end-to-end: code
+reading, fnmatch semantics, and a live gate run agree.
+
 ### Underspecifications (U) — something needed is not stated
 
 | ID | Gap | Source |
