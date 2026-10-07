@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  governance-scope:
+  governance-scope-conflict:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,4 +18,18 @@ jobs:
 
       - name: Validate task manifest and Scope Gate
         run: |
-          python scripts/governance_gate.py             --base "$GITHUB_BASE_SHA"             --head "$GITHUB_SHA"
+          python scripts/governance_gate.py \
+            --base "$GITHUB_BASE_SHA" \
+            --head "$GITHUB_SHA"
+
+      - name: Conflict Gate and Shared Interface Lock
+        run: |
+          MANIFEST=$(find .agent/tasks -maxdepth 1 -type f -name '*.json' | sort)
+          COUNT=$(printf '%s\n' "$MANIFEST" | sed '/^$/d' | wc -l)
+          if [ "$COUNT" -ne 1 ]; then
+            echo "FAIL: expected exactly one PR-local task manifest, found $COUNT"
+            exit 1
+          fi
+          python scripts/governance_conflict_gate.py \
+            --manifest "$MANIFEST" \
+            --registry ".agent/active-tasks.json"
