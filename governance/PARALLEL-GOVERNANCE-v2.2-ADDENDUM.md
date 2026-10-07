@@ -223,3 +223,89 @@ of the implementation, to be repaired by the Phase 2 executable-alignment
 task. Until that repair lands and is accepted, the normative contract of this
 addendum governs design and review; it does not change what the current
 binary behavior of the gate is.
+
+## 11. v2.3 amendment — write∩forbidden language containment (2026-10-08)
+
+### 11.1 Supersession note (C2 alignment scope)
+
+This amendment supersedes the v2.2 non-modification promise stated in the
+addendum header (L13–L22) for exactly the following four legacy governance
+files, and only for the C2 vocabulary alignment performed by
+A-V23-CONTRACT-001:
+
+- `governance/TASK-TEMPLATE-v1.md`
+- `governance/ZCODE-A2-PROMPT-v1.md`
+- `governance/ZCODE-A3-PROMPT-v1.md`
+- `governance/PROTOCOL-v1.md`
+
+The supersession is authorized by AI1's v2.3 deferral ruling and the owner
+directive of 2026-10-08. No other frozen document (in particular
+`TASK-STATE-MACHINE-v2.md`, `SHARED-INTERFACE-LOCK-v2`,
+`GOVERNANCE-GATES-v2`, `EXECUTION-GUIDE-v2.1`, `PARALLEL-GOVERNANCE-v2` and
+any tag) is modified under this amendment. The canonical state machine and
+vocabulary are untouched.
+
+### 11.2 Rule — write∩forbidden language containment
+
+A task manifest FAILS at load when some `write_set` pattern's ENTIRE path
+language is subsumed by some `forbidden_set` pattern — i.e. every path that
+would be permitted by that write pattern is already denied by that forbidden
+pattern. The check is purely syntactic over the pattern language defined in
+§2 and is performed in addition to the per-file runtime deny-wins of §1
+(which remains unchanged).
+
+The check is defined by exactly three deterministic rules.
+
+**(a)** An exact write pattern that is matched by any forbidden pattern fails
+at load.
+
+**(b)** A write pattern with dir prefix `dW` (single-star or trailing `/**`
+form) fails at load against a forbidden trailing-`**` pattern `dF/**` iff
+`dW == dF` or `dW` starts with `dF + "/"`.
+
+**(c)** A write pattern `d/compW` fails at load against a forbidden pattern
+`d/compF` with the same literal directory `d` iff `compF == "*"`.
+
+### 11.3 Definitions
+
+- **dir prefix** of a pattern = all leading path components before the first
+  component that contains a wildcard (`*` or `**`), rejoined with `/`. The
+  dir prefix is the empty string when the first component itself carries a
+  wildcard.
+- **Top-level-wildcard patterns** — patterns whose dir prefix is the empty
+  string — are NOT analyzed by rules (b) and (c). That boundary is
+  documented here; their enforcement is the existing runtime deny-wins of
+  §1, which remains unchanged.
+
+### 11.4 Partial overlap is legal
+
+A write set and a forbidden set whose path languages partially overlap but
+neither subsumes the other is legal and the manifest MUST still load.
+Example: `write_set: [src/**]` + `forbidden_set: [src/secret.py]` is a
+partial-overlap pair; the manifest loads, and per-file runtime deny-wins
+(§1) continues to enforce the per-file denial of `src/secret.py`. The load-
+time containment check only fires on total subsumption.
+
+### 11.5 Supersession of the v2.2 exact-duplicate check
+
+Rule (a) subsumes and REPLACES the v2.2 exact-duplicate load-time check
+(introduced with the Phase 1 executable gate). Implementations MUST replace
+the v2.2 exact-duplicate check with rule (a); they MUST NOT add rule (a)
+alongside the v2.2 check as a separate pass.
+
+### 11.6 Conservative boundary (MUST-NOT)
+
+Implementations MUST NOT analyze component-level literal containment beyond
+rules (a)–(c) above. In particular:
+
+- No substring/`contains`/`startswith` test on the wildcard-bearing
+  component itself (e.g. `compW` against `compF` when both are literals but
+  not equal); that would be a finer-grained analysis than the contract
+  permits.
+- No cross-directory structural inference between unrelated dir prefixes.
+- No interpretation of `*` or `**` beyond the §2 semantics when evaluating
+  rules (b) and (c).
+
+Implementations that wish to perform stronger static analysis MUST do so as
+an advisory layer only, and MUST NOT cause a manifest to fail at load on
+grounds outside rules (a)–(c).

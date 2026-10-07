@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Executable Scope Gate for Parallel Agent Governance v2.2 (rework).
+"""Executable Scope Gate for Parallel Agent Governance v2.3 (rework).
 
-Implements AI3-GOV-V22-GATE-REWORK-001 against the v2.2 contract:
+Implements AI3-GOV-V22-GATE-REWORK-001 against the v2.2/v2.3 contract:
 - PARALLEL-GOVERNANCE-v2.2-ADDENDUM (AI2-GOV-V22-ADDENDUM-IMPLEMENT-001):
   section 1 deny-wins FORBIDDEN_SET, section 2 path pattern semantics,
   section 3 manifest self-exemption, section 4 canonical state vocabulary,
   section 8 Always-Protected Boundary.
+- PARALLEL-GOVERNANCE-v2.2-ADDENDUM §11 (v2.3 amendment): write∩forbidden
+  language containment, exactly the three rules (a)/(b)/(c); top-level-
+  wildcard patterns and deeper literal-glob containment are NOT analyzed
+  (§11.3/§11.6 MUST-NOT). Runtime deny-wins of §1 remains unchanged.
 - AI3-GOV-V22-GATE-DESIGN-001: safe normalization, component-aware
   matching, base/head acquisition, gate boundaries.
 
@@ -256,22 +260,125 @@ def _validate_authorization(data: dict[str, Any]) -> None:
             fail(f"authorization.{key} must be a boolean")
 
 
-def _write_forbidden_exact_duplicate(data: dict[str, Any]) -> list[str]:
-    """Normalized patterns that appear verbatim in BOTH write_set and
-    forbidden_set.
+# v2.3 write∩forbidden language containment
+# (PARALLEL-GOVERNANCE-v2.2-ADDENDUM §11; TASK-DEPENDENCY-SCHEMA-v2 rule 14).
+#
+# The check is purely syntactic over the pattern language of addendum §2 and
+# is performed in addition to the per-file runtime deny-wins of addendum §1
+# (which remains unchanged).
+#
+# Boundary (addendum §11.3 / §11.6 MUST-NOT):
+#   - top-level-wildcard patterns (empty dir prefix) are NOT analyzed by
+#     rules (b) and (c); their enforcement is the runtime deny-wins of §1;
+#   - deeper literal-glob containment (substring/contains/startswith on the
+#     wildcard-bearing component itself, cross-directory structural
+#     inference, etc.) is NOT analyzed; implementations that wish to perform
+#     stronger static analysis MUST do so as an advisory layer only, and
+#     MUST NOT cause a manifest to fail at load on grounds outside rules
+#     (a)–(c).
+#
+# The three deterministic rules (addendum §11.2):
+#   (a) An exact write pattern that is matched by any forbidden pattern
+#       fails at load.
+#   (b) A write pattern with dir prefix dW (single-star or trailing-/**
+#       form) fails at load against a forbidden trailing-** pattern dF/**
+#       iff dW == dF or dW.startswith(dF + "/").
+#   (c) A write pattern d/compW fails at load against a forbidden pattern
+#       d/compF with the same literal directory d iff compF == "*".
+#
+# Rule (a) subsumes and REPLACES the v2.2 exact-duplicate load-time check
+# (addendum §11.5).
 
-    v2.2 AI1 D4 ruling (B-V22-GATE-001 R3): load-time rejection is scoped
-    to exact string-equality after normalization. Full pattern-intersection
-    analysis (e.g. write 'src/a.py' with forbidden 'src/**' — where the
-    write set is a subset of the forbidden set's language) is DEFERRED to
-    v2.3. Overlapping-but-not-identical patterns load successfully; the
-    runtime deny-wins rule still fails any concrete path that matches a
-    forbidden pattern, regardless of whether it also matches a write
-    pattern.
+
+def _is_exact(pattern: str) -> bool:
+    """True if pattern contains no wildcard ('*' nor '**')."""
+    return "*" not in pattern
+
+
+def _is_literal(segment: str) -> bool:
+    """True if a path component / dir prefix contains no wildcard."""
+    return "*" not in segment
+
+
+def _dir_prefix(pattern: str) -> str:
+    """Addendum §11.3 'dir prefix': all leading path components before the
+    first component that carries a wildcard ('*' or '**'), rejoined with
+    '/'. Returns the empty string when the very first component itself
+    carries a wildcard (top-level-wildcard pattern)."""
+    segments = pattern.split("/")
+    leading: list[str] = []
+    for seg in segments:
+        if "*" in seg:
+            break
+        leading.append(seg)
+    return "/".join(leading)
+
+
+def _is_trailing_doublestar(pattern: str) -> bool:
+    """True for the 'd/**' form (the only valid placement of '**' per
+    addendum §2)."""
+    return pattern.endswith("/**")
+
+
+def _split_last_component(pattern: str) -> tuple[str, str]:
+    """Split pattern into (dir, last_component). Single-component patterns
+    return ('', pattern)."""
+    if "/" in pattern:
+        dir_part, _, comp = pattern.rpartition("/")
+        return dir_part, comp
+    return "", pattern
+
+
+def _classify_containment(write: str, forbidden: str) -> str | None:
+    """Return 'a', 'b' or 'c' when (write, forbidden) triggers a load-time
+    failure under addendum §11, else None.
+
+    Rule ordering: (a) first because exact writes are the most specific
+    case; without this ordering rule (b) would double-fire on exact writes
+    against trailing-** forbiddens that share the dir prefix.
     """
-    writes = {normalize(entry) for entry in data["write_set"]}
-    forbiddens = {normalize(entry) for entry in data["forbidden_set"]}
-    return sorted(writes & forbiddens)
+    # Rule (a): exact write pattern matched by any forbidden pattern.
+    if _is_exact(write) and path_matches(write, forbidden):
+        return "a"
+
+    # Rule (b): write with non-empty dir prefix, containing at least one
+    # wildcard (single-star form or trailing-/** form), against a
+    # forbidden trailing-/** pattern.
+    if _is_trailing_doublestar(forbidden):
+        w_dir = _dir_prefix(write)
+        if w_dir and "*" in write:
+            f_dir = _dir_prefix(forbidden)  # for 'dF/**', this is 'dF'
+            if w_dir == f_dir or w_dir.startswith(f_dir + "/"):
+                return "b"
+
+    # Rule (c): write d/compW vs forbidden d/compF with the same literal
+    # directory d, iff compF == "*". The write must not be a top-level-
+    # wildcard pattern (§11.3), enforced by requiring a non-empty literal d.
+    w_dir, _w_comp = _split_last_component(write)
+    f_dir, f_comp = _split_last_component(forbidden)
+    if w_dir and w_dir == f_dir and _is_literal(w_dir) and f_comp == "*":
+        return "c"
+
+    return None
+
+
+def _write_forbidden_containment(
+    data: dict[str, Any],
+) -> list[tuple[str, str, str]]:
+    """v2.3 write∩forbidden language containment (addendum §11).
+
+    Returns a list of (write, forbidden, rule) violations, where rule ∈
+    {'a', 'b', 'c'}, sorted for deterministic error messages.
+    """
+    writes = [normalize(entry) for entry in data["write_set"]]
+    forbiddens = [normalize(entry) for entry in data["forbidden_set"]]
+    violations: list[tuple[str, str, str]] = []
+    for w in writes:
+        for f in forbiddens:
+            rule = _classify_containment(w, f)
+            if rule is not None:
+                violations.append((w, f, rule))
+    return violations
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
@@ -308,12 +415,15 @@ def load_manifest(path: Path) -> dict[str, Any]:
     _validate_pattern_entries(data)
     _validate_authorization(data)
 
-    duplicates = _write_forbidden_exact_duplicate(data)
-    if duplicates:
+    violations = _write_forbidden_containment(data)
+    if violations:
+        detail = "; ".join(
+            f"write {w!r} subsumed by forbidden {f!r} (rule {rule})"
+            for w, f, rule in violations
+        )
         fail(
-            "manifest is self-contradictory: write_set and forbidden_set "
-            "contain identical patterns (deny-wins would reject every such "
-            "path): " + "; ".join(repr(d) for d in duplicates)
+            "manifest is self-contradictory: write subsumed by forbidden "
+            "(v2.3 addendum §11 / schema rule 14): " + detail
         )
 
     acceptance = data["acceptance"]

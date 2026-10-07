@@ -1,0 +1,48 @@
+{
+  "task_id": "ZCODE-V23-GATES-001",
+  "agent": "AI1",
+  "zcode_agent": "ZCODE control plane (v8); Group A/B executed by bound claude-code workers",
+  "base_commit": "30d8c26c122c2559bbf047d98edc8081b351612b",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    "governance/TASK-TEMPLATE-v1.md",
+    "governance/ZCODE-A2-PROMPT-v1.md",
+    "governance/ZCODE-A3-PROMPT-v1.md",
+    "governance/PROTOCOL-v1.md",
+    "governance/TASK-DEPENDENCY-SCHEMA-v2.md",
+    "governance/PARALLEL-GOVERNANCE-v2.2-ADDENDUM.md",
+    "scripts/governance_gate.py",
+    "tests/test_governance_gate_v22.py"
+  ],
+  "forbidden_set": [
+    "src/**",
+    "data/**",
+    "docs/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [
+    "manifest schema: governance/TASK-DEPENDENCY-SCHEMA-v2.md (incl. new rule 14)",
+    "pattern language + containment: governance/PARALLEL-GOVERNANCE-v2.2-ADDENDUM.md sections 2 and 11",
+    "canonical task states: TASK-STATE-MACHINE-v2 11-state vocabulary (unchanged)"
+  ],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "AI1-V22-DESIGN-REVIEW-001 v2.3 deferral rulings (C2 vocabulary; full pattern-intersection analysis) + owner directive 2026-10-08 to continue the next phase (ZCODE-V8-V23-001); task touches protected boundary paths",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [
+      "python -m pytest tests/test_governance_gate_v22.py -q",
+      "python -m pytest tests/ -q"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "ACCEPTED"
+}

@@ -15,4 +15,4 @@ Run relevant syntax/import/unit/integration/build checks. Do not delete, disable
 Before commit: inspect status, diff and diff-stat. Commit as:
 `[AI3][<TASK-ID>] <short description>`
 
-Completion status may only be READY_FOR_AI1_AUDIT after the work is complete. Report task ID, base commit, commit, files, tests/results, risks and limitations.
+Completion status may only be READY_FOR_AUDIT (READY_FOR_AI1_AUDIT = deprecated display alias; see v2.2 addendum §4) after the work is complete. Report task ID, base commit, commit, files, tests/results, risks and limitations.
