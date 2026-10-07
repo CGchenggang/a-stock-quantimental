@@ -1,0 +1,37 @@
+# P14-F Acceptance Matrix — Research-Only Feature Registry & Information-to-Research Integration
+
+> STATUS: DRAFT — P14-F-DESIGN-001 — bound to
+> `docs/contracts/P14-F-DESIGN-CONTRACT.md` (v1, P14F2-001..024).
+> Acceptance Matrix rows P14F2-M-01..M-19; every row maps to a contract
+> invariant and defines verification method, pass condition, and failure
+> behavior. STATUS becomes frozen only upon independent Contract
+> acceptance.
+
+| Matrix ID | Contract invariant | Requirement | Verification / Golden | Pass condition | Failure behavior |
+|---|---|---|---|---|---|
+| P14F2-M-01 | P14F2-001 | Registry exists as a single committed canonical JSON document at `docs/contracts/p14f/FEATURE_REGISTRY.json`; no competing feature list in code | File check + canonical-bytes recompute | File present, canonical bytes stable, no duplicate authority | Registry missing / non-canonical → FAIL CLOSED |
+| P14F2-M-02 | P14F2-002 | Every entry carries name, definition_version, computation_identity, source_lineage, semantics, pit_authority, implementation_identity | Schema validation golden | All fields present and well-typed for all entries | Any missing/ill-typed field → FAIL CLOSED |
+| P14F2-M-03 | P14F2-003 | definition_version = `<path>@<git blob sha>`, derivable from the repo | `git ls-tree` / `git cat-file` check per entry | Every referenced blob exists at the implementation HEAD and matches | Blob missing/mismatch → FAIL CLOSED (GF-03) |
+| P14F2-M-04 | P14F2-004 | Feature identity = (name, definition_version, computation_identity) equality | Golden: same-name/different-blob pairs have different identity hashes | Identity derivation deterministic and discriminating | Identity collision → FAIL CLOSED |
+| P14F2-M-05 | P14F2-005 | Any change to a defining file's blob forces a new definition_version | Golden: simulate blob change → derived version changes | New blob ⇒ new version (no hand-written versions) | Stale version accepted → FAIL |
+| P14F2-M-06 | P14F2-006 | feature_set_id = "fs-" + SHA256(canonical ordered [name, definition_version] list) | Recompute at registry load | Recomputed id == referenced id | Id drift → FAIL CLOSED (GF-01/07) |
+| P14F2-M-07 | P14F2-007 | The initial ordered set is the 6 calibrated features in frozen order | Order check vs contract §4 table | Exact order: momentum, volatility, trend, volume_ratio, industry_relative_return_5, industry_relative_return_20 | Order drift → different id → FAIL CLOSED |
+| P14F2-M-08 | P14F2-008 | No runtime feature selection (best/latest/first/arbitrary forbidden) | Static scan of the consuming code + resolver signature review | Single registry-referenced set per packet | Any selection branch → FAIL |
+| P14F2-M-09 | P14F2-009 | Registry READ-ONLY in operation; evolution = governance commit pair | Digest check across a full research run (G10-pattern) | Registry bytes unchanged | Runtime write → FAIL |
+| P14F2-M-10 | P14F2-010 | Initial registry content = the 6 authorized definitions (blob-pinned) | Content golden vs the contract §4 table + P13-Q factor_list | Recomputed feature_set_id == fs-d1f3bdca…3afe | Mismatch → STOP (P14F2-010) |
+| P14F2-M-11 | P14F2-011/012 | R4-A packet carries exactly the 6 registry features, assembled via the frozen machinery (`build_local_factor_rows` + `build_universe_industry_relative_context_maps`) | Packet golden: names, order, values vs independent assembly | Six values per row, registry order, no new computation | Missing/extra/reordered → FAIL |
+| P14F2-M-12 | P14F2-013 | Missing-feature rows are dropped deterministically (whole-row) and counted | Golden: inject a row with a missing feature | Row dropped, drop count surfaced in the run result, universe unchanged | Silent partial packet → FAIL |
+| P14F2-M-13 | P14F2-014 | Feature-set mismatch reaches the R4-D resolver E4 gate unchanged (no weakening) | Golden: 4-factor packet → INELIGIBLE(feature_set_mismatch) preserved | Gate semantics byte-compatible with the accepted resolver | Weakened gate → FAIL |
+| P14F2-M-14 | P14F2-015 | Deterministic packet assembly + replay (identical inputs → identical packet → identical resolver block → identical ledger provenance) | Double-run byte comparison (R4-B replay pattern) | Byte-identical across runs and input orderings | Any drift → FAIL |
+| P14F2-M-15 | P14F2-016 | No registry entry or assembled row references decision dates ≥ 2026-09-23 | Post-run virgin scan over all assembled rows | Max decision date ≤ 2026-09-22 | Any virgin row → FAIL + STOP |
+| P14F2-M-16 | P14F2-017 | Holdout/virgin data excluded from feature definition discovery and registry content | Registry content audit + history scan | Zero virgin references | Any virgin-derived entry → FAIL + STOP |
+| P14F2-M-17 | P14F2-018 | P13-U guard unchanged; P14-D/P14-E authorities untouched | `assert_research_zone` regression suite + authority-surface diff | Guard fires on ≥ 2026-09-23; authority files byte-identical | Guard bypass → FAIL + STOP |
+| P14F2-M-18 | P14F2-019/020 | Registry integrity chain (bytes → sha256 → feature_set_id → code reference) and no runtime regeneration | Load-time recompute golden (GF-01) + immutability check | Recompute == reference; registry never rewritten at runtime | Mismatch → FAIL CLOSED |
+| P14F2-M-19 | P14F2-011 + R4D-014 | E4 gate transitions honestly: with the 6-factor registry packet the resolver returns CALIBRATED (numeric golden vs platt formula on the research_end day); frozen model/calibration SHAs unchanged through the whole flow | G6-pattern numeric golden + frozen SHA post-check | CALIBRATED with formula-exact probability; 4 frozen SHAs identical pre/post | Probability not formula-exact or any SHA change → FAIL CLOSED |
+
+## Standing rows (inherited, unchanged)
+
+- Exact-head CI for the final implementation HEAD (P14F2-M-19 evidence includes the run id).
+- Full pytest double-run identical; P14-C/D/E audits exit 0; P13-M regression green.
+- P13-T = STOPPED / NOT EXECUTED; P13-U = PROTECTED; P14-F implementation authorization
+  required BEFORE any code (this Matrix governs that implementation; it grants nothing).
