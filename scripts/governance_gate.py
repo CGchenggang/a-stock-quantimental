@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal executable governance gates for Parallel Agent Governance v2.1."""
+"""Executable Scope Gate for Parallel Agent Governance v2.1."""
 
 from __future__ import annotations
 
@@ -51,6 +51,41 @@ def matches(path: str, patterns: list[str]) -> bool:
     return False
 
 
+def changed_files(base: str, head: str) -> list[str]:
+    command = ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...{head}"]
+    try:
+        result = subprocess.run(
+            command,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        fail(f"git diff failed: {exc.stderr.strip()}")
+    return [normalize(line) for line in result.stdout.splitlines() if line.strip()]
+
+
+def select_manifest(changed: list[str], explicit: str | None) -> Path:
+    if explicit:
+        path = Path(explicit)
+        if not path.is_file():
+            fail(f"manifest not found: {path}")
+        return path
+
+    candidates = [
+        Path(path)
+        for path in changed
+        if path.startswith(".agent/tasks/") and path.endswith(".json")
+    ]
+    if len(candidates) != 1:
+        fail(
+            "exactly one PR-local task manifest is required under "
+            ".agent/tasks/*.json; found "
+            + str(len(candidates))
+        )
+    return candidates[0]
+
+
 def load_manifest(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -90,27 +125,21 @@ def load_manifest(path: Path) -> dict[str, Any]:
     return data
 
 
-def changed_files(base: str, head: str) -> list[str]:
-    command = ["git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...{head}"]
-    try:
-        result = subprocess.run(
-            command,
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError as exc:
-        fail(f"git diff failed: {exc.stderr.strip()}")
-
-    return [normalize(line) for line in result.stdout.splitlines() if line.strip()]
-
-
 def run_scope_gate(manifest: dict[str, Any], files: list[str]) -> int:
     write_set = [normalize(p) for p in manifest["write_set"]]
     forbidden_set = [normalize(p) for p in manifest["forbidden_set"]]
 
     forbidden = [path for path in files if matches(path, forbidden_set)]
-    out_of_scope = [path for path in files if not matches(path, write_set)]
+    out_of_scope = [
+        path for path in files
+        if path.startswith(".agent/tasks/")
+        or path in {"scripts/governance_gate.py", ".github/workflows/governance-gate.yml"}
+    ]
+    out_of_scope = [
+        path for path in files
+        if path not in {".agent/tasks/" + Path(manifest["task_id"]).name}
+        and not matches(path, write_set)
+    ]
 
     if forbidden:
         print("FORBIDDEN_SET violations:")
@@ -133,15 +162,19 @@ def run_scope_gate(manifest: dict[str, Any], files: list[str]) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run governance v2.1 scope gates.")
-    parser.add_argument("--manifest", default=".agent/task.json")
+    parser = argparse.ArgumentParser(description="Run governance v2.1 Scope Gate.")
+    parser.add_argument("--manifest", default=None)
     parser.add_argument("--base", required=True)
     parser.add_argument("--head", required=True)
     args = parser.parse_args()
 
-    manifest = load_manifest(Path(args.manifest))
+    files = changed_files(args.base, args.head)
+    manifest_path = select_manifest(files, args.manifest)
+    manifest = load_manifest(manifest_path)
+
     print(f"TASK_ID: {manifest['task_id']}")
     print(f"AGENT: {manifest['agent']}")
+    print(f"MANIFEST: {manifest_path}")
     print(f"BASE_COMMIT: {manifest['base_commit']}")
 
     if normalize(args.base) != normalize(manifest["base_commit"]):
@@ -150,7 +183,6 @@ def main() -> int:
             "the task base is not frozen."
         )
 
-    files = changed_files(args.base, args.head)
     return run_scope_gate(manifest, files)
 
 
