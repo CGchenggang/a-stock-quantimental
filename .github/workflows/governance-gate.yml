@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  governance-scope:
+  governance-scope-conflict-control-plane:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -16,6 +16,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate task manifest and Scope Gate
+      - name: Scope Gate
         run: |
-          python scripts/governance_gate.py             --base "$GITHUB_BASE_SHA"             --head "$GITHUB_SHA"
+          python scripts/governance_gate.py \
+            --base "$GITHUB_BASE_SHA" \
+            --head "$GITHUB_SHA"
+
+      - name: State Machine Gate
+        run: |
+          python scripts/test_governance_state_gate.py
