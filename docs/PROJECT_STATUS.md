@@ -3266,3 +3266,63 @@ the historical acceptance record for that baseline.
 - P14-F: NOT AUTHORIZED
 - P13-T: STOPPED / NOT EXECUTED
 - P13-U: PROTECTED
+
+## R4-D APPLY — Implementation — 2026-10-07
+
+**Authorization.** R4-D-APPLY-HUMAN-AUTHORIZATION-001 (GRANTED — HUMAN
+AUTHORIZATION, authorized baseline `18a8235…76d`; authorization record
+committed separately at `cbf7f14…d5d` before implementation). Status:
+**IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE** — this record is not
+an acceptance decision.
+
+**Implemented (contract v2, R4D-001..019).**
+`src/astock_v2/model/apply_path.py` — the probability resolver:
+consumes the FROZEN MODEL_APPLICATION + CALIBRATION artifacts
+(read-only; sha256 gates vs manifests AND the audited frozen values —
+G15 FAIL CLOSED), enforces G12/G13/G14 binding consistency and the
+G16 historical/forward separation as integrity gates, and produces the
+R4D-009 probability block with explicit states (E3 temporal
+DATE-granular split_date ≤ as_of ≤ research_end; E5 scope; E4 exact
+feature-set equality — a superset is a mismatch). Platt formula
+verbatim; no silent fallback (R4D-010); policy identity frozen
+(threshold_platt_p50, threshold 0.5).
+
+**R4-A integration point (the single authorized production touch,
+R4D-014).** `research_run.py`: the model block now carries the resolver
+output (`model.r4d` = the full probability block) and the ledger
+`input_snapshot` gains `r4d_probability` (G9 provenance chain complete:
+Recommendation → Probability → Calibration → Model → Features →
+ResearchPacket → P14-E → P14-D). `orchestrator.py` `research_state`
+consumes the block when CALIBRATED (frozen policy threshold 0.5 →
+PAPER_TEST; quality/risk gates unchanged); legacy packets keep the
+previous scaffold behavior.
+
+**Honest current state.** With the current 4-factor research packet the
+resolver returns `INELIGIBLE(feature_set_mismatch)` (the calibrated
+lineage requires the 6-factor set) — no silent fallback; on historical
+as_ofs (< split 2025-01-01) `INELIGIBLE(temporal_below_split)`. On the
+research_end day (2026-09-22) with a 6-factor packet the CALIBRATED
+path is reachable (golden-tested with the numeric formula golden).
+
+**Tests.** `tests/test_r4d_apply_path.py` — 21 golden checks (G1 valid
+apply with independent numeric golden + replay; G2 calibration/model
+missing → NOT_AVAILABLE; G3 policy identity/threshold carried
+explicitly; G4/G5/G5b temporal boundaries — DATE-granular,
+research_end day inside, first virgin day outside; G6 scope; G7/G14
+feature-set mismatch incl. supersets; G8 deterministic replay; G9
+ledger provenance; G10 registry read-only digests; G11–G16 integrity
+fail-closed set). R4-A/B regressions adapted to the contract block
+semantics (22 tests).
+
+**Verification.** Full pytest **680 passed / 0 failed** (double run
+identical); P14-C/D/E audits exit 0; P13-M 3 passed; frozen artifact
+SHAs re-verified unchanged post-implementation; registry digests
+unchanged (643a3dcd… / 361791f8…); real-data run on the research_end
+day demonstrated the full block with complete provenance.
+
+**Gate:**
+- R4-D APPLY: **IMPLEMENTED / AWAITING INDEPENDENT ACCEPTANCE**
+- R4-D = CONTRACT ACCEPTED / APPLY IMPLEMENTED (ELIGIBLE FOR AUTHORIZATION lineage complete)
+- P14-F: NOT AUTHORIZED
+- P13-T: STOPPED / NOT EXECUTED
+- P13-U: PROTECTED
