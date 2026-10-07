@@ -125,20 +125,15 @@ def load_manifest(path: Path) -> dict[str, Any]:
     return data
 
 
-def run_scope_gate(manifest: dict[str, Any], files: list[str]) -> int:
+def run_scope_gate(manifest: dict[str, Any], files: list[str], manifest_path: Path) -> int:
     write_set = [normalize(p) for p in manifest["write_set"]]
     forbidden_set = [normalize(p) for p in manifest["forbidden_set"]]
 
     forbidden = [path for path in files if matches(path, forbidden_set)]
+    manifest_name = normalize(str(manifest_path))
     out_of_scope = [
         path for path in files
-        if path.startswith(".agent/tasks/")
-        or path in {"scripts/governance_gate.py", ".github/workflows/governance-gate.yml"}
-    ]
-    out_of_scope = [
-        path for path in files
-        if path not in {".agent/tasks/" + Path(manifest["task_id"]).name}
-        and not matches(path, write_set)
+        if path != manifest_name and not matches(path, write_set)
     ]
 
     if forbidden:
@@ -183,7 +178,7 @@ def main() -> int:
             "the task base is not frozen."
         )
 
-    return run_scope_gate(manifest, files)
+    return run_scope_gate(manifest, files, manifest_path)
 
 
 if __name__ == "__main__":
