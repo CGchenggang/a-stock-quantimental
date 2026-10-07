@@ -1,0 +1,33 @@
+{
+  "task_id": "GOV-V22-CONFLICT-INTERFACE-001",
+  "agent": "AI1",
+  "base_commit": "e33b649189af17547c73a2e131f808c08baa62ed",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [
+    "governance/SHARED-INTERFACE-LOCK-v2.md",
+    "governance/TASK-DEPENDENCY-SCHEMA-v2.md",
+    "scripts/governance_gate.py"
+  ],
+  "write_set": [
+    ".agent/active-tasks.json",
+    ".agent/task-template.json",
+    ".github/workflows/governance-gate.yml",
+    "governance/EXECUTION-GUIDE-v2.2.md",
+    "governance/SHARED-INTERFACE-LOCK-v2.md",
+    "scripts/governance_conflict_gate.py",
+    "scripts/test_governance_v22.py"
+  ],
+  "forbidden_set": [],
+  "shared_interfaces": [],
+  "acceptance": {
+    "tests": [
+      "python scripts/test_governance_v22.py"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  }
+}
