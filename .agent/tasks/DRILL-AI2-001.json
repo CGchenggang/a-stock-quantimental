@@ -1,0 +1,12 @@
+{
+  "task_id": "DRILL-AI2-001",
+  "agent": "AI2",
+  "base_commit": "e33b649189af17547c73a2e131f808c08baa62ed",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": ["src/portfolio.py"],
+  "write_set": ["src/portfolio.py"],
+  "forbidden_set": [],
+  "shared_interfaces": [],
+  "acceptance": {"tests": [], "gates": ["scope", "conflict", "test"]}
+}
