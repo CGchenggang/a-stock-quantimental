@@ -33,6 +33,14 @@
 >     registry 增长（新 name / 同名新版本）的精确后果被定义；runtime
 >     selection 禁令扩展到 membership；mismatch 双侧 FAIL CLOSED。
 >     文档-only。
+> v4: NARROW REPAIR — FINAL SEMANTIC CONSISTENCY（2026-10-07）——独立
+>     验收确认 v3 的 authority/membership 模型正确，但残留四处 v2
+>     语义措辞：P14F2-011 "in the registry order"（packet order
+>     authority 应为 resolved frozen-membership order）；P14F2-014
+>     "differs from the registry set"（应为 resolved frozen-membership
+>     feature set，并显式声明 registry 可含额外未绑定特征、packet
+>     不需要整个 registry）；P14F2-005 缺 Scenario A/B 区分；GF-04
+>     同步。全部统一为 v3 membership-closed 语义。文档-only。
 
 ---
 
@@ -163,12 +171,24 @@ features are THE SAME feature iff name, definition_version, and
 computation_identity are all equal. Same name with a different blob =
 a DIFFERENT feature (new definition_version required).
 
-**P14F2-005 (definition_version bump rule)**: any change to the
-defining implementation file's content → new blob → new
-definition_version → a NEW registry entry (the old entry may remain as
-history but the feature_set referencing it changes identity per
-P14F2-006). Definitions MUST NOT be hand-written version strings —
-they are derived from `git ls-tree` at the implementation HEAD.
+**P14F2-005 (definition_version bump rule — two distinct scenarios)**:
+any change to a defining implementation file's content → new blob →
+new definition_version → a NEW registry current entry (the previous
+entry is archived in that name's history; see P14F2-002). The
+governance consequence depends on whether the re-registered name is a
+FROZEN MEMBERSHIP member (per P14F2-006/009):
+
+- **Scenario A — the name is NOT part of any frozen membership**: the
+  existing frozen feature_set_ids are UNCHANGED; no new model
+  authorization is required for existing models.
+- **Scenario B — the name IS a frozen-membership member**: the
+  resolved frozen list changes → the derived feature_set_id changes →
+  mismatch against the frozen binding → FAIL CLOSED → the frozen model
+  requires a NEW MODEL_APPLICATION lineage + a NEW Human
+  Authorization.
+
+Definitions MUST NOT be hand-written version strings — they are
+derived from `git ls-tree` at the implementation HEAD.
 
 ## 3. Feature-Set Identity (P14F2-006..009)
 
@@ -276,9 +296,11 @@ The resulting feature_set_id MUST recompute to
 
 **P14F2-011 (six-factor packet requirement)**: for the R4-D resolver to
 return `CALIBRATED`, the packet must present factor values for exactly
-the 6 registered features, in the registry order, with each value
-computed by the registered implementation (identity verifiable by
-blob) from PIT-visible inputs.
+the 6 registered features, in the resolved frozen-membership order
+(the frozen MODEL_APPLICATION.feature_names order — the registry's
+storage order and `ordering_hint` are display-only and never serve as
+packet order authority), with each value computed by the registered
+implementation (identity verifiable by blob) from PIT-visible inputs.
 
 **P14F2-012 (assembly source)**: the two industry-relative features are
 assembled via the accepted
@@ -294,10 +316,14 @@ never imputed, never partially packeted. Drops are counted and visible
 in the run result (no silent shrinkage of the universe).
 
 **P14F2-014 (mismatch behavior)**: a packet whose feature set differs
-from the registry set is rejected by the R4-D resolver E4 gate
-(`feature_set_mismatch`) — the registry does not weaken the gate, and
+from the **resolved frozen-membership feature set** (the set derived
+from the frozen MODEL_APPLICATION.feature_names, per P14F2-006) is
+rejected by the R4-D resolver E4 gate (`feature_set_mismatch`) — the
+registry does not weaken the gate, and
 approximation/fallback/partial-substitution are forbidden (R4D-010
-inheritance).
+inheritance). The registry MAY contain additional unbound feature
+definitions (Scenario A growth); a packet is never required to carry
+the whole registry — it must match the frozen membership exactly.
 
 **P14F2-015 (determinism & replay)**: packet assembly is deterministic
 (sorted by (decision_time, symbol); one row per (symbol, decision_time));
@@ -378,7 +404,7 @@ registries, CI workflow, P13-T/U.
   mismatch).
 - GF-02 feature_set_id == fs-d1f3bdca…3afe for the initial set.
 - GF-03 definition blob exists at HEAD (`git cat-file`) for every entry.
-- GF-04 packet assembly yields exactly 6 features in registry order.
+- GF-04 packet assembly yields exactly 6 features in the resolved frozen-membership order.
 - GF-05 missing-feature row drop is deterministic and counted.
 - GF-06 resolver E4 accepts the registry-derived set (CALIBRATED path
   reachable with the frozen model on the research_end day, numeric

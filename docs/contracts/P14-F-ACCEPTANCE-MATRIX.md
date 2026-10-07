@@ -3,7 +3,8 @@
 > STATUS: DRAFT — P14-F-DESIGN-001 — bound to
 > `docs/contracts/P14-F-DESIGN-CONTRACT.md` (v3, P14F2-001..024 incl.
 > P14F2-001a authority model; NARROW REPAIRS — FEATURE AUTHORITY
-> CLOSURE (v2) + FEATURE-SET MEMBERSHIP CLOSURE (v3)). Acceptance Matrix rows P14F2-M-01..M-19; every row maps
+> CLOSURE (v2) + FEATURE-SET MEMBERSHIP CLOSURE (v3) + FINAL SEMANTIC
+> CONSISTENCY (v4)). Acceptance Matrix rows P14F2-M-01..M-19; every row maps
 > to a contract invariant and defines verification method, pass
 > condition, and failure behavior. STATUS becomes frozen only upon
 > independent Contract acceptance.
@@ -20,9 +21,9 @@
 | P14F2-M-08 | P14F2-008/001a | No runtime selection of the feature set OR its MEMBERSHIP (best/latest/first/arbitrary/registry-order/subset selection all forbidden); a newly registered feature NEVER enters an already-bound packet | Static scan of the consuming code + resolver signature review | Single registry-referenced set per packet; membership fixed by the frozen feature_names; E4 gate semantics unchanged | Any selection branch, membership mutation, or authority bypass → FAIL |
 | P14F2-M-09 | P14F2-009 | Registry READ-ONLY in operation; evolution = governance commit pair | Digest check across a full research run (G10-pattern) | Registry bytes unchanged | Runtime write → FAIL |
 | P14F2-M-10 | P14F2-010/019 | Initial registry content = the 6 authorized definitions (blob-pinned); every frozen member resolves to EXACTLY ONE current definition; the resolved list closes onto the frozen MODEL_APPLICATION binding | Content golden vs the contract §4 table + P13-Q factor_list; membership-resolution check (exactly one match per member); cross-validation vs the frozen manifest | Recomputed feature_set_id == fs-d1f3bdca…3afe == the frozen binding | Unresolved/ambiguous member or id mismatch → STOP (P14F2-010/019) |
-| P14F2-M-11 | P14F2-011/012 | R4-A packet carries exactly the 6 registry features, assembled via the frozen machinery (`build_local_factor_rows` + `build_universe_industry_relative_context_maps`) | Packet golden: names, order, values vs independent assembly | Six values per row, registry order, no new computation | Missing/extra/reordered → FAIL |
+| P14F2-M-11 | P14F2-011/012 | R4-A packet carries exactly the 6 resolved frozen-membership features, assembled via the frozen machinery (`build_local_factor_rows` + `build_universe_industry_relative_context_maps`) | Packet golden: names, order, values vs independent assembly | Six values per row in the resolved frozen-membership order (the frozen feature_names order), no new computation | Missing/extra/reordered → FAIL |
 | P14F2-M-12 | P14F2-013 | Missing-feature rows are dropped deterministically (whole-row) and counted | Golden: inject a row with a missing feature | Row dropped, drop count surfaced in the run result, universe unchanged | Silent partial packet → FAIL |
-| P14F2-M-13 | P14F2-014 | Feature-set mismatch reaches the R4-D resolver E4 gate unchanged (no weakening) | Golden: 4-factor packet → INELIGIBLE(feature_set_mismatch) preserved | Gate semantics byte-compatible with the accepted resolver | Weakened gate → FAIL |
+| P14F2-M-13 | P14F2-014 | Feature-set mismatch against the resolved frozen-membership feature set reaches the R4-D resolver E4 gate unchanged (no weakening); the registry MAY hold additional unbound definitions — a packet is never required to carry the whole registry | Golden: 4-factor packet → INELIGIBLE(feature_set_mismatch) preserved; unbound-registry-growth scenario leaves the gate intact | Gate semantics byte-compatible with the accepted resolver | Weakened gate → FAIL |
 | P14F2-M-14 | P14F2-015 | Deterministic packet assembly + replay (identical inputs → identical packet → identical resolver block → identical ledger provenance) | Double-run byte comparison (R4-B replay pattern) | Byte-identical across runs and input orderings | Any drift → FAIL |
 | P14F2-M-15 | P14F2-016 | No registry entry or assembled row references decision dates ≥ 2026-09-23 | Post-run virgin scan over all assembled rows | Max decision date ≤ 2026-09-22 | Any virgin row → FAIL + STOP |
 | P14F2-M-16 | P14F2-017 | Holdout/virgin data excluded from feature definition discovery and registry content | Registry content audit + history scan | Zero virgin references | Any virgin-derived entry → FAIL + STOP |
