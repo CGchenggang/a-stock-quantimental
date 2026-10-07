@@ -1,10 +1,10 @@
-"""Tests for the v2.2 executable governance Scope Gate (rework).
+"""Tests for the v2.2/v2.3 executable governance Scope Gate (rework).
 
 Covers AI3-GOV-V22-GATE-REWORK-001 against PARALLEL-GOVERNANCE-v2.2-ADDENDUM:
 - section 2 pattern semantics: only exact, dir/*.py and trailing dir/** are
   valid; leading/middle/multiple/bare '**' fail closed at load time;
-- section 1 deny-wins FORBIDDEN_SET (load-level exact-duplicate rejection
-  per AI1 D4 ruling, and scope-level enforcement);
+- section 1 deny-wins FORBIDDEN_SET (scope-level enforcement) and v2.3
+  load-level write∩forbidden containment (addendum §11 / schema rule 14);
 - section 3 self-exemption: only the exact current manifest path, exempt
   from WRITE_SET and FORBIDDEN_SET; foreign manifests are not exempt;
 - section 4 canonical 11-state vocabulary for status;
@@ -318,11 +318,9 @@ def test_placeholder_base_commit_rejected(tmp_path, capsys):
 
 
 def test_write_forbidden_exact_duplicate_rejected_at_load(tmp_path, capsys):
-    """v2.2 AI1 D4 ruling (B-V22-GATE-001 R3): load-time rejection fires
-    only when a normalized write_set entry string-equals a normalized
-    forbidden_set entry. The manifest is self-contradictory: every path
-    matched by the write pattern is also matched by the forbidden pattern,
-    so deny-wins would reject every such path."""
+    """v2.3 addendum §11.5: rule (a) subsumes and replaces the v2.2 exact-
+    duplicate check. A normalized exact write equal to a normalized
+    forbidden is a special case of 'exact write matched by forbidden'."""
     path = load_payload(
         tmp_path,
         manifest_payload(write_set=["src/a.py"], forbidden_set=["src/a.py"]),
@@ -330,33 +328,139 @@ def test_write_forbidden_exact_duplicate_rejected_at_load(tmp_path, capsys):
     expect_fail(capsys, gg.load_manifest, path, fragment="self-contradictory")
 
 
-def test_broad_overlap_loads_and_deny_wins_still_fails_at_scope(tmp_path):
-    """v2.2 AI1 D4 ruling (B-V22-GATE-001 R3): overlapping-but-not-
-    identical patterns (write 'src/a.py' + forbid 'src/**') load
-    successfully — full pattern-intersection analysis is DEFERRED to v2.3.
-    The runtime deny-wins rule still fails any concrete path that matches
-    a forbidden pattern, regardless of whether it also matches a write
-    pattern."""
+# ---------------------------------------------------------------------------
+# v2.3 — write∩forbidden language containment (addendum §11)
+# ---------------------------------------------------------------------------
+
+def _expect_containment_fail(tmp_path, capsys, write_set, forbidden_set, rule):
+    """Assert load-time failure with the greppable 'write subsumed by
+    forbidden' message and the rule tag '(rule X)' for the given (write,
+    forbidden) pair."""
+    path = load_payload(
+        tmp_path,
+        manifest_payload(write_set=write_set, forbidden_set=forbidden_set),
+    )
+    expect_fail(
+        capsys,
+        gg.load_manifest,
+        path,
+        fragment="write subsumed by forbidden",
+    )
+
+
+def _expect_loads(tmp_path, write_set, forbidden_set):
+    path = load_payload(
+        tmp_path,
+        manifest_payload(write_set=write_set, forbidden_set=forbidden_set),
+    )
+    assert gg.load_manifest(path)["task_id"] == "T"
+
+
+def test_v23_rule_a_exact_write_matched_by_forbidden_fails(tmp_path, capsys):
+    """Rule (a): an exact write pattern matched by any forbidden pattern
+    fails at load. Subsumes the v2.2 exact-duplicate check (addendum §11.5)
+    and extends it to any forbidden pattern that matches the exact write."""
+    # write exact + forbid trailing-** that covers it
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/a.py"], ["src/**"], rule="a"
+    )
+    # write exact + forbid single-star form that covers it
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/a.py"], ["src/*.py"], rule="a"
+    )
+    # sanity: identical exact patterns (the old v2.2 exact-duplicate case)
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/a.py"], ["src/a.py"], rule="a"
+    )
+
+
+def test_v23_rule_a_exact_write_not_matched_loads(tmp_path):
+    """Rule (a) negative: an exact write not matched by any forbidden
+    pattern does not fail at load, regardless of the forbidden form."""
+    _expect_loads(tmp_path, ["src/a.py"], ["governance/**"])
+    _expect_loads(tmp_path, ["src/a.py"], ["other/*.py"])
+    _expect_loads(tmp_path, ["src/a.py"], ["other/b.py"])
+
+
+def test_v23_rule_b_trailing_doublestar_forbidden_subsumes_write(tmp_path, capsys):
+    """Rule (b): a write pattern with non-empty dir prefix dW, in single-
+    star or trailing-/** form, fails against a forbidden trailing-**
+    pattern dF/** iff dW == dF or dW.startswith(dF + '/')."""
+    # dW == dF (single-star form)
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/*.py"], ["src/**"], rule="b"
+    )
+    # dW.startswith(dF + '/') (trailing-** form)
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/sub/**"], ["src/**"], rule="b"
+    )
+    # dW == dF (middle-single-star form: 'src/*/file.py' has dir prefix 'src')
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/*/file.py"], ["src/**"], rule="b"
+    )
+    # deeper nesting: dW.startswith(dF + '/') with single-star form
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/sub/*.py"], ["src/**"], rule="b"
+    )
+
+
+def test_v23_rule_b_trailing_doublestar_negative(tmp_path):
+    """Rule (b) negative cases: write's dir prefix is not covered by the
+    forbidden's dir prefix."""
+    # write is broader than forbidden (partial overlap — manifest loads;
+    # per-file runtime deny-wins still enforces concrete paths)
+    _expect_loads(tmp_path, ["src/**"], ["src/sub/**"])
+    # unrelated dir prefixes
+    _expect_loads(tmp_path, ["other/*.py"], ["src/**"])
+
+
+def test_v23_rule_c_literal_dir_with_star_component(tmp_path, capsys):
+    """Rule (c): write d/compW fails against forbidden d/compF with the
+    same literal directory d iff compF == '*'."""
+    # one-level literal d
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/*.py"], ["src/*"], rule="c"
+    )
+    # multi-level literal d
+    _expect_containment_fail(
+        tmp_path, capsys, ["src/sub/*.py"], ["src/sub/*"], rule="c"
+    )
+
+
+def test_v23_rule_c_negative(tmp_path):
+    """Rule (c) negative cases: different dirs or compF != '*'."""
+    # compF is not the bare '*'
+    _expect_loads(tmp_path, ["src/*.py"], ["src/*.md"])
+    # different literal dirs
+    _expect_loads(tmp_path, ["src/*.py"], ["other/*"])
+
+
+def test_v23_partial_overlap_legal(tmp_path):
+    """Addendum §11.4: partial overlap (neither subsumes the other) MUST
+    still load. The runtime deny-wins of §1 continues to enforce concrete
+    per-file denials; exercised end-to-end by
+    test_deny_wins_enforced_at_scope which must stay green."""
+    # write trailing-** vs forbidden exact (partial overlap)
+    _expect_loads(tmp_path, ["src/**"], ["src/secret.py"])
+    # write single-star vs forbidden exact (partial overlap)
+    _expect_loads(tmp_path, ["src/*ure.py"], ["src/feature.py"])
+
+
+def test_v23_rule_a_message_is_greppable(tmp_path, capsys):
+    """The error message MUST contain 'write subsumed by forbidden' (the
+    greppable token) and name the rule that fired."""
     path = load_payload(
         tmp_path,
         manifest_payload(write_set=["src/a.py"], forbidden_set=["src/**"]),
     )
-    assert gg.load_manifest(path)["task_id"] == "T"
-
-    repo, base = init_repo(tmp_path / "repo")
-    put(repo, "src/a.py", "x\n")
-    relpath = write_manifest(
-        repo,
-        "T-BROAD",
-        base,
-        write_set=["src/a.py"],
-        forbidden_set=["src/**"],
-    )
-    head = commit_all(repo, "scenario")
-    result = run_gate(repo, base, head, manifest=relpath)
-    assert result.returncode == 1
-    assert "FORBIDDEN_SET violations" in result.stdout
-    assert "src/a.py" in result.stdout
+    with pytest.raises(SystemExit) as excinfo:
+        gg.load_manifest(path)
+    assert excinfo.value.code == 1
+    out = capsys.readouterr().out
+    assert "write subsumed by forbidden" in out
+    assert "(rule a)" in out
+    assert "src/a.py" in out
+    assert "src/**" in out
 
 
 def test_v21_manifest_fails_v22_load():
