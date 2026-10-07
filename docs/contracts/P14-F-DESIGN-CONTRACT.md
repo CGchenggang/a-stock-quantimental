@@ -22,6 +22,17 @@
 >     chain（registry_sha256 存 evidence；authoritative binding = 冻结
 >     MODEL_APPLICATION 的 feature_set_id；derived id 交叉验证；双向
 >     FAIL CLOSED；frozen set 变化 = 新模型新授权）。文档-only。
+> v3: NARROW REPAIR — FEATURE-SET MEMBERSHIP CLOSURE（2026-10-07）——
+>     独立验收发现 v2 遗留 membership 闭合缺失：P14F2-019 允许 registry
+>     增长，但 P14F2-006 的 derivation 输入未定义"哪个 ordered subset
+>     构成当前 frozen feature set"。修复 = 正式定义三概念分离：
+>     MEMBERSHIP AUTHORITY = 冻结 MODEL_APPLICATION.feature_names
+>     （ordered、权威、不可变）；registry = DEFINITION authority（按
+>     name 解析 current definition_version）；derived feature_set_id =
+>     从 frozen membership 逐成员解析 registry 后的有序清单哈希。
+>     registry 增长（新 name / 同名新版本）的精确后果被定义；runtime
+>     selection 禁令扩展到 membership；mismatch 双侧 FAIL CLOSED。
+>     文档-only。
 
 ---
 
@@ -114,7 +125,14 @@ the resolver E4 gate rejects any packet that does not match it) — the
 repair is a governance act (new definitions / new model authorization),
 never a runtime adjustment.
 
-**P14F2-002 (feature definition record)**: each entry is
+**P14F2-002 (registry structure & feature definition record)**: the
+registry's top-level object is `{"definitions": {<name>: <entry>},
+"registry_version": <int>}`. `definitions` is keyed by feature name and
+holds EXACTLY ONE current entry per name — re-registering a name with a
+new definition_version REPLACES the current entry and moves the previous
+one into that name's `history` array (history is preserved for audit
+traceability but NEVER participates in feature_set_id derivation or
+resolution; see P14F2-006/019). Each current entry is:
 
 ```json
 {
@@ -130,7 +148,7 @@ never a runtime adjustment.
   "semantics": "<one-line frozen description>",
   "pit_authority": "P14-D (available_time <= as_of) via local_pipeline decision-time visibility",
   "implementation_identity": "<git blob sha of the defining source file>",
-  "ordering_hint": <int — see P14F2-007>
+  "ordering_hint": <int, display-only — see P14F2-007>
 }
 ```
 
@@ -154,27 +172,39 @@ they are derived from `git ls-tree` at the implementation HEAD.
 
 ## 3. Feature-Set Identity (P14F2-006..009)
 
-**P14F2-006 (feature_set_id)**: for an ORDERED list of feature
-definitions,
+**P14F2-006 (feature_set_id — membership-closed derivation)**: the
+derivation input is NOT the whole registry. It is the ordered
+`[name, current definition_version]` list produced by resolving the
+FROZEN MEMBERSHIP (P14F2-007) against the registry's current
+definitions:
 
 ```text
-feature_set_id = "fs-" + SHA256(canonical_json([
-    [name_1, definition_version_1], ..., [name_n, definition_version_n]
-]))
+membership   = MODEL_APPLICATION.feature_names      (authoritative, ordered)
+resolved     = [[name_i, registry.definitions[name_i].definition_version]
+                for name_i in membership, in membership order]
+feature_set_id = "fs-" + SHA256(canonical_json(resolved))
 ```
 
 — the exact algorithm already frozen in the R4-D apply-path lineage
-(the authorized fs-d1f3bdca…3afe was computed this way). Registry
-content and feature_set_id are bound by construction: a registry change
-that alters any (name, definition_version) pair or the order CHANGES
-the feature_set_id. "Registry content changed but feature_set_id
-unchanged" is structurally impossible and is additionally detected by
-golden check (recompute at load).
+(the authorized fs-d1f3bdca…3afe was computed this way from the six
+members and their blob-pinned versions). Consequences, by construction:
 
-**P14F2-007 (ordering)**: the feature set is ORDERED; the order is the
-weight-vector order of the consuming MODEL_APPLICATION. The initial
-authorized order (matching the frozen model and the P13-Q calibrated
-lineage):
+- Registry GROWTH (a new feature name registered) does NOT alter any
+  existing frozen model's derived id: a new name is not a member of
+  that model's `feature_names`, hence not in the resolution input.
+- A re-registered member (same name, new current definition_version)
+  DOES change the resolved list -> derived id changes -> the binding to
+  the frozen model breaks (FAIL CLOSED per P14F2-019) — registry
+  evolution of a bound member REQUIRES a new model lineage.
+- "Registry content changed but the frozen binding unchanged" is
+  detectable by load-time recompute (P14F2-019) and golden check.
+
+**P14F2-007 (ordering authority)**: the feature set is ORDERED, and the
+ORDER AUTHORITY is the frozen MODEL_APPLICATION's `feature_names`
+(its weight-vector order) — NOT the registry's storage order and NOT
+`ordering_hint`, which is display-only metadata and never enters
+derivation. The initial authorized order (matching the frozen model and
+the P13-Q calibrated lineage):
 
 ```text
 1. momentum
@@ -187,24 +217,41 @@ lineage):
 
 Order drift = a different feature_set_id (never a silent reorder).
 
-**P14F2-008 (no runtime selection)**: feature sets are NOT chosen at
-runtime (no best/latest/first/arbitrary). The consuming packet targets
-exactly ONE registry feature set, identified by its feature_set_id,
-which must match the binding expected by the R4-D resolver.
+**P14F2-008 (no runtime selection — membership included)**: NEITHER the
+feature set NOR its MEMBERSHIP is chosen at runtime (no
+best/latest/first/arbitrary; no "registry order" selection; no subset
+selection). A frozen model's membership is fixed by its own
+`feature_names`; a consuming packet targets exactly the bound set,
+identified by the derived feature_set_id, which must match the frozen
+binding expected by the R4-D resolver. A newly registered feature NEVER
+enters an already-bound packet.
 
-**P14F2-009 (registry evolution)**:
+**P14F2-009 (registry evolution — exact consequences)**:
 
 - The registry file is READ-ONLY in normal operation; adding a new
   definition_version or a new feature requires a governance commit
   (docs-only for the registry + code commit for any new consuming
-  implementation) AND — when it changes a feature set bound to a frozen
-  model — a NEW MODEL_APPLICATION lineage (new model authorization),
-  never an in-place edit.
-- The frozen R4-D model's feature set (`fs-d1f3bdca…3afe`) is
-  PERMANENTLY BOUND to model_version `97602f4d…664`: the registry may
-  add new entries, but that feature_set_id and its binding never
-  change. Changing a frozen model's feature definition = a new model /
-  new authorization boundary, not a registry edit.
+  implementation), never an in-place edit.
+- Scenario A - register a NEW feature name: the new entry joins
+  `definitions`; no existing frozen model's `feature_names` contains
+  the new name, so every existing derived feature_set_id is UNCHANGED.
+  No new model authorization is required for existing models; the new
+  feature can only be consumed by a NEW packet/feature set under its
+  own authorization.
+- Scenario B - re-register a BOUND member (a name that appears in some
+  frozen model's `feature_names`, with a new current
+  definition_version): the resolved list for every bound model changes
+  -> its derived feature_set_id no longer equals its frozen binding ->
+  the binding FAILS CLOSED -> that frozen model is unusable until a NEW
+  MODEL_APPLICATION lineage (authorized against the new definition) is
+  created. The old frozen artifact bytes are untouched; it simply
+  cannot resolve under the evolved registry.
+- Scenario C - mutate a frozen model's `feature_names`: impossible
+  without changing the artifact bytes -> the sha256 gate fires first
+  (P14F2-019) - and would constitute a NEW model, not a registry act.
+- The frozen R4-D model's feature set (fs-d1f3bdca...3afe) is
+  PERMANENTLY BOUND to model_version 97602f4d...664: that
+  feature_set_id and its binding never change in place.
 
 ## 4. Initial Registry Content (ratification target, P14F2-010)
 
