@@ -86,8 +86,49 @@ Phase 3: optional consolidation of frozen v1/v2 wording — separately authorize
 
 Existing v2.1 manifests remain reviewable; new manifests use the ratified canonical contract. Legacy compatibility must not weaken the executable gate.
 
-## 8. Protected boundaries
-Ordinary workers should remain forbidden from `governance/**`, `.github/workflows/**`, `.agent/**`, executable governance scripts, and AI1-designated production schema/config authorities. A specifically authorized governance task may declare an exception in WRITE_SET, but deny-wins applies to all other forbidden paths.
+## 8. Protected boundaries and FORBIDDEN_SET relationship
+The **Always-Protected Boundary** and task-level **FORBIDDEN_SET** are separate governance layers and MUST NOT be modeled as competing patterns inside the same deny-wins mechanism.
+
+### 8.1 Always-Protected Boundary
+The Always-Protected Boundary is a higher-level authorization boundary for paths such as:
+- `governance/**`
+- `.github/workflows/**`
+- `.agent/**`
+- executable governance scripts
+- AI1-designated production schema/config authorities
+
+By default, ordinary worker tasks cannot modify these paths. A task's WRITE_SET MUST NOT be interpreted as an implicit exception to an Always-Protected Boundary.
+
+### 8.2 FORBIDDEN_SET
+FORBIDDEN_SET remains a task-local mechanical deny list. Its rule is strictly **deny-wins**:
+> If a changed path matches FORBIDDEN_SET, the Scope Gate fails even if the same path also matches WRITE_SET.
+
+Therefore, WRITE_SET never overrides FORBIDDEN_SET.
+
+### 8.3 Authorized exceptions
+A governance task that is explicitly authorized to modify an Always-Protected Boundary does **not** obtain that authority by putting the protected path into WRITE_SET while leaving it in FORBIDDEN_SET.
+
+Instead, the v2.2 contract MUST carry an explicit authorization-level exception for the protected boundary. That exception:
+1. is granted by the required Human Authorization and AI1 authorization;
+2. is evaluated at the authorization/policy layer before task-level scope evaluation;
+3. permits the authorized path to become eligible for WRITE_SET evaluation;
+4. does not weaken deny-wins for any other FORBIDDEN_SET match.
+
+Thus:
+**Always-Protected Boundary → authorization eligibility → WRITE_SET / FORBIDDEN_SET mechanical evaluation.**
+
+The exception mechanism is a v2.2 design requirement; it is NOT implied to exist in the current v2.1 executable gate.
+
+### 8.4 Normative precedence
+For a changed path:
+1. Check whether the path is inside an Always-Protected Boundary.
+2. If protected and no explicit authorized exception exists: **FAIL CLOSED**.
+3. If an authorized exception exists, evaluate the task's WRITE_SET and FORBIDDEN_SET normally.
+4. If FORBIDDEN_SET matches: **FAIL CLOSED**, regardless of WRITE_SET.
+5. Otherwise, if WRITE_SET does not match: **FAIL CLOSED**.
+6. Otherwise: Scope Gate may pass for that path.
+
+This removes the previous internal contradiction: an authorized governance task does not override deny-wins; authorization changes whether the protected boundary is eligible for evaluation, while FORBIDDEN_SET deny-wins remains absolute within the task-level scope gate.
 
 ## 9. READ_SET and gates
 READ_SET declares required audit/input evidence and grants no write authority. Missing required evidence is an audit finding.
@@ -109,8 +150,9 @@ No authorization is implied by this report.
 ## 11. Open decisions for AI1/Human
 1. Exact v2.2 addendum filename/versioning.
 2. Exact always-protected boundary list.
-3. Whether legacy manifest compatibility is time-bounded or version-tagged.
-4. Whether `zcode_agent` is mandatory for all governed tasks or only ZCODE-backed tasks.
+3. Exact machine-readable authorization-exception representation for Always-Protected Boundaries.
+4. Whether legacy manifest compatibility is time-bounded or version-tagged.
+5. Whether `zcode_agent` is mandatory for all governed tasks or only ZCODE-backed tasks.
 
 ## Acceptance
 **READY_FOR_AI1_AUDIT. No implementation authorization granted.**
