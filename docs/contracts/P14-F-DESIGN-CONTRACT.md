@@ -12,6 +12,16 @@
 >     （Lead Agent 验收记录 commit `5aa37c9`），其 gap 清单是本
 >     契约的输入。规范不变量 P14F2-001..024（"F2" 区分于 forward-model
 >     契约的 P13O-F-* 系列）。
+> v2: NARROW REPAIR — FEATURE AUTHORITY CLOSURE（2026-10-07）——独立
+>     验收发现 P14F2-001 的 "sole feature-definition authority" 与
+>     forward_model.py::FROZEN_FEATURE_NAMES（apply_path.py E4 的实际
+>     判据，且两文件在实施阶段 forbidden）构成 authority contradiction。
+>     修复 = 采纳分层权威模型（方案 B）：P14F2-001 重写为 Research
+>     Feature Definition Authority；新增 P14F2-001a 三角色 authority
+>     model + binding closure 链；P14F2-019 重写为双向闭合 integrity
+>     chain（registry_sha256 存 evidence；authoritative binding = 冻结
+>     MODEL_APPLICATION 的 feature_set_id；derived id 交叉验证；双向
+>     FAIL CLOSED；frozen set 变化 = 新模型新授权）。文档-only。
 
 ---
 
@@ -53,10 +63,56 @@ E4 feature-set gate can transition from the current honest
 **P14F2-001 (registry artifact)**: a single committed JSON document
 `docs/contracts/p14f/FEATURE_REGISTRY.json` (canonical serialization
 per P13O-F-016c semantics: UTF-8, no BOM, no trailing newline,
-sort_keys, compact separators). It is the sole feature-definition
-authority; no parallel feature list may exist in code as a competing
-source of truth (existing protocol constants are superseded by the
-registry once P14-F is implemented and accepted).
+sort_keys, compact separators). It is the **Research Feature Definition
+Authority** — the only authority that defines HOW a feature is computed
+(definition_version, computation identity, source lineage). It is NOT
+the authority for frozen-model identity: the frozen MODEL_APPLICATION
+carries its own immutable feature identity (P14F2-001a), and the two
+are cross-validated against a single shared feature_set_id (P14F2-019)
+rather than one superseding the other.
+
+**P14F2-001a (authority model — three distinct roles, one identity)**:
+
+| role | holder | answers | mutable? |
+|---|---|---|---|
+| Research Feature **Definition** Authority | `FEATURE_REGISTRY.json` (P14F2-002) | "HOW is each feature computed, from which lineage, at which definition_version?" | via governance commit pair (P14F2-009) |
+| Frozen MODEL_APPLICATION **Identity** Boundary | the committed frozen artifact bytes + `forward_model.py::FROZEN_FEATURE_NAMES` (a projection of the artifact's own `feature_names`, which are part of its content-addressed identity) | "WHICH feature vector is the frozen model bound to?" | never (any byte change = new model_version / new authorization) |
+| Runtime **Eligibility** | `apply_path.py` E4 gate | "does THIS packet match the bound feature set?" | no (gate semantics fixed; it compares against the bound set) |
+
+Why `FROZEN_FEATURE_NAMES` is NOT a second feature-definition
+authority: (a) it carries no computation identity and no
+definition_version — it answers nothing about HOW a feature is
+computed; (b) it never evolves — it is a projection of the frozen
+artifact's own `feature_names` field, which is part of the
+content-addressed model identity; (c) its correctness is not
+self-asserted — it is cross-validated against the registry-derived
+feature_set_id (P14F2-019). It is frozen-model identity evidence, and
+the registry is the definition authority: two roles, one shared
+feature_set_id, zero competing truth.
+
+**Binding closure (the required chain)**:
+
+```text
+Feature Definition (registry, P14F2-002)
+        ↓ (ordered per P14F2-007)
+Feature Registry ordered set
+        ↓ feature_set_id = "fs-" + SHA256(canonical ordered list)
+derived feature_set_id
+        ↓ MUST EQUAL (cross-validation, P14F2-019)
+Frozen MODEL_APPLICATION feature_set_id (fs-d1f3bdca…3afe)
+        ↓ consumed by
+R4-A packet (six-factor, P14F2-011)
+        ↓ gate
+R4-D E4 eligibility check (apply_path.py, unchanged)
+```
+
+A future implementation that derives the feature set from the registry
+and recomputes the id MUST obtain exactly the frozen id; if it does
+not, the mismatch is FAIL CLOSED on BOTH sides (the registry loader
+refuses to reference a set that does not match the frozen binding, and
+the resolver E4 gate rejects any packet that does not match it) — the
+repair is a governance act (new definitions / new model authorization),
+never a runtime adjustment.
 
 **P14F2-002 (feature definition record)**: each entry is
 
@@ -220,11 +276,35 @@ never replaces).
 
 ## 7. Registry Immutability & Integrity (P14F2-019..020)
 
-**P14F2-019**: integrity chain: registry bytes → registry_sha256 →
-referenced by implementation constant/tests → committed evidence
-record. A load-time recompute of `feature_set_id` from the registry
-bytes MUST equal the id referenced by the code path (mismatch → FAIL
-CLOSED).
+**P14F2-019 (integrity chain & dual-binding closure)**:
+
+- `registry_sha256` is stored in the committed P14-F evidence record
+  (`docs/artifacts/P14-F-REGISTRY-EVIDENCE.md`) and re-verified by the
+  registry loader at every use; the registry bytes are never trusted
+  without the hash check.
+- The **authoritative binding** for runtime eligibility is the frozen
+  MODEL_APPLICATION's `feature_set_id` (`fs-d1f3bdca…3afe`) — the
+  identity boundary, immutable per P14F2-001a.
+- The **derived feature_set_id** is computed from the registry's
+  ordered `[name, definition_version]` list at load time.
+- **Cross-validation**: derived feature_set_id MUST equal the frozen
+  MODEL_APPLICATION's feature_set_id at every load and at every packet
+  assembly. Both sides FAIL CLOSED on mismatch: the registry loader
+  refuses to serve a set whose derived id does not match the frozen
+  binding, and the R4-D E4 gate rejects any packet that does not carry
+  the bound set. The mismatch is a governance error — the repair is new
+  definitions and/or a new model authorization (P14F2-009), never a
+  runtime adjustment.
+- The runtime NEVER modifies the registry.
+- The registry MAY add new entries or new definition_versions without
+  changing the frozen set (the frozen set is the specific ordered
+  subset referenced by `fs-d1f3bdca…3afe`; additions that do not alter
+  that subset's ordered content leave the binding untouched).
+- Any change to a member of the frozen set (name, definition_version,
+  or order) CHANGES the derived feature_set_id, which detaches it from
+  the frozen model binding — therefore a frozen-set change REQUIRES a
+  new MODEL_APPLICATION lineage under a new Human Authorization (the
+  frozen model cannot consume a set it was not trained against).
 
 **P14F2-020**: the registry is never regenerated at runtime; a registry
 governance change is a docs+code commit pair with exact-head CI and,
