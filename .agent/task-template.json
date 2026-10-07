@@ -1,6 +1,7 @@
 {
   "task_id": "TASK-ID",
   "agent": "AI2",
+  "zcode_agent": "ZCODE-A2",
   "base_commit": "FREEZE_TO_REAL_COMMIT_SHA",
   "depends_on": [],
   "blocks": [],
@@ -14,6 +15,12 @@
     "pyproject.toml"
   ],
   "shared_interfaces": [],
+  "authorization": {
+    "human_required": false,
+    "human_authorization_ref": null,
+    "ai1_authorized": false,
+    "protected_boundary_exception": false
+  },
   "acceptance": {
     "tests": [],
     "gates": [
@@ -21,5 +28,6 @@
       "conflict",
       "test"
     ]
-  }
+  },
+  "status": "PLANNED"
 }
