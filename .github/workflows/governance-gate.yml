@@ -33,3 +33,7 @@ jobs:
           python scripts/governance_conflict_gate.py \
             --manifest "$MANIFEST" \
             --registry ".agent/active-tasks.json"
+
+      - name: v2.2 self-test
+        run: |
+          python scripts/test_governance_v22.py
