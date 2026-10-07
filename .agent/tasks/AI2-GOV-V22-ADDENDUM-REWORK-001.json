@@ -1,0 +1,48 @@
+{
+  "task_id": "AI2-GOV-V22-ADDENDUM-REWORK-001",
+  "agent": "AI2",
+  "zcode_agent": "ZCODE-A2",
+  "base_commit": "e33b649189af17547c73a2e131f808c08baa62ed",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [
+    "governance/PARALLEL-GOVERNANCE-v2.2-ADDENDUM.md",
+    "governance/TASK-DEPENDENCY-SCHEMA-v2.md",
+    "governance/TASK-STATE-MACHINE-v2.md",
+    ".agent/task-template.json",
+    ".agent/tasks/AI2-GOV-V22-ADDENDUM-IMPLEMENT-001.json"
+  ],
+  "write_set": [
+    "governance/PARALLEL-GOVERNANCE-v2.2-ADDENDUM.md",
+    "governance/TASK-DEPENDENCY-SCHEMA-v2.md",
+    ".agent/task-template.json",
+    ".agent/tasks/AI2-GOV-V22-ADDENDUM-REWORK-001.json"
+  ],
+  "forbidden_set": [
+    "src/**",
+    "data/**",
+    "tests/**",
+    ".github/workflows/**",
+    "scripts/**",
+    "governance/audits/**",
+    ".agent/tasks/AI2-GOV-V22-ADDENDUM-IMPLEMENT-001.json"
+  ],
+  "shared_interfaces": [],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "HUMAN-AUTH-V22-PHASE1-AND-EXECUTABLE-IMPLEMENTATION-2026-10-07",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [
+      "python -m json.tool .agent/tasks/AI2-GOV-V22-ADDENDUM-REWORK-001.json"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "READY_FOR_AUDIT"
+}

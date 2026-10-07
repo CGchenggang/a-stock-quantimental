@@ -2,14 +2,25 @@
 
 Status: ACTIVE (Phase 1 contract layer)
 Base: e33b649189af17547c73a2e131f808c08baa62ed (tag `governance-v2.1`)
-Implementing task: AI2-GOV-V22-ADDENDUM-IMPLEMENT-001 (AI2 / ZCODE-A2, EXECUTOR ONLY)
+Implementing tasks: AI2-GOV-V22-ADDENDUM-IMPLEMENT-001; wording alignment
+repaired by AI2-GOV-V22-ADDENDUM-REWORK-001 (AI2 / ZCODE-A2, EXECUTOR ONLY)
 Provenance: implements the design decisions of AI1-V22-DESIGN-REVIEW-001
 (FINAL DESIGN DECISION; IMPLEMENTATION AUTHORIZATION: GRANTED) under Human
 Authorization `HUMAN-AUTH-V22-PHASE1-AND-EXECUTABLE-IMPLEMENTATION-2026-10-07`.
 
-This addendum is ADDITIVE. It does not modify PROTOCOL-v1,
-PARALLEL-GOVERNANCE-v2, TASK-STATE-MACHINE-v2, SHARED-INTERFACE-LOCK-v2,
-GOVERNANCE-GATES-v2, TASK-TEMPLATE-v1, EXECUTION-GUIDE-v2.1, or any tag.
+Scope of the v2.2 Phase 1 implementation that carries this addendum:
+
+- This addendum document is ADDITIVE with respect to the frozen governance
+  documents: it does not modify PROTOCOL-v1, PARALLEL-GOVERNANCE-v2,
+  TASK-STATE-MACHINE-v2, SHARED-INTERFACE-LOCK-v2, GOVERNANCE-GATES-v2,
+  TASK-TEMPLATE-v1, EXECUTION-GUIDE-v2.1, or any tag.
+- The same Phase 1 implementation DOES align the following two existing
+  artifacts with the v2.2 contract, as authorized Phase 1 scope (§9):
+  - `governance/TASK-DEPENDENCY-SCHEMA-v2.md` — additive field/rule alignment;
+  - `.agent/task-template.json` — additive field alignment.
+  These alignments are part of the v2.2 Phase 1 contract implementation; they
+  are not modifications of the frozen v1/v2/v2.1 documents listed above.
+
 Where this addendum and an older document appear to differ, the Authority
 Precedence (§7) decides.
 
