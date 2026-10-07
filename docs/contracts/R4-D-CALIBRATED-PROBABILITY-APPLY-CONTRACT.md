@@ -1,8 +1,10 @@
 # R4-D Contract — Calibrated Probability Apply-Path
 
-> STATUS: DRAFT — R4-D-DESIGN-001 — awaiting independent Contract acceptance.
-> **R4-D Implementation is NOT AUTHORIZED** until this contract passes
-> independent acceptance AND the owner grants Human Authorization.
+> STATUS: ACCEPTED — R4-D-DESIGN-001 CONTRACT + DESIGN
+> (independently accepted; recorded in docs/PROJECT_STATUS.md).
+> **R4-D APPLY remains BLOCKED / ELIGIBLE FOR AUTHORIZATION** — this
+> accepted status does NOT authorize R4-D APPLY; the APPLY unlock
+> additionally requires explicit Human Authorization.
 > Companion design: `docs/design/R4-D-CALIBRATED-PROBABILITY-APPLY-DESIGN.md`.
 >
 > 修订历史：
@@ -15,6 +17,11 @@
 >     artifact（P13-O 折内权重未持久化；p13p 文件为指标对比非
 >     模型参数）→ R4-D = BLOCKED — RAW MODEL APPLY AUTHORITY
 >     NOT FROZEN（§13）。文档-only，零生产代码。
+> v3: STATUS SYNC（2026-10-06）——头部状态与仓库既定治理状态同步：
+>     R4-D Contract = ACCEPTED（独立验收已发生并记录）；本状态同步
+>     不构成 R4-D APPLY 授权——APPLY 保持 BLOCKED / ELIGIBLE FOR
+>     AUTHORIZATION，解锁仍需显式 Human Authorization。
+>     文档-only，零规范内容变更。
 
 ---
 
