@@ -1,0 +1,25 @@
+{
+  "task_id": "TASK-ID",
+  "agent": "AI2",
+  "base_commit": "FREEZE_TO_REAL_COMMIT_SHA",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    "path/to/allowed/file.py"
+  ],
+  "forbidden_set": [
+    "governance/**",
+    ".github/workflows/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [],
+  "acceptance": {
+    "tests": [],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  }
+}
