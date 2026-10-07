@@ -1,0 +1,21 @@
+name: governance-gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  governance-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate task manifest and Scope Gate
+        run: |
+          python scripts/governance_gate.py             --manifest .agent/task.json             --base "$GITHUB_BASE_SHA"             --head "$GITHUB_SHA"
