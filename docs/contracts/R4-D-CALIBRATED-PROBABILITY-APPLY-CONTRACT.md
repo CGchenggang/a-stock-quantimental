@@ -209,6 +209,20 @@ alpha).
 
 ## 13. Raw-Model Application Authority — NOT FROZEN (blocker record)
 
+> **HISTORICAL AUDIT RECORD — SUPERSEDED BY FROZEN MODEL_APPLICATION
+> AUTHORITY.** This section records the audit conclusion at Exact HEAD
+> `0406abc…` (R4-D-NARROW-REPAIR-001) and applies to THAT historical
+> state only. It is NOT a current R4-D blocker: the authorized
+> execution phase (P13-O-FORWARD-MODEL-EXECUTION-001, under
+> R4-D-APPLY-HUMAN-AUTHORIZATION-001) has since created and frozen the
+> required MODEL_APPLICATION authority
+> (`97602f4d…664` + bound CALIBRATION `6e341fcd…42bc9`, committed at
+> `docs/artifacts/p13o-forward-model/`, evidence per
+> `docs/artifacts/P13-O-FORWARD-MODEL-ARTIFACT-EVIDENCE.md`), the
+> contract itself is ACCEPTED, and R4-D APPLY has been implemented and
+> independently accepted. The original audit text below is preserved
+> verbatim for audit traceability.
+
 Audit at Exact HEAD `0406abc` (R4-D-NARROW-REPAIR-001): **no forward-applicable
 frozen raw-model artifact exists in this repository.** P13-O fold weights were
 transient (fit_predict returns predictions; weights discarded); the only persisted
@@ -218,6 +232,7 @@ variant-pooled with no binding record.
 
 ```text
 R4-D BLOCKED — RAW MODEL APPLY AUTHORITY NOT FROZEN
+(HISTORICAL — SUPERSEDED; see the supersession note above)
 
 R4-D Contract cannot authorize implementation until a raw-model
 application authority (MODEL_APPLICATION artifact, variant-bound and
@@ -230,13 +245,16 @@ This is a legal outcome, not a failure: R4D-002a/002b/003a/003b/003c and
 G11–G16 define exactly what must exist before re-acceptance can authorize
 implementation. Everything else in this contract (semantics, eligibility
 states, read-only boundary, provenance chain, fallback rules) is already
-specified and remains frozen text.
+specified and remains frozen text. **(Historical note: those conditions
+have since been satisfied — see the supersession note above.)**
 
 ## 12. Acceptance Checklist (task §18 mapping)
 
 [×] Existing probability/calibration/policy authorities identified
-    (R4D-002/003/004) · [ ] **raw-model application authority frozen
-    (R4D-002a/003b) — UNMET: BLOCKED** · [×] Probability semantics frozen (R4D-001) ·
+    (R4D-002/003/004) · [×] **raw-model application authority frozen
+    (R4D-002a/003b) — SATISFIED: the MODEL_APPLICATION artifact was
+    frozen by P13-O-FORWARD-MODEL-EXECUTION-001
+    (`97602f4d…664`, independently accepted)** · [×] Probability semantics frozen (R4D-001) ·
     [×] Calibration semantics frozen (R4D-003/007) · [×] Apply
     eligibility (R4D-008) · [×] PIT/temporal rule (R4D-006/R4D-008-E3) ·
     [×] Model/calibration/policy version rules (R4D-002/003/004) · [×]
