@@ -1,0 +1,46 @@
+{
+  "task_id": "ZCODE-V22-CONTINUATION-001",
+  "agent": "AI1",
+  "zcode_agent": "ZCODE control plane (v8); Group A/B executed by bound claude-code workers",
+  "base_commit": "e33b649189af17547c73a2e131f808c08baa62ed",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    ".agent/task-template.json",
+    ".github/workflows/governance-gate.yml",
+    "governance/PARALLEL-GOVERNANCE-v2.2-ADDENDUM.md",
+    "governance/TASK-DEPENDENCY-SCHEMA-v2.md",
+    "scripts/governance_gate.py",
+    "tests/test_governance_gate_v22.py"
+  ],
+  "forbidden_set": [
+    "src/**",
+    "data/**",
+    "docs/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [
+    "manifest schema: governance/TASK-DEPENDENCY-SCHEMA-v2.md (13-field contract)",
+    "pattern language: governance/PARALLEL-GOVERNANCE-v2.2-ADDENDUM.md section 2",
+    "canonical task states: TASK-STATE-MACHINE-v2 11-state vocabulary"
+  ],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "AI1-V22-DESIGN-REVIEW-001 MINIMAL V2.2 FIX BUNDLE (Human Auth=YES: owner approval of the bundle constitutes authorization, bundle items 1-4 touch protected boundary); owner directive 2026-10-08 to start ZCODE-V8-INTEGRATION-001 (open PR and land the bundle)",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [
+      "python -m pytest tests/test_governance_gate_v22.py -q",
+      "python -m pytest tests/ -q"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "ACCEPTED"
+}
