@@ -1,0 +1,51 @@
+{
+  "task_id": "ZCODE-EXPLAIN-LAYER-001",
+  "agent": "AI1",
+  "zcode_agent": "ZCODE control plane (v8); LLM Research Explanation Layer Engineer",
+  "base_commit": "2df2cb281aee53f67d270cb5ab5b370300e5f56b",
+  "depends_on": ["ZCODE-LEDGER-CLOSURE-001"],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    "src/astock_v2/explain/__init__.py",
+    "src/astock_v2/explain/llm_adapter.py",
+    "src/astock_v2/explain/prompt_builder.py",
+    "src/astock_v2/explain/report_schema.py",
+    "src/astock_v2/explain/research_explainer.py",
+    "src/astock_v2/explain/__main__.py",
+    "tests/test_explain_layer.py"
+  ],
+  "forbidden_set": [
+    "src/astock_v2/agent/**",
+    "src/astock_v2/model/**",
+    "src/astock_v2/information/**",
+    "src/astock_v2/features/**",
+    "src/astock_v2/risk/**",
+    "src/astock_v2/factors/**",
+    "src/astock_v2/ledger.py",
+    "src/astock_v2/recommendation.py",
+    "data/**",
+    "governance/**",
+    ".github/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "owner directive 2026-10-09: 'ZCODE — LLM Research Explanation Layer Engineer' tasking; architecture audit 2026-10-08 (Deterministic Agent COMPLETE, LLM layer ABSENT, read-only boundary pre-approved)",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [
+      "python -m pytest tests/test_explain_layer.py -q",
+      "python -m pytest tests/ -q"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "READY_FOR_AUDIT"
+}
