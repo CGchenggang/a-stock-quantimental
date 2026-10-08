@@ -10,7 +10,9 @@
 >   → Human Authorization — GRANTED（`3ec2b86`，2026-10-04）
 >   → Implementation — DELIVERED（`69cfe2a86d23352e9f74cf7454aad6cf59135e7b`，
 >     2026-10-04）
->   → Independent Acceptance of the implementation — **PENDING**
+>   → Independent Acceptance of the implementation — **PASS**
+>     （2026-10-08，ZCODE V8 控制面验收；owner 同日 Human
+>     Authorization 再确认——"P14 主线，对集成契约 v2 授权"）
 >
 > 本文档源于 3b8f8ae 判定 Required narrow repair #1 "preferred
 > approach" 所要求的**单独授权请求**；"未获独立验收前不得实施"的
@@ -50,6 +52,15 @@
 >     （`3ec2b86`）与 Implementation（`69cfe2a`）生命周期事实；
 >     §6 状态引用同步。§1-§5 语义零变化；四阶段分离保留；
 >     `0067807` / `3ec2b86` / `69cfe2a` 历史事实原样引用，无任何改写。
+> v4: Independent Acceptance 记录（2026-10-08，docs-only）——实施的
+>     Independent Acceptance 判定 **PASS**，生命周期四阶段全部闭合。
+>     验收证据：实施 `69cfe2a` delta 与 §2/§3/§4 授权面精确一致
+>     （7 文件）；全量 pytest 733 passed；三合同审计 exit 0（P14-E
+>     failures 空）；P13-M 回归 3 passed；§5 不变量抽查通过
+>     （additive-only / PIT 边界 / 词表 P14E-P-007 / P14-E 纯消费
+>     静态扫描无第二 selection authority）。owner 于 2026-10-08 明示
+>     "P14 主线，对集成契约 v2 授权"，构成本契约 Human Authorization
+>     的再确认与验收授权。§1-§6 语义零变化。
 
 ---
 
@@ -193,7 +204,8 @@ REPAIR-002 对应 delta，无其他）：
   （不得修改任何生产代码、测试、P14-D 冻结面或 P14-E 运行时）——
   该前置条件已由 `0067807`（Contract Acceptance）与 `3ec2b86`
   （Human Authorization）依序满足；实施 `69cfe2a` 系在授权链完成后
-  进行，其本身待 Independent Acceptance。
+  进行，其 Independent Acceptance 已于 2026-10-08 判定 **PASS**
+  （见修订历史 v4）——生命周期四阶段全部闭合。
 - 阶段分离：本契约获得独立 Contract Acceptance 后，仍须由验收方
   显式作出 **Human Authorization**，之后才进入 **Implementation**
   （内容 = §2 + §3 + §4 的精确 delta，即已验证的 REPAIR-002 改动
