@@ -1,0 +1,36 @@
+{
+  "task_id": "ZCODE-P14E-ACCEPT-001",
+  "agent": "AI1",
+  "zcode_agent": "ZCODE control plane (v8)",
+  "base_commit": "a22c88862822b2975ec932ab20c3cb546862a06d",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    "docs/contracts/P14-E-P14D-SELECTION-STATE-INTEGRATION-CONTRACT.md"
+  ],
+  "forbidden_set": [
+    "src/**",
+    "data/**",
+    "governance/**",
+    "scripts/**",
+    "tests/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "owner directive 2026-10-08: 'P14 主线，对集成契约 v2 授权' — records the Independent Acceptance verdict (ZCODE verification: 733 tests, 3 audits exit 0, P13-M 3 passed, §5 invariants verified, delta == authorized surface) and closes the contract lifecycle; exception required because the manifest path itself lives under protected .agent/** (addendum §3 exemption does NOT extend to the §8 boundary)",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "READY_FOR_AUDIT"
+}
