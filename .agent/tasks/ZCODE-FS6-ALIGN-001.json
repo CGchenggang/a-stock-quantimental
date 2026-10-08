@@ -1,0 +1,43 @@
+{
+  "task_id": "ZCODE-FS6-ALIGN-001",
+  "agent": "AI1",
+  "zcode_agent": "ZCODE control plane (v8); Group B executed by bound claude-code worker",
+  "base_commit": "45a242c2b2756e38cd380378df854c9fc9e29676",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    "src/astock_v2/agent/research_run.py",
+    "tests/test_fs6_alignment.py"
+  ],
+  "forbidden_set": [
+    "governance/**",
+    "data/**",
+    "docs/**",
+    "src/astock_v2/model/**",
+    "src/astock_v2/information/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [
+    "R4-D resolver eligibility semantics: src/astock_v2/model/apply_path.py (E4 unchanged, read-only authority)",
+    "canonical PIT context builder: src/astock_v2/industry_relative.py (read-only reuse, computation identity)"
+  ],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "owner directive 2026-10-08: 立项 '6 因子 packet 对齐' (ZCODE-V8-FS6-001); R4-D contract v2 E4 comment explicitly anticipates this alignment; R4D-APPLY-HUMAN-AUTHORIZATION-001 lineage governs the apply path",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [
+      "python -m pytest tests/test_fs6_alignment.py tests/test_r4a_research_run.py tests/test_r4d_apply_path.py -q",
+      "python -m pytest tests/ -q"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "READY_FOR_AUDIT"
+}
