@@ -1,0 +1,36 @@
+{
+  "task_id": "ZCODE-P14F-ACCEPT-001",
+  "agent": "AI1",
+  "zcode_agent": "ZCODE control plane (v8)",
+  "base_commit": "94a8c83ef45b7d14fa1e958089708bad4243535a",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    "docs/contracts/P14-F-DESIGN-CONTRACT.md"
+  ],
+  "forbidden_set": [
+    "src/**",
+    "data/**",
+    "governance/**",
+    "scripts/**",
+    "tests/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "owner directive 2026-10-08: '授权P14-F' — records the independent Contract Acceptance PASS (ZCODE review 7/7: lifecycle, authority model, invariant sweep P14F2-001..024, fail-closed completeness, scope, reality-check) and the P14-F-APPLY-HUMAN-AUTHORIZATION; implementation unlocked per the contract's gate",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "READY_FOR_AUDIT"
+}
