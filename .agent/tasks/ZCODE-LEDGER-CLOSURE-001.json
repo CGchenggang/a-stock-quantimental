@@ -1,0 +1,46 @@
+{
+  "task_id": "ZCODE-LEDGER-CLOSURE-001",
+  "agent": "AI1",
+  "zcode_agent": "ZCODE control plane (v8); Recommendation Ledger Closure Engineer",
+  "base_commit": "a1622d6a1891b1f26189c24df9d01aea2e150f8f",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    "src/astock_v2/ledger.py",
+    "tests/test_ledger_closure.py"
+  ],
+  "forbidden_set": [
+    "src/astock_v2/information/**",
+    "src/astock_v2/model/**",
+    "src/astock_v2/features/**",
+    "src/astock_v2/risk/**",
+    "src/astock_v2/factors/**",
+    "src/astock_v2/research_boundary.py",
+    "src/astock_v2/agent/**",
+    "data/**",
+    "governance/**",
+    "docs/artifacts/p13o-forward-model/**",
+    ".github/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "owner directive 2026-10-08/09: 'ZCODE — Recommendation Ledger Closure Engineer' tasking (fix audit REQUIRED-1 review read-side lifecycle + REQUIRED-2 idempotency + USEFUL query/outcome_stats); audit source: ZCODE Architecture/Capability Gap Audit 2026-10-08 (Ledger = PARTIAL)",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [
+      "python -m pytest tests/test_ledger_closure.py tests/test_ledger_append_only.py tests/test_p7_integration.py tests/test_review.py -q",
+      "python -m pytest tests/ -q"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "READY_FOR_AUDIT"
+}
