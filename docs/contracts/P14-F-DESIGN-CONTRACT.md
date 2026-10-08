@@ -1,9 +1,9 @@
 # P14-F Design Contract — Research-Only Feature Registry & Information-to-Research Integration
 
-> STATUS: DRAFT — P14-F-DESIGN-001 — awaiting independent Contract acceptance.
-> **P14-F Implementation is NOT AUTHORIZED** until this contract passes
-> independent Contract acceptance AND the project owner grants a
-> P14-F-APPLY-HUMAN-AUTHORIZATION record.
+> STATUS: **ACCEPTED — INDEPENDENTLY ACCEPTED**（Contract Acceptance，
+> 2026-10-08，ZCODE V8 控制面独立审查 7/7 PASS）。Human Authorization：
+> **GRANTED**（owner 2026-10-08："授权P14-F"）。P14-F Implementation
+> **AUTHORIZED** —— 按 §实施门 的授权面执行。
 >
 > 修订历史：
 > v1: 初稿（P14-F DESIGN CONTRACT + ACCEPTANCE MATRIX design gate，
@@ -33,6 +33,13 @@
 >     registry 增长（新 name / 同名新版本）的精确后果被定义；runtime
 >     selection 禁令扩展到 membership；mismatch 双侧 FAIL CLOSED。
 >     文档-only。
+> v5: 生命周期记录（2026-10-08，docs-only）——Contract Acceptance
+>     **PASS**（独立审查：lifecycle/authority model/invariant sweep
+>     P14F2-001..024/fail-closed completeness/scope&compatibility/
+>     reality-check-vs-main 七项全过；确认 v1->v4 四轮修复全部在文、
+>     与 apply_path.py FROZEN_FEATURE_NAMES 及 FS6 后 main 现状无矛盾）；
+>     owner Human Authorization GRANTED（2026-10-08）。Implementation
+>     解锁，按授权面执行。§1-§24 语义零变化。
 > v4: NARROW REPAIR — FINAL SEMANTIC CONSISTENCY（2026-10-07）——独立
 >     验收确认 v3 的 authority/membership 模型正确，但残留四处 v2
 >     语义措辞：P14F2-011 "in the registry order"（packet order
