@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import hashlib
 from math import log, sqrt
+from pathlib import Path
 from statistics import mean
 from typing import Any
 
@@ -50,6 +51,7 @@ from ..factors import (
     volume_ratio_factor,
 )
 from ..data.providers import ProviderResult
+from ..industry_relative import build_stock_industry_relative_context_map
 from ..regime import classify_regime
 from ..model.apply_path import resolve_probability
 from ..recommendation import RecommendationRecord
@@ -145,7 +147,9 @@ def run_research(symbol: str, as_of: str, *,
                  historical_store: LocalHistoricalStore | None = None,
                  raw_store: RawStore,
                  ingested_at: str | None = None,
-                 lookback: int = 20) -> dict:
+                 lookback: int = 20,
+                 membership_path: str | Path | None = None,
+                 universe_symbols: tuple[str, ...] | None = None) -> dict:
     """Run one complete evidence-backed research loop.
 
     ``historical_store`` (optional) triggers an idempotent R3-A ingestion
@@ -185,6 +189,47 @@ def run_research(symbol: str, as_of: str, *,
             "observation_count": (out.metadata or {}).get("observation_count"),
             "method": (out.metadata or {}).get("method"),
         }
+
+    # R4-D 6-factor alignment (R4D-005): the calibrated forward model
+    # expects the industry-relative return pair alongside the existing
+    # four. Reuse the canonical PIT industry-relative context builder —
+    # no formula is reimplemented here. The context is consulted ONLY
+    # when the full capability tuple is present (C4/C5 honest absence:
+    # missing membership_path / universe_symbols / historical_store /
+    # insufficient lookback yields honest absence, not an exception).
+    _INDUSTRY_FACTOR_NAMES = (
+        "industry_relative_return_5",
+        "industry_relative_return_20",
+    )
+    if (membership_path is not None
+            and universe_symbols is not None
+            and historical_store is not None
+            and lookback >= 20):
+        context_map = build_stock_industry_relative_context_map(
+            historical_store, membership_path, symbol, universe_symbols,
+            lookback=lookback)
+        # Direct decision_time lookup — EXACT string match against the
+        # builder's emitted "{day}T16:00:00+08:00" format. No date
+        # normalization (C2): a non-matching as_of is honest absence,
+        # leaving the factor values None so the resolver stays
+        # INELIGIBLE(feature_set_mismatch) as the contract demands.
+        context_row = context_map.get(as_of)
+        for name in _INDUSTRY_FACTOR_NAMES:
+            if context_row is None:
+                v = None
+            else:
+                v = context_row.get(name)
+            factors[name] = {
+                "value": v,
+                "admissible": v is not None,
+                "observation_count": lookback if v is not None else 0,
+                "method": "industry_relative_p13m_lineage",
+            }
+    else:
+        # Capability tuple incomplete: the honest 4-factor packet
+        # persists. The new factors stay absent so the resolver's
+        # feature-set check keeps reporting INELIGIBLE.
+        pass
 
     closes = [c for c in (_visible_close(rec) for rec in visible)
               if c is not None]
