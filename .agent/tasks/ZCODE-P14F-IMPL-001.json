@@ -1,0 +1,49 @@
+{
+  "task_id": "ZCODE-P14F-IMPL-001",
+  "agent": "AI1",
+  "zcode_agent": "ZCODE control plane (v8); Group B executed by bound claude-code worker",
+  "base_commit": "b7b7192e2299ea46a037c8e515d9ff8d86c47b52",
+  "depends_on": [],
+  "blocks": [],
+  "read_set": [],
+  "write_set": [
+    "docs/contracts/p14f/FEATURE_REGISTRY.json",
+    "src/astock_v2/features/registry.py",
+    "src/astock_v2/features/__init__.py",
+    "src/astock_v2/agent/research_run.py",
+    "tests/test_p14f_feature_registry.py",
+    "docs/artifacts/P14-F-REGISTRY-EVIDENCE.md"
+  ],
+  "forbidden_set": [
+    "src/astock_v2/model/**",
+    "src/astock_v2/information/**",
+    "data/**",
+    "governance/**",
+    ".github/**",
+    "docs/artifacts/p13o-forward-model/**",
+    "pyproject.toml"
+  ],
+  "shared_interfaces": [
+    "MEMBERSHIP AUTHORITY: src/astock_v2/model/forward_model.py FROZEN_FEATURE_NAMES/FROZEN_FEATURE_SET_ID (read-only import)",
+    "R4-D resolver E4 semantics: src/astock_v2/model/apply_path.py (read-only)",
+    "canonical PIT context builder: src/astock_v2/industry_relative.py (read-only reuse)"
+  ],
+  "authorization": {
+    "human_required": true,
+    "human_authorization_ref": "P14-F-DESIGN-CONTRACT v5 (Contract Acceptance PASS 2026-10-08 + owner '授权P14-F' = P14-F-APPLY-HUMAN-AUTHORIZATION); ZCODE-V8-P14F-IMPL-001",
+    "ai1_authorized": true,
+    "protected_boundary_exception": true
+  },
+  "acceptance": {
+    "tests": [
+      "python -m pytest tests/test_p14f_feature_registry.py -q",
+      "python -m pytest tests/ -q"
+    ],
+    "gates": [
+      "scope",
+      "conflict",
+      "test"
+    ]
+  },
+  "status": "READY_FOR_AUDIT"
+}

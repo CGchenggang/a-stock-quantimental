@@ -51,6 +51,12 @@ from ..factors import (
     volume_ratio_factor,
 )
 from ..data.providers import ProviderResult
+from ..features import (
+    feature_set_id as p14f_feature_set_id,
+    load_registry as p14f_load_registry,
+    registry_sha256 as p14f_registry_sha256,
+    verify_against_frozen as p14f_verify_against_frozen,
+)
 from ..industry_relative import build_stock_industry_relative_context_map
 from ..regime import classify_regime
 from ..model.apply_path import resolve_probability
@@ -158,6 +164,12 @@ def run_research(symbol: str, as_of: str, *,
     chain plus the existing factor/risk/regime/orchestrator/ledger
     components — nothing here re-decides visibility or selection.
     """
+    # P14-F: fail-closed integrity & binding closure. The derived
+    # feature_set_id from the committed registry MUST equal the frozen
+    # MODEL_APPLICATION binding; a mismatch is a governance error and
+    # aborts the run before any assembly happens.
+    p14f_verify_against_frozen()
+
     if historical_store is not None:
         if not ingested_at:
             raise ValueError(
@@ -205,6 +217,12 @@ def run_research(symbol: str, as_of: str, *,
             and universe_symbols is not None
             and historical_store is not None
             and lookback >= 20):
+        # RV7-1 FS6 equivalence: computation identity pinned by
+        # build_universe_industry_relative_context_maps (P13-M pooled==single
+        # field-exact regression
+        # tests/test_industry_relative.py::test_pooled_context_matches_single_stock_context).
+        # The single-stock builder used here is byte-identical per (symbol,
+        # decision_time) to the pooled builder the registry entry_symbol names.
         context_map = build_stock_industry_relative_context_map(
             historical_store, membership_path, symbol, universe_symbols,
             lookback=lookback)
@@ -337,6 +355,13 @@ def append_to_ledger(run_result: dict, ledger, ingested_at: str) -> dict:
         **run_result["recommendation"],
         "provenance": tuple(run_result["recommendation"]["provenance"]),
     })
+    # P14-F: the registry identity that the run was bound against. Both
+    # are siblings of r4d_probability in the ledger input_snapshot so
+    # the Recommendation -> Probability -> FeatureSet -> Registry chain
+    # stays traceable (P14F2-019 provenance continuity).
+    registry = p14f_load_registry()
+    p14f_sha = p14f_registry_sha256()
+    p14f_fsid = p14f_feature_set_id(registry)
     event = ledger.append(
         record,
         feature_version=MODEL_VERSION,
@@ -352,6 +377,10 @@ def append_to_ledger(run_result: dict, ledger, ingested_at: str) -> dict:
             # Recommendation → Probability → Calibration → Model →
             # Features → ResearchPacket → P14-E → P14-D stays traceable.
             "r4d_probability": run_result["probability"],
+            # P14-F registry provenance: the registry digest and the
+            # derived feature_set_id the run bound against.
+            "p14f_registry_sha256": p14f_sha,
+            "p14f_feature_set_id": p14f_fsid,
         },
     )
     return event
